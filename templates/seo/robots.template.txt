@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml
+
+# Review before production:
+# - Block internal search pages.
+# - Block staging paths.
+# - Do not block assets needed for rendering.

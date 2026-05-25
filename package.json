@@ -1,0 +1,22 @@
+{
+  "name": "ai-growth-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Growth OS template for B2B demand generation, SEO/GEO, approvals, and agentic content operations.",
+  "workspaces": [
+    "apps/backend",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/backend",
+    "build": "npm run build -w packages/shared && npm run build -w apps/backend",
+    "start": "npm run start -w apps/backend",
+    "db:migrate": "npm run db:migrate -w apps/backend",
+    "lint": "npm run lint -w apps/backend",
+    "seed:demo": "bash scripts/seed-demo-company.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

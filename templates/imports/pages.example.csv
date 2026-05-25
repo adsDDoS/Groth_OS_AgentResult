@@ -1,0 +1,5 @@
+item_type,title,slug,intent,audience,priority
+product_page,Core Platform,core-platform,commercial,VP Operations,100
+pain_page,Reduce Manual Reporting,reduce-manual-reporting,problem-aware,Operations leaders,80
+comparison_page,Example Platform vs Spreadsheets,platform-vs-spreadsheets,comparison,RevOps and Ops leaders,70
+industry_page,B2B SaaS Operations Platform,b2b-saas-operations-platform,industry,COO and VP Ops,65

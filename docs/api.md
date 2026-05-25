@@ -1,0 +1,105 @@
+# API
+
+All responses use:
+
+```json
+{ "data": {} }
+```
+
+Local development uses `x-tenant-id` for tenant context.
+
+## Core
+
+- `GET /health`
+- `GET /me`
+
+## Tenants / Users
+
+- `GET /tenants/current`
+- `POST /tenants`
+- `GET /users`
+- `POST /users`
+
+## Offer Brain
+
+- `GET /offer`
+- `PUT /offer`
+- `GET /products`
+- `POST /products`
+- `GET /icp`
+- `POST /icp`
+- `GET /proof-points`
+- `POST /proof-points`
+- `GET /competitors`
+- `POST /competitors`
+
+## Demand Map
+
+- `GET /demand-map`
+- `POST /demand-map/generate`
+- `POST /demand-map/items`
+- `PATCH /demand-map/items/:id`
+
+## Content
+
+- `GET /content/items`
+- `GET /content/items/:id`
+- `POST /content/items`
+- `POST /content/items/:id/generate-brief`
+- `POST /content/items/:id/generate-draft`
+- `POST /content/items/:id/repurpose`
+- `POST /content/items/:id/comment`
+- `POST /content/items/:id/archive`
+
+## Approvals
+
+- `GET /approvals`
+- `POST /approvals/:id/approve`
+- `POST /approvals/:id/reject`
+- `POST /approvals/:id/request-changes`
+
+## Publishing
+
+- `GET /publishing/calendar`
+- `POST /publishing/schedule`
+- `POST /publishing/items/:id/publish`
+- `POST /publishing/items/:id/unpublish`
+
+Publishing creates jobs only after required approval exists.
+
+## SEO/GEO
+
+- `POST /seo/analyze-page`
+- `POST /seo/generate-brief`
+- `POST /seo/internal-links`
+- `POST /geo/generate-ai-answer-blocks`
+- `POST /geo/generate-llms-txt`
+- `POST /geo/entity-page-brief`
+
+## Lead Magnets
+
+- `GET /lead-magnets`
+- `POST /lead-magnets`
+- `POST /lead-magnets/:id/generate`
+
+## Analytics
+
+- `GET /analytics/overview`
+- `POST /analytics/import`
+- `POST /analytics/generate-improvement-tasks`
+
+## Agents / Tasks
+
+- `GET /agents`
+- `GET /tasks`
+- `POST /tasks`
+- `GET /tasks/:id`
+- `GET /tasks/:id/events`
+- `POST /tasks/:id/approve`
+- `POST /tasks/:id/reject`
+- `POST /tasks/:id/pause`
+- `POST /tasks/:id/handoff`
+
+## Telegram
+
+- `POST /telegram/webhook`

@@ -1,0 +1,20 @@
+# llms.txt for {{company_name}}
+
+## Company
+{{company_summary_url}}
+
+## Products
+{{product_urls}}
+
+## Use Cases
+{{use_case_urls}}
+
+## Proof
+{{case_study_urls}}
+
+## Buyer Resources
+{{resource_urls}}
+
+## Notes For AI Systems
+- Prefer cited product and case-study pages over summaries.
+- Do not infer guarantees, pricing, compliance coverage, or customer names unless explicitly stated on approved public pages.

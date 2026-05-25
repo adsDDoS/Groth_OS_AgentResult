@@ -1,0 +1,63 @@
+company:
+  name: Example B2B SaaS
+  website_url: https://example.com
+  positioning: "Operations platform for mid-market B2B teams."
+  tone_of_voice:
+    - practical
+    - evidence-led
+    - direct
+    - no hype
+
+products:
+  - name: Core Platform
+    category: SaaS
+    description: "Helps teams centralize workflows, approvals, and reporting."
+    differentiators:
+      - "Fast onboarding with existing data"
+      - "Approval-first workflow"
+    pricing_notes: "Public ranges are allowed; custom discounts are not."
+
+icp_profiles:
+  - name: Mid-market B2B operations team
+    segment: "50-500 employees"
+    buying_triggers:
+      - "Manual reporting breaks down"
+      - "Leadership needs reliable pipeline visibility"
+    disqualifiers:
+      - "No internal owner"
+      - "Looking only for one-off consulting"
+
+personas:
+  - name: VP Operations
+    goals:
+      - "Reduce manual coordination"
+      - "Improve accountability"
+    pains:
+      - "Data lives in too many tools"
+    objections:
+      - "Will this create more process?"
+
+proof_points:
+  - title: "Reduced weekly reporting time"
+    proof_type: metric
+    source_note: "Needs customer-approved case study before publication."
+    confidence: needs_review
+    approved_for_public_use: false
+
+forbidden_claims:
+  - claim: "Guaranteed 3x revenue growth"
+    reason: "Unsupported guarantee."
+    replacement_guidance: "Use qualified language tied to specific case evidence."
+
+competitors:
+  - name: Example Competitor
+    website_url: https://competitor.example
+    watch_level: normal
+
+regions:
+  - United States
+  - Europe
+
+industries:
+  - B2B SaaS
+  - Professional services

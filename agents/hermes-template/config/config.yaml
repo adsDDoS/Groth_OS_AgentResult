@@ -1,0 +1,25 @@
+runtime:
+  name: ai-growth-os-hermes-template
+  mode: manual-first
+  workspace: /workspace
+
+model:
+  provider: openrouter
+  model: ${OPENROUTER_MODEL}
+
+backend:
+  base_url: ${AI_GROWTH_OS_BACKEND_URL}
+  api_key: ${AI_GROWTH_OS_AGENT_API_KEY}
+
+policies:
+  - GROWTH_POLICY.md
+  - CONTENT_POLICY.md
+  - GEO_POLICY.md
+
+tools:
+  publishing:
+    mode: approval_required
+  browser_research:
+    enabled: false
+  manual_exports:
+    enabled: true

@@ -1,0 +1,29 @@
+{
+  "organization": {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Example B2B Company",
+    "url": "https://example.com"
+  },
+  "softwareApplication": {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Example Platform",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web"
+  },
+  "faqPage": {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Who is this for?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "This answer must be reviewed and approved before publication."
+        }
+      }
+    ]
+  }
+}

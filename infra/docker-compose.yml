@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_growth_os}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_growth_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_growth_os}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai_growth_os} -d ${POSTGRES_DB:-ai_growth_os}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: apps/backend/Dockerfile
+    env_file:
+      - ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    command: sh -c "node apps/backend/dist/db/migrate.js && node apps/backend/dist/main.js"
+
+  hermes:
+    build:
+      context: ../agents/hermes-template
+      dockerfile: Dockerfile
+    env_file:
+      - ../agents/hermes-template/config/.env.example
+    profiles:
+      - agents
+    volumes:
+      - ../agents/hermes-template/workspace:/workspace
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
