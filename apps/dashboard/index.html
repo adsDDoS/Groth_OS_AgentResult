@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Growth OS</title>
+    <link rel="stylesheet" href="./styles.css?v=agentresult-working-os-12" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="AI Growth OS navigation">
+        <div class="brand-lockup">
+          <div class="mark" aria-hidden="true"></div>
+          <div>
+            <p class="eyebrow">AI Growth OS</p>
+            <h1>Рост компании</h1>
+          </div>
+        </div>
+
+        <nav class="nav-list" id="navList" aria-label="Product sections">
+          <a href="#/overview" class="nav-link" data-route="overview">Сегодня</a>
+          <a href="#/growth-plan" class="nav-link" data-route="growth-plan">План роста</a>
+          <a href="#/offer-brain" class="nav-link" data-route="offer-brain">Компания</a>
+          <a href="#/content-pipeline" class="nav-link" data-route="content-pipeline">Материалы</a>
+          <a href="#/publications" class="nav-link" data-route="publications">Публикации</a>
+          <a href="#/analytics" class="nav-link" data-route="analytics">Результаты</a>
+          <a href="#/settings" class="nav-link" data-route="settings">Настройки</a>
+        </nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="sectionKicker">Пульт собственника</p>
+            <h2 id="sectionTitle">Главная</h2>
+          </div>
+          <div class="topbar-controls">
+            <button type="button" class="help-chip" id="helpButton">Как работать</button>
+            <div class="language-switch" aria-label="Language">
+              <button type="button" class="language-button" data-lang="en">ENG</button>
+              <button type="button" class="language-button" data-lang="ru">РУС</button>
+            </div>
+            <div class="topbar-actions" id="routeActions"></div>
+          </div>
+        </header>
+
+        <section id="screenRoot" class="screen-root" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div id="modalRoot"></div>
+    <script src="./app.js?v=agentresult-working-os-12"></script>
+  </body>
+</html>

@@ -1,10 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query } from "../../db/client.js";
-import { insertJson } from "../common/repository.js";
+import { insertJson, patchJson } from "../common/repository.js";
 import { createApprovalRequest, requireApproval } from "../approvals/service.js";
 
 const idParams = z.object({ id: z.string().uuid() });
+const statusBody = z.object({ status: z.enum(["draft", "review", "scheduled", "published", "handed_off", "archived", "rejected"]) });
 
 export async function publishingRoutes(app: FastifyInstance) {
   app.get("/publishing/calendar", async (request) => {
@@ -48,5 +49,20 @@ export async function publishingRoutes(app: FastifyInstance) {
       [id, request.tenantId]
     );
     return { data: result.rows[0] ?? null };
+  });
+
+  app.patch("/publishing/items/:id/status", async (request) => {
+    const { id } = idParams.parse(request.params);
+    const { status } = statusBody.parse(request.body);
+    const result = await query(
+      "update publishing_calendar_items set status = $3, updated_at = now() where id = $1 and tenant_id = $2 returning *",
+      [id, request.tenantId, status]
+    );
+    return { data: result.rows[0] ?? null };
+  });
+
+  app.patch("/publishing/items/:id", async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await patchJson("publishing_calendar_items", id, request.body as Record<string, unknown>) };
   });
 }

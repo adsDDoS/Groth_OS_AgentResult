@@ -20,6 +20,40 @@ This is not a bulk SEO spam generator. The system is designed for useful, proof-
 
 ## Quick Start
 
+Local AgentResult launch mode:
+
+```bash
+npm run local:agentresult
+```
+
+Open:
+
+```text
+http://127.0.0.1:4173
+```
+
+This starts both services:
+
+- Backend API: `http://127.0.0.1:3000`
+- Dashboard: `http://127.0.0.1:4173`
+
+This command uses explicit local storage mode, so it serves a local AgentResult workspace even if Postgres is available on your machine. The workspace includes Offer Brain, demand map, content, approvals, publishing calendar, agents and results counters. Local data is persisted in `apps/backend/.runtime/agentresult.local-data.json`.
+
+You can still run the two services separately:
+
+```bash
+npm run backend:bundle
+npm run backend:local
+```
+
+In another terminal:
+
+```bash
+npm run dashboard
+```
+
+Full Postgres mode:
+
 ```bash
 cp .env.example .env
 npm install
@@ -32,6 +66,20 @@ Health check:
 ```bash
 curl http://localhost:3000/health
 ```
+
+Dashboard:
+
+```bash
+npm run dashboard
+```
+
+Open:
+
+```text
+http://localhost:4173
+```
+
+The dashboard uses `http://localhost:3000` as the backend API. If the backend is offline, it runs in demo/manual mode and stores company setup drafts in the browser.
 
 Docker:
 
@@ -85,6 +133,7 @@ They cannot publish, update live website content, send newsletters, post to soci
 ## Documentation
 
 - [Product](docs/product.md)
+- [Commercial Product Roadmap](docs/commercial-product-roadmap.md)
 - [Architecture](docs/architecture.md)
 - [API](docs/api.md)
 - [Database](docs/database.md)

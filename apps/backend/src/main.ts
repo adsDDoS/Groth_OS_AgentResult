@@ -5,24 +5,31 @@ import { config } from "./config.js";
 import { authPlugin } from "./modules/auth/plugin.js";
 import { registerRoutes } from "./routes.js";
 
-const app = fastify({
-  logger: true
-});
-
-await app.register(helmet);
-await app.register(cors, { origin: true });
-await app.register(authPlugin);
-await registerRoutes(app);
-
-app.setErrorHandler((error, _request, reply) => {
-  const normalizedError = error instanceof Error ? error : new Error("Unknown error");
-  const statusCode = Number((normalizedError as { statusCode?: number }).statusCode ?? 500);
-  app.log.error(normalizedError);
-  reply.status(statusCode).send({
-    error: normalizedError.name,
-    message: normalizedError.message,
-    code: (normalizedError as { code?: string }).code
+async function bootstrap() {
+  const app = fastify({
+    logger: true
   });
-});
 
-await app.listen({ host: config.host, port: config.port });
+  await app.register(helmet);
+  await app.register(cors, { origin: true });
+  await authPlugin(app);
+  await registerRoutes(app);
+
+  app.setErrorHandler((error, _request, reply) => {
+    const normalizedError = error instanceof Error ? error : new Error("Unknown error");
+    const statusCode = Number((normalizedError as { statusCode?: number }).statusCode ?? 500);
+    app.log.error(normalizedError);
+    reply.status(statusCode).send({
+      error: normalizedError.name,
+      message: normalizedError.message,
+      code: (normalizedError as { code?: string }).code
+    });
+  });
+
+  await app.listen({ host: config.host, port: config.port });
+}
+
+bootstrap().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

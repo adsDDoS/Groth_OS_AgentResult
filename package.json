@@ -9,6 +9,10 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/backend",
+    "dashboard": "python3 -m http.server 4173 -d apps/dashboard",
+    "backend:bundle": "esbuild apps/backend/src/main.ts --bundle --platform=node --format=cjs --packages=external --outfile=apps/backend/.runtime/backend.cjs",
+    "backend:local": "HOST=127.0.0.1 node apps/backend/.runtime/backend.cjs",
+    "local:agentresult": "node scripts/local-agentresult.mjs",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",

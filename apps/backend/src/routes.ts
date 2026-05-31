@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { query } from "./db/client.js";
+import { insertJson } from "./modules/common/repository.js";
 import { approvalsRoutes } from "./modules/approvals/routes.js";
 import { registerCrudRoutes } from "./modules/common/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
@@ -14,15 +15,52 @@ export async function registerRoutes(app: FastifyInstance) {
   app.get("/health", async () => ({ status: "ok" }));
 
   app.get("/me", async (request) => ({
-    data: {
-      tenantId: request.tenantId,
-      userId: request.userId ?? null
-    }
+    data: await (async () => {
+      const user = await query("select * from users where id = $1 and tenant_id = $2", [request.userId, request.tenantId]).catch(() => ({ rows: [] }));
+      const row = user.rows[0] ?? null;
+      const role = String(row?.role || request.userRole || "owner");
+      return {
+        tenantId: request.tenantId,
+        userId: request.userId ?? null,
+        role,
+        name: row?.name ?? "Owner",
+        email: row?.email ?? null,
+        permissions: role === "owner"
+          ? ["approve", "publish", "configure", "results", "tasks"]
+          : ["edit", "comment", "schedule", "tasks"]
+      };
+    })()
   }));
 
   app.get("/tenants/current", async (request) => {
     const result = await query("select * from tenants where id = $1", [request.tenantId]);
     return { data: result.rows[0] ?? null };
+  });
+
+  app.get("/workspace/state", async (request) => {
+    const result = await query("select * from tenants where id = $1", [request.tenantId]);
+    const tenant = result.rows[0] ?? null;
+    const settings = tenant?.settings && typeof tenant.settings === "object" ? (tenant.settings as Record<string, unknown>) : {};
+    return { data: settings.dashboard_state ?? {} };
+  });
+
+  app.put("/workspace/state", async (request) => {
+    const current = await query("select * from tenants where id = $1", [request.tenantId]);
+    const tenant = current.rows[0] ?? null;
+    const currentSettings =
+      tenant?.settings && typeof tenant.settings === "object" ? ({ ...(tenant.settings as Record<string, unknown>) } as Record<string, unknown>) : {};
+    const nextState = request.body && typeof request.body === "object" ? (request.body as Record<string, unknown>) : {};
+    currentSettings.dashboard_state = {
+      ...(currentSettings.dashboard_state && typeof currentSettings.dashboard_state === "object"
+        ? (currentSettings.dashboard_state as Record<string, unknown>)
+        : {}),
+      ...nextState
+    };
+    const result = await query("update tenants set settings = $2 where id = $1 returning *", [request.tenantId, currentSettings]);
+    const settings = result.rows[0]?.settings && typeof result.rows[0].settings === "object"
+      ? (result.rows[0].settings as Record<string, unknown>)
+      : {};
+    return { data: settings.dashboard_state ?? {} };
   });
 
   registerCrudRoutes(app, { prefix: "/tenants", table: "tenants" });
@@ -38,16 +76,17 @@ export async function registerRoutes(app: FastifyInstance) {
     const body = request.body as Record<string, unknown>;
     if (existing.rowCount) {
       const result = await query(
-        `update companies set name = coalesce($2, name), profile = coalesce($3, profile), updated_at = now()
+        `update companies set name = coalesce($2, name), profile = coalesce($3, profile), website_url = coalesce($4, website_url), updated_at = now()
          where id = $1 returning *`,
-        [existing.rows[0].id, body.name ?? null, body.profile ?? null]
+        [existing.rows[0].id, body.name ?? null, body.profile ?? null, body.website_url ?? null]
       );
       return { data: result.rows[0] };
     }
-    const result = await query("insert into companies (tenant_id, name, profile) values ($1, $2, $3) returning *", [
+    const result = await query("insert into companies (tenant_id, name, profile, website_url) values ($1, $2, $3, $4) returning *", [
       request.tenantId,
       body.name ?? "New B2B Company",
-      body.profile ?? {}
+      body.profile ?? {},
+      body.website_url ?? null
     ]);
     return { data: result.rows[0] };
   });
@@ -101,17 +140,53 @@ export async function registerRoutes(app: FastifyInstance) {
   }));
 
   app.get("/analytics/overview", async (request) => {
+    const latestImport = await query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [
+      request.tenantId,
+      1
+    ]).catch(() => ({ rows: [] }));
+    const summary = latestImport.rows[0]?.payload && typeof latestImport.rows[0].payload === "object"
+      ? (latestImport.rows[0].payload as Record<string, unknown>)
+      : {};
     const result = await query(
       `select
         (select count(*) from content_items where tenant_id = $1) as content_items,
         (select count(*) from publishing_calendar_items where tenant_id = $1) as calendar_items,
-        (select count(*) from approvals where tenant_id = $1 and status = 'pending') as pending_approvals`,
+        (select count(*) from approvals where tenant_id = $1 and status = 'pending') as pending_approvals,
+        (select count(*) from approvals where tenant_id = $1) as approvals_total,
+        (select count(*) from publishing_calendar_items where tenant_id = $1 and status in ('published', 'handed_off')) as published_materials,
+        (select count(*) from tasks where tenant_id = $1) as tasks_created,
+        0 as leads,
+        0 as receivables_in_progress,
+        0 as promised_payments,
+        0 as recovered_payments`,
       [request.tenantId]
     );
-    return { data: result.rows[0] };
+    return {
+      data: {
+        ...(result.rows[0] ?? {}),
+        leads: Number(summary.leads ?? result.rows[0]?.leads ?? 0),
+        tasks_created: Number(summary.tasks_created ?? result.rows[0]?.tasks_created ?? 0),
+        published_materials: Number(summary.published_materials ?? result.rows[0]?.published_materials ?? 0),
+        receivables_in_progress: Number(summary.receivables_in_progress ?? result.rows[0]?.receivables_in_progress ?? 0),
+        promised_payments: Number(summary.promised_payments ?? result.rows[0]?.promised_payments ?? 0),
+        recovered_payments: Number(summary.recovered_payments ?? result.rows[0]?.recovered_payments ?? 0),
+        source: latestImport.rows[0]?.source ?? null,
+        imported_at: latestImport.rows[0]?.created_at ?? null
+      }
+    };
   });
 
   registerCrudRoutes(app, { prefix: "/analytics/import", table: "analytics_imports", tenantScoped: true });
+  app.post("/analytics/summary", async (request) => ({
+    data: await insertJson(
+      "analytics_imports",
+      {
+        source: "owner_manual",
+        payload: request.body as Record<string, unknown>
+      },
+      request.tenantId
+    )
+  }));
   app.post("/analytics/generate-improvement-tasks", async (request) => ({
     data: await createAgentTask({
       tenantId: request.tenantId,

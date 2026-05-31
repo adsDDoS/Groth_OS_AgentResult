@@ -1,10 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query } from "../../db/client.js";
-import { decideApproval } from "./service.js";
+import { createApprovalRequest, decideApproval } from "./service.js";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 const noteSchema = z.object({ note: z.string().optional() });
+const createBodySchema = z.object({
+  scope: z.string(),
+  targetType: z.string(),
+  targetId: z.string().uuid(),
+  riskFlags: z.array(z.string()).optional(),
+  summary: z.string().optional()
+});
 
 export async function approvalsRoutes(app: FastifyInstance) {
   app.get("/approvals", async (request) => {
@@ -12,6 +19,21 @@ export async function approvalsRoutes(app: FastifyInstance) {
       request.tenantId
     ]);
     return { data: result.rows };
+  });
+
+  app.post("/approvals", async (request) => {
+    const body = createBodySchema.parse(request.body ?? {});
+    return {
+      data: await createApprovalRequest({
+        tenantId: request.tenantId,
+        scope: body.scope,
+        targetType: body.targetType,
+        targetId: body.targetId,
+        requestedBy: request.userId,
+        riskFlags: body.riskFlags,
+        summary: body.summary
+      })
+    };
   });
 
   app.post("/approvals/:id/approve", async (request) => {
