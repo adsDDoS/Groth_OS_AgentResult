@@ -1,3 +1,12 @@
+const params = new URLSearchParams(window.location.search);
+if (params.get("demo") === "reset") {
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith("aiGrowthOs")) localStorage.removeItem(key);
+  }
+  localStorage.setItem("aiGrowthOsLang", "ru");
+}
+
 const API_BASE = localStorage.getItem("aiGrowthOsApiBase") || "http://localhost:3000";
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
@@ -25,8 +34,13 @@ const RU = {
   "Settings": "Настройки",
   "Tools": "Инструменты",
   "Rules, channels, and tools": "Правила, каналы и инструменты",
+  "Revenue priorities": "Приоритеты выручки",
+  "Work that can go outside": "Материалы для внешнего выпуска",
+  "Approve, hand off, publish": "Согласовать, передать, выпустить",
+  "Business signals": "Бизнес-сигналы",
   "Owner cockpit": "Пульт собственника",
-  "Client acquisition workflow": "Рабочий цикл привлечения клиентов",
+  "Summary": "Сводка",
+  "Client acquisition workflow": "Цикл привлечения клиентов",
   "What can be approved, planned, or exported": "Что можно согласовать, запланировать или забрать",
   "30-day client acquisition plan": "30-дневный план привлечения",
   "What we sell, to whom, and why we are trusted": "Что продаём, кому и за счёт чего нам доверяют",
@@ -34,7 +48,7 @@ const RU = {
   "Drafts, posts, pages, emails": "Черновики, посты, страницы, письма",
   "Decisions before public publishing": "Решения перед публичной публикацией",
   "When and where materials go live": "Когда и где выходят материалы",
-  "Approved texts for manual publishing": "Утверждённые тексты для ручной публикации",
+  "Approved texts for manual publishing": "Утверждённые материалы",
   "What the system does by itself": "Что система делает сама",
   "Traffic, leads, pages, channel response": "Переходы, заявки, страницы и каналы",
   "Technical status": "Технический статус",
@@ -87,12 +101,12 @@ const RU = {
   "Upcoming publications": "Ближайшие публикации",
   "Integration issues": "Интеграции",
   "System activity": "Активность системы",
-  "Publishing APIs are not connected": "API публикаций не подключены",
-  "Manual-first export is active": "Работает ручной экспорт",
+  "Publishing APIs are not connected": "Публикации требуют настройки",
+  "Manual-first export is active": "Материалы готовы к передаче",
   "Public distribution waits for approval": "Публичная дистрибуция ждёт согласования",
-  "No backend issue detected": "Backend работает штатно",
-  "Backend is offline": "Backend недоступен",
-  "API connected": "API подключен",
+  "No backend issue detected": "Сервис работает штатно",
+  "Backend is offline": "Сервис недоступен",
+  "API connected": "Сервис подключён",
   "Demo data is active": "Активны демо-данные",
   "Publishing APIs": "API публикаций",
   "Manual-first mode active": "Включён ручной режим",
@@ -174,7 +188,7 @@ const RU = {
   "Calendar": "Календарь",
   "Pack builder": "Сборщик пакета",
   "Weekly content pack": "Недельный контент-пакет",
-  "manual-first": "сначала вручную",
+  "manual-first": "через подтверждение",
   "Week": "Неделя",
   "Channels": "Каналы",
   "SEO pages": "SEO-страницы",
@@ -183,12 +197,12 @@ const RU = {
   "Package contents": "Состав пакета",
   "Product mode": "Режим продукта",
   "Manual-first": "Ручной режим",
-  "Backend API": "Backend API",
+  "Backend API": "Сервис данных",
   "Tenant": "Тенант",
   "Postgres source of truth": "Postgres как источник правды",
   "connected": "подключён",
   "not connected": "не подключён",
-  "Backend online": "Backend онлайн",
+  "Backend online": "Сервис онлайн",
   "Demo mode": "Демо-режим",
   "Content velocity": "Скорость контента",
   "Assets in the system": "Материалов в системе",
@@ -235,8 +249,8 @@ const RU = {
   "publish/export": "опубликовать или экспортировать",
   "mark as handed off": "отметить как переданное",
   "mark as published": "отметить как опубликованное",
-  "approval gate": "контур согласования",
-  "waiting for owner decision": "ждёт решения собственника",
+  "approval gate": "согласование",
+  "waiting for owner decision": "ждёт решения",
   "ready for handoff": "готово к передаче",
   "already shipped": "уже выпущено",
   "product page": "продуктовая страница",
@@ -250,13 +264,13 @@ const RU = {
   "social": "соцсети",
   "publishing": "публикация",
   "unknown": "неизвестно",
-  "owner": "владелец",
+  "owner": "ответственный",
   "unassigned": "не назначен",
   "no deadline": "без дедлайна",
   "Offer Brain saved to Postgres.": "Оффер сохранён в Postgres.",
   "Could not save Offer Brain.": "Не удалось сохранить оффер.",
-  "Saved locally. Backend is offline.": "Сохранил локально. Backend недоступен.",
-  "Backend is offline. Demand generation requires the API.": "Backend недоступен. Для генерации карты спроса нужен API.",
+  "Saved locally. Backend is offline.": "Сохранено на этом устройстве. Сервис недоступен.",
+  "Backend is offline. Demand generation requires the API.": "Сервис недоступен. Для составления плана нужно подключение.",
   "Demand Map task queued.": "Задача на карту спроса поставлена в очередь.",
   "Could not queue Demand Map task.": "Не удалось поставить задачу на карту спроса.",
   "Package text summary copied.": "Тексты пакета скопированы.",
@@ -279,13 +293,13 @@ const RU = {
   "Content item form is next: source idea, channel, owner, status.": "Следующий шаг — форма материала: исходная идея, канал, владелец, статус.",
   "Select a content item first, then generate an SEO/GEO brief.": "Сначала выберите материал, затем соберите SEO/GEO-бриф.",
   "Schedule form will create a calendar item and approval request.": "Форма планирования создаст пункт календаря и заявку на согласование.",
-  "Calendar CSV export prepared for manual workflow.": "CSV календаря подготовлен для ручного workflow.",
+  "Calendar CSV export prepared for manual workflow.": "CSV календаря подготовлен.",
   "Agent task form is next: role, target, payload.": "Следующий шаг — форма агентной задачи: роль, цель, payload.",
-  "Analytics import accepts CSV or API payloads.": "Импорт аналитики принимает CSV или API payload.",
+  "Analytics import accepts CSV or API payloads.": "Можно загрузить CSV или данные из подключённого сервиса.",
   "Analytics Agent task queued placeholder.": "Заглушка: задача Analytics Agent будет поставлена в очередь.",
   "Risk checklist is visible in the approval detail.": "Чеклист рисков уже открыт в деталях согласования.",
   "Approval required before scheduled publishing can run.": "Нужно согласование перед запуском публикации по расписанию.",
-  "Agent workflow": "Агентный workflow",
+  "Agent workflow": "Работа системы",
   "Human reviewer": "Человек-ревьюер",
   "Just now": "Только что",
   "Today": "Сегодня",
@@ -352,12 +366,12 @@ const settingsTabs = {
 };
 
 const routes = {
-  overview: { title: "Today", kicker: "Owner cockpit" },
-  "growth-plan": { title: "Growth Plan", kicker: "30-day client acquisition plan" },
+  overview: { title: "Today", kicker: "Summary" },
+  "growth-plan": { title: "Growth Plan", kicker: "Revenue priorities" },
   "offer-brain": { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
-  "content-pipeline": { title: "Materials", kicker: "Drafts, posts, pages, emails" },
-  publications: { title: "Publications", kicker: "What can be approved, planned, or exported" },
-  analytics: { title: "Results", kicker: "Traffic, leads, pages, channel response" },
+  "content-pipeline": { title: "Materials", kicker: "Work that can go outside" },
+  publications: { title: "Publications", kicker: "Approve, hand off, publish" },
+  analytics: { title: "Results", kicker: "Business signals" },
   settings: { title: "Settings", kicker: "Rules, channels, and tools" },
   "demand-map": { title: "Growth Plan", kicker: "Client acquisition workflow" },
   approvals: { title: "Publications", kicker: "What can be approved, planned, or exported" },
@@ -490,7 +504,7 @@ const state = {
   },
   decisionModal: null,
   formModal: null,
-  helpOpen: localStorage.getItem("aiGrowthOsHelpSeen") !== "true",
+  helpOpen: false,
   exportAssembled: loadLocalJson("aiGrowthOsWorkspaceState", {}).exportAssembled === true,
   publicationTab: "approvals",
   settingsTab: "technical",
@@ -615,11 +629,11 @@ async function loadData() {
 
     state.me = me.data || state.me;
     state.offer = offer.data || state.offer;
-    state.demand = Array.isArray(demand.data) && demand.data.length ? demand.data : state.demand;
-    state.approvals = Array.isArray(approvals.data) && approvals.data.length ? approvals.data : state.approvals;
+    state.demand = Array.isArray(demand.data) ? demand.data : state.demand;
+    state.approvals = Array.isArray(approvals.data) ? approvals.data : state.approvals;
     state.agents = agents.data?.length ? agents.data : demo.agents;
-    state.content = Array.isArray(content.data) && content.data.length ? content.data : state.content;
-    state.calendar = Array.isArray(calendar.data) && calendar.data.length ? calendar.data : state.calendar;
+    state.content = Array.isArray(content.data) ? content.data : state.content;
+    state.calendar = Array.isArray(calendar.data) ? calendar.data : state.calendar;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
@@ -648,7 +662,7 @@ async function loadData() {
   state.content = mergeLocalItems(state.content, state.localContent);
   state.calendar = mergeLocalItems(state.calendar, state.localCalendar);
   state.approvals = mergeLocalItems(state.approvals, state.localApprovals);
-  state.tasks = mergeLocalItems(state.tasks, state.localTasks);
+  state.tasks = mergeLocalItems(state.tasks, state.localTasks).map(normalizeVisibleTask);
   normalizeAgentResultLanguageArtifacts();
   state.exportAssembled = state.workspaceState.exportAssembled === true || state.exportAssembled === true;
   if (Array.isArray(state.workspaceState.activity) && state.workspaceState.activity.length) {
@@ -716,23 +730,30 @@ async function reconcileWorkflowConsistency() {
 
 function normalizeAgentResultLanguageArtifacts() {
   const replacements = new Map([
-    ["Workflow link verification material", "Проверка owner workflow: согласование и публикация"],
+    ["Workflow link verification material", "Проверка согласования и публикации"],
+    ["Проверка owner workflow: согласование и публикация", "Проверка согласования и публикации"],
     ["Weekly AgentResult growth pack", "Недельный пакет публикаций AgentResult"],
     ["AI agents for B2B sales", "AI-агенты для B2B-продаж"],
-    ["How to recover overdue receivables without hiring an operator", "Как вернуть просроченную дебиторку без отдельного оператора"],
+    ["How to recover overdue receivables without hiring an operator", "Как системно возвращать просроченную дебиторку"],
+    ["Как вернуть просроченную дебиторку без отдельного оператора", "Как системно возвращать просроченную дебиторку"],
     ["Telegram CRM for the owner", "Telegram CRM для собственника"],
+    ["Owner workflow demand topic", "Проверка согласования и публикации"],
+    ["Owner workflow material", "Проверка согласования и публикации"],
     ["AI agent for Bitrix24", "AI-агент для Bitrix24"],
     ["AI agent for amoCRM", "AI-агент для amoCRM"]
   ]);
 
   for (const item of state.demand) {
     if (replacements.has(item.title)) item.title = replacements.get(item.title);
+    if (item.audience === "B2B owner") item.audience = "Собственники B2B-компаний";
     if (item.audience === "B2B owners") item.audience = "Собственники B2B-компаний";
     if (item.audience === "Owners who do not want to live inside CRM") item.audience = "Собственники, которым не хочется жить внутри CRM";
     if (item.audience === "Owners and finance leads with overdue invoices") item.audience = "Собственники и финансисты с просроченной дебиторкой";
   }
   for (const item of state.content) {
     if (replacements.has(item.title)) item.title = replacements.get(item.title);
+    if (item.audience === "B2B owner") item.audience = "Собственники B2B-компаний";
+    if (item.persona === "B2B owner") item.persona = "Собственники B2B-компаний";
   }
   for (const item of state.calendar) {
     if (replacements.has(item.title)) item.title = replacements.get(item.title);
@@ -756,13 +777,31 @@ function normalizeTask(task) {
   const rawStatus = payload.status || task.status || "queued";
   return {
     id: task.id,
-    title: payload.title || labelize(task.task_type || "task"),
+    title: cleanVisibleText(payload.title || labelize(task.task_type || "task")),
     owner: payload.owner || task.agent_role || text("System", "Система"),
     status: rawStatus === "approved" ? "done" : rawStatus,
-    note: payload.note || payload.reason || "",
+    note: cleanVisibleText(payload.note || payload.reason || ""),
     source: payload.source || task.task_type || "backend",
     created_at: task.created_at
   };
+}
+
+function normalizeVisibleTask(task) {
+  return {
+    ...task,
+    title: cleanVisibleText(task.title),
+    note: cleanVisibleText(task.note || "")
+  };
+}
+
+function cleanVisibleText(value) {
+  return String(value || "")
+    .replace(/Assign access owner for Telegram WebApp/gi, text("Assign Telegram access responsible", "Назначить ответственного за Telegram"))
+    .replace(/Telegram WebApp/g, text("Telegram control", "Telegram-пульт"))
+    .replace(/B2B owner/g, text("B2B owners", "Собственники B2B-компаний"))
+    .replace(/owner workflow/gi, text("approval and publishing", "согласование и публикация"))
+    .replace(/without hiring an operator/gi, text("systematically", "системно"))
+    .trim();
 }
 
 function deriveMetrics(source = {}) {
@@ -814,7 +853,7 @@ function render() {
 
 function renderChrome() {
   document.querySelector(".brand-lockup h1").textContent = tr("Growth Control");
-  document.querySelector("#helpButton").textContent = state.me?.name ? `${text("Help", "Как работать")} · ${state.me.name}` : text("Help", "Как работать");
+  document.querySelector("#helpButton").textContent = text("Guide", "Инструкция");
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLang);
   });
@@ -849,18 +888,18 @@ function renderModal() {
         <div class="panel-heading">
           <div>
             <p class="eyebrow">${text("Quick start", "Как пользоваться")}</p>
-            <h3 id="guideTitle">${text("Three simple moves", "Три простых шага")}</h3>
+            <h3 id="guideTitle">${text("Guide", "Инструкция")}</h3>
           </div>
           <button class="button secondary" data-action="close-help">${tr("Close")}</button>
         </div>
         <div class="guide-steps">
-          ${guideStep("1", text("Open Today", "Откройте Сегодня"), text("It shows what needs your decision today.", "Там видно, что требует вашего решения сегодня."))}
-          ${guideStep("2", text("Approve or request edits", "Согласуйте или отправьте на правки"), text("The system will not publish risky materials without you.", "Система не выпустит рискованные материалы без вас."))}
-          ${guideStep("3", text("Use the weekly pack", "Используйте недельный пакет"), text("Copy approved texts until direct channel publishing is connected.", "Копируйте утверждённые тексты, пока прямая публикация в каналы не настроена."))}
+          ${guideStep("1", text("Review decisions", "Проверьте решения"), text("Approvals show what is waiting before publication.", "В согласованиях видно, что ждёт решения перед публикацией."))}
+          ${guideStep("2", text("Approve or return", "Согласуйте или верните"), text("Materials move forward only after the decision.", "Материалы двигаются дальше только после решения."))}
+          ${guideStep("3", text("Check results", "Проверьте результат"), text("Published items and leads are tracked in Results.", "Публикации и заявки отслеживаются в результатах."))}
         </div>
-        <div class="modal-warning">${text("You can always return here from the Help button.", "Эту подсказку всегда можно открыть кнопкой «Как работать».")}</div>
+        <div class="modal-warning">${text("This guide is available from the top bar.", "Инструкция доступна в верхней панели.")}</div>
         <div class="detail-actions">
-          <button class="button primary" data-action="close-help">${text("Got it", "Понятно")}</button>
+          <button class="button primary" data-action="close-help">${text("Close", "Закрыть")}</button>
           <button class="button secondary" data-action="go-approvals">${text("Go to decisions", "К решениям")}</button>
         </div>
       </section>
@@ -1193,18 +1232,15 @@ function renderActions() {
   };
   const actions = {
     overview: [
-      actionButton("Refresh", "secondary", "refresh-data"),
-      actionButton(text("Create task", "Создать задачу"), "secondary", "create-task"),
-      actionButton(text("Open decisions", "К решениям"), "primary", "go-approvals")
+      actionButton(text("Approvals", "Согласования"), "primary", "go-approvals")
     ],
     "growth-plan": [
-      actionButton("Build plan", "primary", "generate-demand"),
+      actionButton(text("Create material", "Создать материал"), "primary", "new-content"),
       actionButton("Add topic", "secondary", "add-demand")
     ],
     "offer-brain": [actionButton("Save company", "primary", "save-offer")],
     "content-pipeline": [
-      actionButton("New material", "primary", "new-content"),
-      actionButton("Prepare brief", "secondary", "generate-brief")
+      actionButton("New material", "primary", "new-content")
     ],
     publications: publicationActions[currentPublicationTab()],
     analytics: [
@@ -1240,33 +1276,116 @@ function renderOverview() {
   const ownerMoves = ownerNextMoves(pending);
 
   return `
-    ${ownerCockpitHero(pending, blockers, ownerMoves)}
-    ${ownerSnapshotGrid(pending, blockers, ownerMoves, publishedCount)}
-    ${workflowStrip()}
+    ${hermesDailyBrief(pending, blockers, ownerMoves)}
+    ${resultPath(pending, publishedCount)}
+    <section class="today-focus-grid">
+      ${queuePanel(text("Needs decision", "Требует решения"), nextActions.slice(0, 3).map((item) => row(item.title, item.meta, item.actionLabel, item.action, item.id)))}
+      ${queuePanel(text("Blocked", "Блокирует"), blockers.slice(0, 3).map((item) => row(item.title, item.meta, item.label, item.action, item.id)))}
+      ${queuePanel(text("Done by system", "Сделала система"), systemDoneRows().slice(0, 3))}
+    </section>
+    <section class="quiet-result-strip">
+      ${quietResult(text("Ready outside", "Готово наружу"), readyContent.length, text("approval / calendar / handoff", "согласование / план / передача"))}
+      ${quietResult(text("Published", "Опубликовано"), publishedCount, text("confirmed live or handed off", "подтверждено или передано"))}
+      ${quietResult(text("Leads", "Заявки"), state.metrics.leads || 0, text("after CRM/forms import", "после импорта CRM/forms"))}
+    </section>
+  `;
+}
 
-    <div class="metric-grid">
-      ${metricCard(text("Needs your decision", "Требует решения"), pending.length, text("Materials waiting for approval", "Материалы ждут согласования"), "coral")}
-      ${metricCard(text("Ready to publish", "Готово к публикации"), readyContent.length, text("Can move to calendar or export", "Можно ставить в план или пакет"))}
-      ${metricCard(text("Planned", "В плане"), state.calendar.length, text("Upcoming publications", "Ближайшие публикации"))}
-      ${metricCard(text("Published", "Опубликовано"), publishedCount, text("Live materials", "Материалы уже вышли"), "dark")}
-      ${metricCard(text("Tasks", "Задачи"), state.tasks.length, text("Next work items", "Следующие действия"))}
-      ${metricCard(text("Leads", "Заявки"), state.metrics.leads || 0, text("Imported from analytics", "После загрузки результатов"))}
-    </div>
+function resultPath(pending, publishedCount) {
+  const pendingApproval = pending[0] || state.approvals.find((item) => item.status === "pending");
+  const scheduled = state.calendar.find((item) => item.status === "scheduled" || item.status === "handed_off");
+  const hasMaterial = state.content.length > 0;
+  const hasApprovalDecision = state.approvals.some((item) => item.status === "approved");
+  const hasLeads = Number(state.metrics.leads || 0) > 0;
+  const steps = [
+    {
+      title: text("Hermes prepared", "Hermes подготовил"),
+      note: text("Material is ready for owner decision.", "Материал готов к решению владельца."),
+      state: hasMaterial ? "done" : "active",
+      action: "go-content",
+      label: text("Open", "Открыть")
+    },
+    {
+      title: text("Owner approved", "Владелец согласовал"),
+      note: pendingApproval
+        ? text("One public action is waiting.", "Одно публичное действие ждёт решения.")
+        : text("Approval gate is clear.", "Согласование пройдено."),
+      state: pendingApproval ? "active" : hasApprovalDecision ? "done" : "muted",
+      action: pendingApproval ? "open-demo-approval" : "go-approvals",
+      id: pendingApproval?.id || "",
+      label: pendingApproval ? text("Approve", "Согласовать") : text("Open", "Открыть")
+    },
+    {
+      title: text("Went outside", "Вышло наружу"),
+      note: scheduled
+        ? text("Approved material is ready to publish or confirm.", "Согласованный материал готов к выпуску или подтверждению.")
+        : text("Publication appears here after approval.", "Публикация появится здесь после согласования."),
+      state: publishedCount ? "done" : scheduled ? "active" : "muted",
+      action: scheduled ? "mark-calendar-published" : "go-calendar",
+      id: scheduled?.id || "",
+      label: scheduled ? text("Mark live", "Отметить выпуск") : text("Calendar", "Календарь")
+    },
+    {
+      title: text("Result appeared", "Появился результат"),
+      note: hasLeads
+        ? text(`${state.metrics.leads} leads are visible in Results.`, `${state.metrics.leads} заявки видны в результатах.`)
+        : text("Import CRM/forms when the first signal arrives.", "Загрузите CRM/forms, когда появится первый сигнал."),
+      state: hasLeads ? "done" : publishedCount ? "active" : "muted",
+      action: "go-analytics",
+      label: text("Results", "Результаты")
+    }
+  ];
 
-    <div class="dashboard-grid">
-      ${queuePanel(text("What requires a decision", "Что требует решения"), nextActions.slice(0, 4).map((item) => row(item.title, item.meta, item.actionLabel, item.action, item.id)))}
-      ${queuePanel(text("Next 3 owner actions", "Следующие 3 действия собственника"), ownerMoves.map((item) => row(item.title, item.meta, item.label, item.action, item.id)))}
-      ${queuePanel(text("What the system did", "Что система сделала"), systemDoneRows())}
-      ${queuePanel(text("What blocks growth", "Что блокирует рост"), blockers.map((item) => row(item.title, item.meta, item.label, item.action, item.id)))}
-      ${queuePanel(text("Ready to publish", "Готово к публикации"), readyToPublishRows())}
-      ${queuePanel(text("Work queue", "Очередь задач"), taskQueueRows())}
-      ${queuePanel(text("Result", "Результат"), [
-        row(text("Published materials", "Опубликовано материалов"), text(String(publishedCount), String(publishedCount)), text("View", "Смотреть"), "go-calendar", "published"),
-        row(text("Traffic from search and channels", "Переходы из поиска и каналов"), text(String(state.metrics.visits || 0), String(state.metrics.visits || 0)), text("View", "Смотреть"), "go-analytics", "traffic"),
-        row(text("Incoming requests", "Заявки"), text(String(state.metrics.leads || 0), String(state.metrics.leads || 0)), text("View", "Смотреть"), "go-analytics", "leads"),
-        row(text("Pages in search index", "Страницы в индексе"), text(String(state.metrics.indexed_pages || 0), String(state.metrics.indexed_pages || 0)), text("View", "Смотреть"), "go-analytics", "index")
-      ])}
-    </div>
+  return `
+    <section class="result-path" aria-label="${escapeAttr(text("Path to result", "Путь до результата"))}">
+      <div class="result-path-head">
+        <p class="eyebrow">${text("Demo flow", "Демо-цепочка")}</p>
+        <h3>${text("From Hermes to a visible business signal", "От Hermes до видимого бизнес-сигнала")}</h3>
+      </div>
+      <div class="result-path-steps">
+        ${steps.map((step, index) => `
+          <article class="result-path-step ${step.state}">
+            <span>${index + 1}</span>
+            <strong>${escapeHtml(step.title)}</strong>
+            <p>${escapeHtml(step.note)}</p>
+            <button class="button secondary table-button" data-action="${escapeAttr(step.action)}" data-id="${escapeAttr(step.id || "")}">${escapeHtml(step.label)}</button>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function hermesDailyBrief(pending, blockers, ownerMoves) {
+  const urgent = pending[0] ? getApprovalContext(pending[0]) : null;
+  const title = urgent
+    ? text(`Approval: ${urgent.title}`, `На согласовании: ${urgent.title}`)
+    : blockers[0]?.title || text("No urgent decisions", "Срочных решений нет");
+  const note = urgent
+    ? text("Decision required before publication.", "Решение нужно до публикации.")
+    : text("Check priorities, publications and results when needed.", "Проверяйте приоритеты, публикации и результаты по необходимости.");
+  const action = urgent ? "go-approval" : ownerMoves[0]?.action || "go-demand-map";
+  const label = urgent ? text("Open decision", "Открыть решение") : ownerMoves[0]?.label || text("Open plan", "Открыть план");
+
+  return `
+    <section class="hermes-brief">
+      <div>
+        <p class="eyebrow">${text("Today", "Сегодня")}</p>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(note)}</p>
+        <button class="button primary" data-action="${escapeAttr(action)}" data-id="${escapeAttr(pending[0]?.id || ownerMoves[0]?.id || "")}">${escapeHtml(label)}</button>
+      </div>
+    </section>
+  `;
+}
+
+function quietResult(label, value, note) {
+  return `
+    <article class="quiet-result">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(note)}</p>
+    </article>
   `;
 }
 
@@ -1407,7 +1526,7 @@ function growthBlockers(pending) {
   }
   blockers.push({
     title: text("Direct posting is not connected", "Прямая публикация не подключена"),
-    meta: text("Use manual handoff until channels are connected.", "Используйте ручную передачу, пока каналы не подключены."),
+    meta: text("Use the material pack until channels are connected.", "Используйте пакет материалов, пока каналы не подключены."),
     label: text("Pack", "Пакет"),
     action: "go-manual-export",
     id: "manual-export"
@@ -1456,61 +1575,31 @@ function ownerNextMoves(pending) {
 }
 
 function renderGrowthPlan() {
-  const weeks = [
-    [text("Week 1", "Неделя 1"), [
-      text("Describe the offer in plain language", "Описать оффер человеческим языком"),
-      text("Collect proof and constraints", "Собрать доказательства и ограничения"),
-      text("Create 3 priority pages", "Создать 3 приоритетные страницы"),
-      text("Prepare 5 short posts", "Подготовить 5 коротких постов")
-    ]],
-    [text("Week 2", "Неделя 2"), [
-      text("Add regional or industry pages where useful", "Добавить региональные или отраслевые страницы, где это оправдано"),
-      text("Prepare a comparison page", "Подготовить страницу сравнения"),
-      text("Assemble the first lead magnet", "Собрать первый лид-магнит")
-    ]],
-    [text("Week 3", "Неделя 3"), [
-      text("Turn proof into case stories", "Превратить доказательства в кейсы"),
-      text("Write deeper articles for expert channels", "Написать экспертные статьи"),
-      text("Add AI-search answer blocks", "Добавить блоки для AI-поиска")
-    ]],
-    [text("Week 4", "Неделя 4"), [
-      text("Import first results", "Загрузить первые результаты"),
-      text("Strengthen pages with weak signals", "Усилить страницы со слабыми сигналами"),
-      text("Plan the next weekly content pack", "Спланировать следующий недельный пакет")
-    ]]
-  ];
-
   return `
-    ${workflowStrip("growth-plan")}
-    ${growthFocusGrid()}
-    <div class="screen-grid two">
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("What brings clients faster", "Что быстрее ведёт к клиентам")}</p>
-            <h3>${text("Demand map by money, speed and proof", "Карта спроса по деньгам, скорости и доказательствам")}</h3>
-          </div>
+    ${growthPlanBrief()}
+    <article class="panel full">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("What brings clients faster", "Что быстрее ведёт к клиентам")}</p>
+          <h3>${text("Demand map by money, speed and proof", "Карта спроса по деньгам, скорости и доказательствам")}</h3>
         </div>
-        ${growthPriorityBoard()}
-      </article>
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("30-day plan", "План роста на 30 дней")}</p>
-            <h3>${text("A simple monthly loop", "Простой месячный цикл")}</h3>
-          </div>
-        </div>
-        <div class="week-plan">
-          ${weeks.map(([week, items]) => `
-            <section class="week-card">
-              <strong>${escapeHtml(week)}</strong>
-              <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-            </section>
-          `).join("")}
-        </div>
-      </article>
-    </div>
-    ${renderDemandMap()}
+      </div>
+      ${growthPriorityBoard()}
+    </article>
+  `;
+}
+
+function growthPlanBrief() {
+  const top = [...state.demand].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0))[0];
+  return `
+    <section class="plan-brief">
+      <div>
+        <p class="eyebrow">${text("Priority", "Приоритет")}</p>
+        <h3>${escapeHtml(top?.title || text("Choose one revenue topic", "Выберите одну тему выручки"))}</h3>
+        <p>${escapeHtml(text("Choose the next commercial topic and turn it into a material, approval and market signal.", "Выберите следующую коммерческую тему и доведите её до материала, согласования и рыночного сигнала."))}</p>
+      </div>
+      <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(top?.id || "")}">${escapeHtml(text("Create material", "Создать материал"))}</button>
+    </section>
   `;
 }
 
@@ -1578,11 +1667,10 @@ function renderOfferBrain() {
     text("Who do buyers compare us with?", "С кем нас сравнивают?")
   ];
   return `
-    ${workflowStrip("offer-brain")}
     <section class="owner-setup-strip">
       ${ownerSetupCard(text("Setup complete", "Заполненность"), `${setupCompleteness}%`, text("Enough to generate safe first materials", "Достаточно для безопасных первых материалов"))}
-      ${ownerSetupCard(text("Approval mode", "Режим согласований"), text("Manual-first", "Сначала вручную"), text("No public action without owner decision", "Без решения собственника наружу ничего не уходит"))}
-      ${ownerSetupCard(text("Main cockpit", "Главный пульт"), "Telegram WebApp", text("Tasks, approvals and results in one place", "Задачи, согласования и результаты в одном месте"))}
+      ${ownerSetupCard(text("Approval mode", "Режим согласований"), text("Approval first", "Сначала согласование"), text("No public action without approval", "Без согласования наружу ничего не уходит"))}
+      ${ownerSetupCard(text("Main cockpit", "Главный пульт"), text("Telegram control", "Telegram-пульт"), text("Tasks, approvals and results in one place", "Задачи, согласования и результаты в одном месте"))}
       ${ownerSetupCard(text("Next unlock", "Следующее подключение"), "CRM / Email", text("Leads, follow-ups and debtor touches", "Заявки, касания и дебиторка"))}
     </section>
     ${ownerSetupGapsPanel(profile)}
@@ -1730,8 +1818,7 @@ function growthPriorityBoard() {
             <strong>${escapeHtml(demandNextAction(item))}</strong>
           </div>
           <div class="card-actions">
-            <button class="button secondary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
-            <button class="button primary" data-action="publish-from-demand" data-id="${escapeAttr(item.id)}">${text("Send to publications", "В публикации")}</button>
+            <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
           </div>
         </article>
       `).join("")}
@@ -1805,19 +1892,12 @@ function demandOpportunityCard(item) {
       <p>${escapeHtml(demandBusinessReason(item))}</p>
       <div class="demand-facts">
         <span>${escapeHtml(item.audience || text("B2B owner", "Собственник B2B"))}</span>
-        <span>${escapeHtml(demandProblem(item))}</span>
         <span>${escapeHtml(demandNextAction(item))}</span>
         <span>${escapeHtml(approvalState)}</span>
       </div>
-      <div class="priority-score">
-        ${priorityPill(text("Revenue", "Выручка"), demandScore(item, "revenue"))}
-        ${priorityPill(text("Speed", "Скорость"), demandScore(item, "speed"))}
-        ${priorityPill(text("Proof", "Доказательства"), demandScore(item, "proof"))}
-      </div>
       <div class="card-actions">
-        <button class="button secondary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
+        <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
         <button class="button secondary" data-action="task-from-demand" data-id="${escapeAttr(item.id)}">${text("Create task", "Поставить задачу")}</button>
-        <button class="button primary" data-action="publish-from-demand" data-id="${escapeAttr(item.id)}">${text("Send to publications", "В публикации")}</button>
       </div>
     </article>
   `;
@@ -1866,50 +1946,62 @@ function renderContentPipeline() {
     status,
     count: state.content.filter((item) => item.status === status).length
   }));
+  const focusedItems = materialFocusItems().slice(0, 6);
 
   return `
-    ${workflowStrip("content-pipeline")}
-    <section class="material-summary">
-      ${counts.map((item) => `
-        <article>
-          <span>${escapeHtml(tr(labelize(item.status)))}</span>
-          <strong>${item.count}</strong>
-        </article>
-      `).join("")}
+    <section class="material-command">
+      <div>
+        <p class="eyebrow">${text("Materials", "Материалы")}</p>
+        <h3>${text("Ready for review, handoff and publishing", "Готовность к проверке, передаче и публикации")}</h3>
+        <p>${text("Materials are sorted by the next action: edit, approve, schedule or export.", "Материалы отсортированы по следующему действию: правка, согласование, планирование или экспорт.")}</p>
+      </div>
+      <div class="material-summary compact">
+        ${counts.filter((item) => item.count || ["review", "approved", "scheduled"].includes(item.status)).map((item) => `
+          <article>
+            <span>${escapeHtml(tr(labelize(item.status)))}</span>
+            <strong>${item.count}</strong>
+          </article>
+        `).join("")}
+      </div>
     </section>
-    <div class="kanban">
-      ${columns.map((status) => `
-        <section class="kanban-column">
-          <h3>${escapeHtml(tr(labelize(status)))}</h3>
-          ${(state.content.filter((item) => item.status === status).length ? state.content.filter((item) => item.status === status) : []).map((item) => `
-            <article class="kanban-card">
-              <div class="material-card-top">
-                <strong>${escapeHtml(item.title)}</strong>
-                ${statusChip(item.status || "idea")}
-              </div>
-              <span>${escapeHtml(text("Goal", "Цель"))}: ${escapeHtml(materialGoal(item))}</span>
-              <span>${escapeHtml(text("Brief", "Бриф"))}: ${escapeHtml(materialBrief(item))}</span>
-              <span>${escapeHtml(text("Channel", "Канал"))}: ${escapeHtml(displayChannel(item.channel || item.content_type || "content"))}</span>
-              <span>${escapeHtml(text("For whom", "Для кого"))}: ${escapeHtml(materialAudience(item))}</span>
-              ${materialProofLine(item)}
-              ${materialWorkflowFacts(item)}
-              <div class="card-meta">
-                <span>${escapeHtml(item.due_at || tr("no deadline"))}</span>
-                <span>${escapeHtml(tr(nextContentAction(item.status)))}</span>
-              </div>
-              <div class="card-actions material-actions">
-                <button class="button primary" data-action="${escapeAttr(materialPrimaryAction(item).action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(materialPrimaryAction(item).label)}</button>
-                <button class="button secondary" data-action="open-content-detail" data-id="${escapeAttr(item.id || "")}">${text("Edit", "Править")}</button>
-                <button class="button secondary" data-action="send-content-approval" data-id="${escapeAttr(item.id || "")}">${text("Send to approval", "На согласование")}</button>
-                <button class="button secondary" data-action="schedule-content" data-id="${escapeAttr(item.id || "")}">${text("Schedule", "В план")}</button>
-                <button class="button secondary" data-action="export-content" data-id="${escapeAttr(item.id || "")}">${text("Export", "Экспорт")}</button>
-              </div>
-            </article>
-          `).join("") || `<p class="empty-note">No items</p>`}
-        </section>
-      `).join("")}
-    </div>
+    <section class="material-list">
+      ${focusedItems.map(materialListCard).join("") || `<p class="empty-note">${text("No materials yet.", "Материалов пока нет.")}</p>`}
+    </section>
   `;
+}
+
+function materialFocusItems() {
+  const order = { review: 0, approved: 1, scheduled: 2, draft: 3, brief: 4, idea: 5, published: 6 };
+  return [...state.content].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+}
+
+function materialListCard(item) {
+  const primary = materialPrimaryAction(item);
+  const secondary = materialSecondaryAction(item);
+  return `
+    <article class="material-list-card">
+      <div class="material-list-main">
+        <div class="material-card-top">
+          <strong>${escapeHtml(item.title)}</strong>
+          ${statusChip(item.status || "idea")}
+        </div>
+        <p>${escapeHtml(materialOneLine(item))}</p>
+        ${materialWorkflowFacts(item)}
+      </div>
+      <div class="material-list-actions">
+        <button class="button primary" data-action="${escapeAttr(primary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(primary.label)}</button>
+        <button class="button secondary" data-action="${escapeAttr(secondary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(secondary.label)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function materialOneLine(item) {
+  return [
+    displayChannel(item.channel || item.content_type || "content"),
+    materialAudience(item),
+    tr(nextContentAction(item.status))
+  ].filter(Boolean).join(" · ");
 }
 
 function renderPublications() {
@@ -1921,7 +2013,6 @@ function renderPublications() {
   };
 
   return `
-    ${workflowStrip("publications")}
     <section class="tabs-panel" aria-label="${escapeAttr(text("Publication workspace", "Работа с публикациями"))}">
       <div class="segmented-tabs" role="tablist">
         ${Object.entries(publicationTabs).map(([key, item]) => `
@@ -2030,11 +2121,6 @@ function approvalDetail(item) {
         <span class="meta-label">${text("What to check", "На что обратить внимание")}</span>
         <div class="flag-row">${flags.length ? flags.map((flag) => `<span class="flag">${escapeHtml(tr(flag))}</span>`).join("") : `<span class="muted">${text("Standard public check", "Стандартная проверка публичного текста")}</span>`}</div>
       </div>
-    </div>
-    <div class="source-actions">
-      <button class="button secondary" data-action="open-source">${text("Open source material", "Открыть исходный материал")}</button>
-      <button class="button secondary" data-action="open-content-detail">${text("Open text version", "Открыть версию текста")}</button>
-      <button class="button secondary" data-action="open-risk-checklist">${text("Open risk checklist", "Открыть чеклист")}</button>
     </div>
     <div class="preview-pane">
       <p class="eyebrow">${text("Text preview", "Текст")}</p>
@@ -2297,32 +2383,15 @@ function renderAgents() {
 function renderAnalytics() {
   const metrics = deriveMetrics(state.metrics);
   return `
-    ${workflowStrip("analytics")}
     ${resultNextMovePanel(metrics)}
     <div class="metric-grid">
-      ${metricCard(text("Tasks created", "Создано задач"), metrics.tasks_created, text("Agent and operator work items", "Задачи агентов и операторов"))}
       ${metricCard(text("Approvals", "Согласования"), metrics.approvals_total, text(`${metrics.pending_approvals} pending`, `${metrics.pending_approvals} ждут решения`), "coral")}
       ${metricCard(text("Published materials", "Опубликовано материалов"), metrics.published_materials, text("Live or handed off", "Вышли или переданы"))}
       ${metricCard(text("Leads", "Заявки"), metrics.leads, text("Imported from forms or CRM", "Из форм или CRM"), "dark")}
-      ${metricCard(text("Receivables in progress", "Дебиторка в работе"), metrics.receivables_in_progress, text("Invoices under follow-up", "Счета в дожиме"))}
-      ${metricCard(text("Promised payments", "Обещанные оплаты"), metrics.promised_payments, text("Debtor promises tracked", "Зафиксированные обещания"))}
-      ${metricCard(text("Recovered payments", "Возвращённые оплаты"), metrics.recovered_payments, text("Confirmed manually or by import", "Подтверждены вручную или импортом"), "coral")}
+      ${metricCard(text("Recovered payments", "Возвращённые оплаты"), metrics.recovered_payments, text("Confirmed by status or import", "Подтверждены статусом или импортом"), "coral")}
+      ${metricCard(text("Tasks created", "Создано задач"), metrics.tasks_created, text("Open work items", "Рабочие задачи"))}
       ${metricCard(text("Ready to improve", "На улучшение"), metrics.improvement_tasks, text("Tasks from analytics", "Задачи из аналитики"))}
     </div>
-    <article class="panel full">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">${text("Result placeholders", "Метрики результата")}</p>
-          <h3>${text("What AgentResult should track first", "Что AgentResult должен считать в первую очередь")}</h3>
-        </div>
-      </div>
-      ${table([
-        text("Metric", "Метрика"),
-        text("Why it matters", "Зачем собственнику"),
-        text("Current source", "Текущий источник"),
-        text("Next connection", "Следующее подключение")
-      ], resultsMetricRows())}
-    </article>
     <article class="panel full">
       <div class="panel-heading">
         <div>
@@ -2338,9 +2407,9 @@ function renderAnalytics() {
         text("Next action", "Следующее действие")
       ], state.tasks.map((task) => [
         task.title,
-        task.owner,
+        displayWorkOwner(task.owner),
         statusChip(task.status || "next"),
-        task.note || text("Manual action", "Ручное действие"),
+        task.note || text("Action required", "Требуется действие"),
         taskAction(task)
       ]))}
     </article>
@@ -2405,13 +2474,13 @@ function taskAction(task) {
 
 function resultsMetricRows() {
   return [
-    [text("Tasks created", "Создано задач"), text("Shows whether the system turns signals into work.", "Показывает, превращает ли система сигналы в работу."), text("Backend tasks", "Backend tasks"), "Telegram WebApp"],
+    [text("Tasks created", "Создано задач"), text("Shows whether the system turns signals into work.", "Показывает, превращает ли система сигналы в работу."), text("Task list", "Список задач"), text("Telegram", "Telegram")],
     [text("Approvals", "Согласования"), text("Shows owner load and blocked public actions.", "Показывает нагрузку собственника и заблокированные публичные действия."), text("Approvals table", "Таблица согласований"), "Telegram"],
     [text("Published materials", "Опубликовано материалов"), text("Shows market-facing output without counting drafts as results.", "Показывает внешний выпуск, не считая черновики результатом."), text("Publishing calendar", "Календарь публикаций"), text("Website / CMS", "Сайт / CMS")],
-    [text("Leads", "Заявки"), text("Connects growth work to demand.", "Связывает работу по росту со спросом."), text("Manual import", "Ручной импорт"), "CRM / forms"],
+    [text("Leads", "Заявки"), text("Connects growth work to demand.", "Связывает работу по росту со спросом."), text("Import", "Импорт"), "CRM / forms"],
     [text("Receivables in progress", "Дебиторка в работе"), text("Shows money currently under systematic follow-up.", "Показывает деньги в системном дожиме."), "CSV / XLSX", "CRM / 1C"],
-    [text("Promised payments", "Обещанные оплаты"), text("Separates real debtor promises from ordinary reminders.", "Отделяет обещания оплатить от обычных напоминаний."), text("Manual status", "Ручной статус"), "Email / CRM"],
-    [text("Recovered payments", "Возвращённые оплаты"), text("Shows confirmed cash return without promising guarantees.", "Показывает подтверждённый возврат денег без обещаний гарантии."), text("Manual import", "Ручной импорт"), text("Bank / accounting", "Банк / учёт")]
+    [text("Promised payments", "Обещанные оплаты"), text("Separates real debtor promises from ordinary reminders.", "Отделяет обещания оплатить от обычных напоминаний."), text("Payment status", "Статус оплаты"), "Email / CRM"],
+    [text("Recovered payments", "Возвращённые оплаты"), text("Shows confirmed cash return without promising guarantees.", "Показывает подтверждённый возврат денег без обещаний гарантии."), text("Import", "Импорт"), text("Bank / accounting", "Банк / учёт")]
   ];
 }
 
@@ -2445,7 +2514,7 @@ function settingsTabContext(tab) {
   const contexts = {
     technical: [
       text("Technical status", "Технический статус"),
-      text("A quiet place for service connection details, so the main workflow stays business-facing.", "Тихое место для состояния сервиса, чтобы основной workflow оставался языком бизнеса.")
+      text("Service connection details stay here, away from daily decisions.", "Детали подключений остаются здесь и не мешают ежедневным решениям.")
     ],
     autopilot: [
       text("Autopilot", "Автопилот"),
@@ -2453,7 +2522,7 @@ function settingsTabContext(tab) {
     ],
     channels: [
       text("Channels", "Каналы"),
-      text("Control where materials can go and which channels stay manual-first.", "Настройте, куда можно передавать материалы и какие каналы пока остаются ручными.")
+      text("Control where approved materials can go next.", "Настройте, куда могут уходить согласованные материалы.")
     ],
     tools: [
       text("Tools", "Инструменты"),
@@ -2478,7 +2547,7 @@ function renderTechnicalSettings() {
         <div class="settings-list">
           <div><span>${text("Service address", "Адрес сервиса")}</span><strong>${escapeHtml(API_BASE)}</strong></div>
           <div><span>${text("Workspace", "Рабочая область")}</span><strong>${escapeHtml(TENANT_ID)}</strong></div>
-          <div><span>${text("Current user", "Текущий пользователь")}</span><strong>${escapeHtml(`${state.me?.name || "Owner"} · ${state.me?.role || "owner"}`)}</strong></div>
+          <div><span>${text("Current user", "Текущий пользователь")}</span><strong>${escapeHtml(`${state.me?.name || text("Owner", "Собственник")} · ${displayWorkOwner(state.me?.role || "owner")}`)}</strong></div>
           <div><span>${text("Data connection", "Подключение данных")}</span><strong>${state.online ? text("connected", "подключено") : text("not connected", "не подключено")}</strong></div>
         </div>
       </article>
@@ -2489,7 +2558,7 @@ function renderTechnicalSettings() {
             <h3>${text("Technical details stay here", "Технические детали остаются здесь")}</h3>
           </div>
         </div>
-        <p class="empty-note">${text("The daily workflow speaks about growth, materials, approvals and results. Connection details are separated so operators do not have to read infrastructure language while making business decisions.", "Ежедневный workflow говорит о росте, материалах, согласованиях и результатах. Детали подключений вынесены отдельно, чтобы в рабочих решениях не мешал инженерный язык.")}</p>
+        <p class="empty-note">${text("Daily screens stay focused on priorities, materials, approvals and results. Service details are separated for setup and support.", "Рабочие экраны показывают приоритеты, материалы, согласования и результаты. Сервисные детали вынесены отдельно для настройки и поддержки.")}</p>
       </article>
     </div>
   `;
@@ -3412,7 +3481,7 @@ function buildTodayActions(pending, reviewContent) {
     ...pending.map((item) => {
       const context = getApprovalContext(item);
       return {
-        title: text(`Decide: ${context.title}`, `Решить: ${context.title}`),
+        title: context.title,
         meta: text("Public publishing is blocked until you decide.", "Публичная публикация ждёт вашего решения."),
         actionLabel: text("Open", "Открыть"),
         action: "go-approval",
@@ -3583,7 +3652,10 @@ function materialGoal(item) {
 }
 
 function materialAudience(item) {
-  return item.audience || item.persona || text("B2B owner or operator", "Собственник или оператор B2B");
+  const value = item.audience || item.persona || "";
+  if (value === "B2B owner") return text("B2B owners", "Собственники B2B-компаний");
+  if (/operator|оператор/i.test(value)) return text("B2B decision makers", "Ответственные за продажи и рост");
+  return value || text("B2B decision makers", "Ответственные за продажи и рост");
 }
 
 function materialBrief(item) {
@@ -3601,7 +3673,7 @@ function materialWorkflowFacts(item) {
   const approval = state.approvals.find((entry) => (entry.target_id === item.id || entry.content_item_id === item.id) && entry.status === "pending");
   const calendar = state.calendar.find((entry) => entry.content_item_id === item.id);
   const facts = [];
-  if (approval) facts.push(text("Waiting for owner approval", "Ждёт согласования собственника"));
+  if (approval) facts.push(text("Waiting for approval", "Ждёт согласования"));
   if (calendar) facts.push(`${displayChannel(calendar.channel || "channel")} · ${formatDate(calendar.scheduled_for)}`);
   if (!facts.length) facts.push(text("Not yet linked to approval or publishing plan", "Пока не связан с согласованием или планом публикаций"));
   return `<div class="material-workflow-facts">${facts.map((fact) => `<span>${escapeHtml(fact)}</span>`).join("")}</div>`;
@@ -3612,6 +3684,24 @@ function materialPrimaryAction(item) {
   if (item.status === "review") return { action: "go-approvals", label: text("Open approvals", "Открыть согласования") };
   if (item.status === "scheduled" || item.status === "published") return { action: "go-calendar", label: text("Open calendar", "Открыть календарь") };
   return { action: "open-content-detail", label: text("Open material", "Открыть материал") };
+}
+
+function displayWorkOwner(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return text("Responsible", "Ответственный");
+  if (/owner/i.test(raw)) return text("Owner", "Собственник");
+  if (/sales/i.test(raw)) return text("Sales", "Продажи");
+  if (/publishing/i.test(raw)) return text("Publishing", "Публикации");
+  if (/growth|orchestrator/i.test(raw)) return text("Growth", "Рост");
+  if (/content/i.test(raw)) return text("Materials", "Материалы");
+  return tr(raw);
+}
+
+function materialSecondaryAction(item) {
+  if (item.status === "idea" || item.status === "brief" || item.status === "draft") return { action: "send-content-approval", label: text("Send to approval", "На согласование") };
+  if (item.status === "review") return { action: "open-content-detail", label: text("Edit", "Править") };
+  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Export", "Экспорт") };
+  return { action: "open-content-detail", label: text("Details", "Детали") };
 }
 
 function miniSection(title, items) {
@@ -3759,6 +3849,10 @@ async function handleAction(action, id) {
     },
     "go-approval": () => {
       openPublicationTab("approvals", id);
+    },
+    "open-demo-approval": () => {
+      if (id) state.selectedApprovalId = id;
+      openDecisionModal("approve");
     },
     "set-publication-tab": () => openPublicationTab(id),
     "set-settings-tab": () => openSettingsTab(id),
@@ -3921,11 +4015,11 @@ function demandContentType(demand) {
 }
 
 async function sendContentToApproval(id, options = {}) {
-  const item = state.content.find((entry) => entry.id === id);
+  let item = state.content.find((entry) => entry.id === id);
   if (!item) return;
   item.status = "review";
   item.updated_at = new Date().toISOString();
-  await saveContentItem(item);
+  item = await saveContentItem(item);
   state.content = mergeLocalItems(state.content, [item]);
   const existing = state.approvals.find((approval) => approval.target_type === "content_item" && approval.target_id === item.id && approval.status === "pending");
   if (!existing) {
@@ -4373,12 +4467,22 @@ async function submitContentEditForm() {
 
 async function submitScheduleForm() {
   const contentId = document.querySelector("#scheduleContentId")?.value || "";
-  const content = state.content.find((item) => item.id === contentId);
+  let content = state.content.find((item) => item.id === contentId);
   if (!content) {
     showToast(text("Select a material first.", "Сначала выберите материал."));
     return;
   }
-  const status = document.querySelector("#scheduleStatus")?.value || "review";
+  const requestedStatus = document.querySelector("#scheduleStatus")?.value || "review";
+  const approvedForPublishing = state.approvals.some((approval) =>
+    approval.status === "approved" &&
+    ((approval.target_type === "content_item" && approval.target_id === content.id) ||
+      (approval.content_item_id && approval.content_item_id === content.id))
+  ) || content.status === "approved";
+  const status = approvedForPublishing && requestedStatus === "scheduled" ? "scheduled" : "review";
+  content.status = status === "scheduled" ? "scheduled" : "review";
+  content.updated_at = new Date().toISOString();
+  content = await saveContentItem(content);
+  state.content = mergeLocalItems(state.content, [content]);
   const calendarItem = {
     id: `local-calendar-${Date.now()}`,
     content_item_id: content.id,
@@ -4388,14 +4492,11 @@ async function submitScheduleForm() {
     status,
     metadata: {
       handoff_note: status === "scheduled"
-        ? text("Проверьте канал, формат и финальную публикацию вручную. После выхода отметьте статус как published.", "Check the channel, format and final publication manually. After it goes live, mark it as published.")
+        ? text("Check the channel, format and final publication manually. After it goes live, mark it as published.", "Проверьте канал, формат и финальную публикацию вручную. После выхода отметьте статус как published.")
         : ""
     },
     created_at: new Date().toISOString()
   };
-  content.status = status === "scheduled" ? "scheduled" : "review";
-  content.updated_at = new Date().toISOString();
-  await saveContentItem(content);
   const savedCalendarItem = await saveCalendarItem(calendarItem);
   state.calendar = mergeLocalItems(state.calendar, [savedCalendarItem]);
   if (status === "review" && String(savedCalendarItem.id || "").startsWith("local-")) {
@@ -4559,9 +4660,14 @@ async function saveContentItem(item) {
     try {
       const isLocal = String(item.id || "").startsWith("local-");
       const result = isLocal
-        ? await api("/content/items", { method: "POST", body: JSON.stringify(withoutLocalId(item)) })
-        : await api(`/content/items/${item.id}`, { method: "PATCH", body: JSON.stringify(withoutLocalId(item)) });
-      return result.data || item;
+        ? await api("/content/items", { method: "POST", body: JSON.stringify(contentItemPayload(item, { stripId: true })) })
+        : await api(`/content/items/${item.id}`, { method: "PATCH", body: JSON.stringify(contentItemPayload(item)) });
+      const saved = result.data || item;
+      if (isLocal && saved.id && saved.id !== item.id) {
+        removeLocalItem("aiGrowthOsLocalContent", state.localContent, item.id);
+        return saved;
+      }
+      return saved;
     } catch {
       // Fallback to browser storage if API persistence is not available for this item.
     }
@@ -4573,7 +4679,7 @@ async function saveContentItem(item) {
 async function saveCalendarItem(item) {
   if (state.online) {
     try {
-      const result = await api("/publishing/schedule", { method: "POST", body: JSON.stringify(withoutLocalId(item)) });
+      const result = await api("/publishing/schedule", { method: "POST", body: JSON.stringify(calendarItemPayload(item, { stripId: true })) });
       return result.data || item;
     } catch {
       // Fallback to browser storage if API persistence is not available.
@@ -4583,30 +4689,64 @@ async function saveCalendarItem(item) {
   return item;
 }
 
-function withoutLocalId(item) {
-  if (!String(item.id || "").startsWith("local-")) return item;
-  const { id, ...rest } = item;
-  return rest;
+function contentItemPayload(item, options = {}) {
+  const metadata = {
+    ...(item.metadata || {}),
+    owner: item.metadata?.owner || item.owner || "",
+    audience: item.metadata?.audience || item.audience || ""
+  };
+  const payload = {
+    demand_map_item_id: item.demand_map_item_id || null,
+    title: item.title,
+    content_type: item.content_type || "telegram_post",
+    channel: item.channel || "website",
+    status: item.status || "idea",
+    target_url: item.target_url || null,
+    metadata
+  };
+  if (!options.stripId && item.id) payload.id = item.id;
+  return payload;
+}
+
+function calendarItemPayload(item, options = {}) {
+  const payload = {
+    content_item_id: item.content_item_id || null,
+    title: item.title,
+    channel: item.channel || "telegram",
+    status: item.status === "scheduled" ? "scheduled" : "review",
+    scheduled_for: item.scheduled_for || defaultScheduleDate(),
+    timezone: item.timezone || "Europe/Moscow",
+    export_path: item.export_path || null,
+    metadata: item.metadata || {}
+  };
+  if (!options.stripId && item.id) payload.id = item.id;
+  return payload;
+}
+
+function removeLocalItem(key, collection, id) {
+  const next = collection.filter((entry) => entry.id !== id);
+  collection.splice(0, collection.length, ...next);
+  saveLocalJson(key, collection);
 }
 
 async function requestToolOwner() {
   const selected = selectedTool();
   state.toolOverrides[selected.id] = {
     ...(state.toolOverrides[selected.id] || {}),
-    owner: text("Access owner needed", "Нужен владелец доступа"),
+    owner: text("Access responsible needed", "Нужен ответственный за доступ"),
     status: "needs-setup",
     accessNeeded: true
   };
   saveLocalJson("aiGrowthOsToolOverrides", state.toolOverrides);
   await addLocalTask({
-    title: text(`Assign access owner for ${selected.name}`, `Назначить владельца доступа: ${selected.name}`),
+    title: text(`Assign access responsible for ${selected.name}`, `Назначить ответственного за доступ: ${selected.name}`),
     owner: "Owner",
     status: "blocked",
     note: text("Connection cannot move forward until a responsible person is named.", "Подключение не двинется дальше, пока не назначен ответственный."),
     source: "tools"
   });
-  addActivity("Growth Orchestrator", `Marked access owner needed: ${selected.name}`);
-  showToast(text("Access owner task created.", "Задача на владельца доступа создана."));
+  addActivity("Growth Orchestrator", `Marked access responsible needed: ${selected.name}`);
+  showToast(text("Access task created.", "Задача по доступу создана."));
   render();
 }
 
@@ -4616,7 +4756,7 @@ async function generateImprovementTasks() {
   if (!metrics.leads) {
     suggestions.push({
       title: text("Connect first lead source", "Подключить первый источник заявок"),
-      owner: "Sales owner",
+      owner: text("Sales", "Продажи"),
       status: "next",
       note: text("Leads are still zero, so the growth loop has no demand signal.", "Заявок пока 0, поэтому у цикла роста нет сигнала спроса.")
     });
@@ -4624,7 +4764,7 @@ async function generateImprovementTasks() {
   if (!metrics.published_materials) {
     suggestions.push({
       title: text("Publish or hand off first approved material", "Опубликовать или передать первый согласованный материал"),
-      owner: "Publishing QA",
+      owner: text("Publishing", "Публикации"),
       status: "next",
       note: text("Prepared assets do not count as results until they leave the system.", "Подготовленные материалы не считаются результатом, пока не вышли наружу.")
     });
@@ -4632,7 +4772,7 @@ async function generateImprovementTasks() {
   if (!metrics.receivables_in_progress) {
     suggestions.push({
       title: text("Import first receivables list", "Загрузить первый список дебиторки"),
-      owner: "Owner",
+      owner: text("Owner", "Собственник"),
       status: "next",
       note: text("DebtorPilot needs a CSV/XLSX starting point before follow-up automation.", "DebtorPilot нужен стартовый CSV/XLSX до автоматизации дожима.")
     });
@@ -4640,7 +4780,7 @@ async function generateImprovementTasks() {
   if (!suggestions.length) {
     suggestions.push({
       title: text("Review strongest performing asset", "Разобрать самый сильный материал"),
-      owner: "Growth Orchestrator",
+      owner: text("Growth", "Рост"),
       status: "next",
       note: text("Use current results to choose the next page, post or follow-up.", "Использовать текущие результаты, чтобы выбрать следующую страницу, пост или касание.")
     });
@@ -4830,7 +4970,6 @@ async function decideApproval(item, action, note = "") {
     item.decision_note = note;
     item.decided_at = new Date().toISOString();
     await applyDecisionToSource(item, nextStatus);
-    persistLocalApproval(item);
     appendAudit(item, nextStatus, note);
     showToast(decisionToast(nextStatus));
     await loadData();
@@ -4841,7 +4980,7 @@ async function decideApproval(item, action, note = "") {
 
 function isLocalApproval(item) {
   const id = String(item?.id || "");
-  return !id || id.startsWith("a") || id.startsWith("local-");
+  return !id || id.startsWith("local-approval-");
 }
 
 function persistLocalApproval(item) {

@@ -31,12 +31,12 @@ export async function insertJson(table: string, payload: Record<string, unknown>
   return result.rows[0];
 }
 
-export async function patchJson(table: string, id: string, payload: Record<string, unknown>) {
+export async function patchJson(table: string, id: string, payload: Record<string, unknown>, tenantId?: string) {
   const entries = Object.entries(payload).filter(([key]) => key !== "id");
   const setClause = entries.map(([key], index) => `"${key}" = $${index + 2}`).join(", ");
-  const result = await query(`update ${table} set ${setClause}, updated_at = now() where id = $1 returning *`, [
-    id,
-    ...entries.map(([, value]) => value)
-  ]);
+  const values = [id, ...entries.map(([, value]) => value)];
+  const tenantClause = tenantId ? ` and tenant_id = $${values.length + 1}` : "";
+  if (tenantId) values.push(tenantId);
+  const result = await query(`update ${table} set ${setClause}, updated_at = now() where id = $1${tenantClause} returning *`, values);
   return result.rows[0] ?? null;
 }

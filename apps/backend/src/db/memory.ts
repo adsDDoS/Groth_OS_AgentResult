@@ -36,7 +36,10 @@ const ids = {
   calendarPack: "55555555-5555-4555-8555-555555555553",
   approvalTelegram: "66666666-6666-4666-8666-666666666661",
   approvalComparison: "66666666-6666-4666-8666-666666666662",
-  approvalPack: "66666666-6666-4666-8666-666666666663"
+  approvalPack: "66666666-6666-4666-8666-666666666663",
+  taskLeadSource: "88888888-8888-4888-8888-888888888881",
+  taskPublishResult: "88888888-8888-4888-8888-888888888882",
+  analyticsImportDemo: "99999999-9999-4999-8999-999999999991"
 };
 
 const localStorePath =
@@ -356,7 +359,7 @@ const store: Record<string, Row[]> = {
       title: "AI Growth OS для B2B-компаний",
       content_type: "landing_page",
       channel: "website",
-      status: "draft",
+      status: "approved",
       target_url: "https://agentresult-crm.vercel.app/",
       metadata: { owner: "Growth", module: "Programmatic SEO Pages" },
       created_at: now,
@@ -434,13 +437,13 @@ const store: Record<string, Row[]> = {
       scope: "sensitive_claim",
       target_type: "content_item",
       target_id: ids.contentProductPage,
-      status: "pending",
+      status: "approved",
       summary: "Согласовать формулировки для страницы AI Growth OS",
       risk_flags: ["proof required", "public claim"],
       requested_by: null,
-      decided_by: null,
-      decision_note: null,
-      decided_at: null,
+      decided_by: ids.ownerUser,
+      decision_note: "Можно ставить в план публикаций.",
+      decided_at: now,
       created_at: now,
       updated_at: now
     },
@@ -450,13 +453,13 @@ const store: Record<string, Row[]> = {
       scope: "publish",
       target_type: "publishing_calendar_item",
       target_id: ids.calendarPack,
-      status: "pending",
+      status: "approved",
       summary: "Согласовать недельный пакет материалов AgentResult",
       risk_flags: ["multi-channel distribution"],
       requested_by: null,
-      decided_by: null,
-      decision_note: null,
-      decided_at: null,
+      decided_by: ids.ownerUser,
+      decision_note: "Пакет можно использовать для ручной передачи.",
+      decided_at: now,
       created_at: now,
       updated_at: now
     }
@@ -465,10 +468,10 @@ const store: Record<string, Row[]> = {
     {
       id: ids.calendarTelegram,
       tenant_id: tenantId,
-      content_item_id: ids.contentTelegram,
+      content_item_id: null,
       channel: "telegram",
       title: "Telegram-пост: почему бизнесу нужен операционный контур, а не один AI-агент",
-      status: "review",
+      status: "published",
       scheduled_for: "2026-05-26T07:00:00.000Z",
       timezone: "Europe/Moscow",
       export_path: null,
@@ -481,7 +484,7 @@ const store: Record<string, Row[]> = {
       content_item_id: ids.contentProductPage,
       channel: "website",
       title: "AI Growth OS для B2B-компаний",
-      status: "draft",
+      status: "scheduled",
       scheduled_for: "2026-05-27T09:00:00.000Z",
       timezone: "Europe/Moscow",
       export_path: null,
@@ -516,7 +519,52 @@ const store: Record<string, Row[]> = {
     agent("competitor_watch", "Competitor Watch Agent", "Monitors competitor messaging and gaps."),
     agent("publishing_qa", "Publishing QA Agent", "Checks drafts before approval and export.")
   ],
-  tasks: [],
+  tasks: [
+    {
+      id: ids.taskLeadSource,
+      tenant_id: tenantId,
+      agent_role: "growth",
+      task_type: "connect_lead_source",
+      target_type: "integration",
+      target_id: null,
+      status: "queued",
+      priority: 90,
+      payload: {
+        title: "Подключить первый источник заявок",
+        owner: "Продажи",
+        note: "Нужно связать форму, CRM или таблицу, чтобы видеть заявки после публикаций.",
+        source: "results"
+      },
+      result: {},
+      created_by: ids.ownerUser,
+      assigned_to: null,
+      due_at: null,
+      created_at: now,
+      updated_at: now
+    },
+    {
+      id: ids.taskPublishResult,
+      tenant_id: tenantId,
+      agent_role: "publishing",
+      task_type: "confirm_publication_result",
+      target_type: "publishing_calendar_item",
+      target_id: ids.calendarTelegram,
+      status: "approved",
+      priority: 70,
+      payload: {
+        title: "Подтвердить первую публикацию",
+        owner: "Публикации",
+        note: "Telegram-пост отмечен как опубликованный и уже попал в результаты.",
+        source: "publications"
+      },
+      result: {},
+      created_by: ids.ownerUser,
+      assigned_to: null,
+      due_at: null,
+      created_at: now,
+      updated_at: now
+    }
+  ],
   task_events: [],
   publishing_channels: [],
   publishing_jobs: [],
@@ -534,7 +582,23 @@ const store: Record<string, Row[]> = {
       updated_at: now
     }
   ],
-  analytics_imports: [],
+  analytics_imports: [
+    {
+      id: ids.analyticsImportDemo,
+      tenant_id: tenantId,
+      source: "demo",
+      payload: {
+        leads: 3,
+        published_materials: 1,
+        tasks_created: 2,
+        receivables_in_progress: 0,
+        promised_payments: 0,
+        recovered_payments: 0,
+        improvement_tasks: 1
+      },
+      created_at: now
+    }
+  ],
   page_metrics: [],
   channel_metrics: [],
   conversion_events: []
@@ -706,6 +770,8 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
   if (normalized.includes("select count(*) from content_items")) {
     const approvals = tenantRows("approvals", values[0]);
     const calendar = tenantRows("publishing_calendar_items", values[0]);
+    const latestImport = tenantRows("analytics_imports", values[0]).sort(sortCreatedDesc)[0];
+    const summary = isRecord(latestImport?.payload) ? latestImport.payload : {};
     return result([
       {
         content_items: tenantRows("content_items", values[0]).length,
@@ -714,10 +780,13 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
         approvals_total: approvals.length,
         published_materials: calendar.filter((row) => row.status === "published" || row.status === "handed_off").length,
         tasks_created: tenantRows("tasks", values[0]).length,
-        leads: 0,
-        receivables_in_progress: 0,
-        promised_payments: 0,
-        recovered_payments: 0
+        leads: Number(summary.leads ?? 0),
+        receivables_in_progress: Number(summary.receivables_in_progress ?? 0),
+        promised_payments: Number(summary.promised_payments ?? 0),
+        recovered_payments: Number(summary.recovered_payments ?? 0),
+        improvement_tasks: Number(summary.improvement_tasks ?? 0),
+        source: latestImport?.source ?? null,
+        imported_at: latestImport?.created_at ?? null
       }
     ] as unknown as T[]);
   }
@@ -743,9 +812,10 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
   }
 
   const patchMatch = normalized.match(/^update ([a-z_]+) set /);
-  if (patchMatch && normalized.includes(" where id = $1 returning *")) {
+  if (patchMatch && normalized.includes(" where id = $1") && normalized.includes("returning *")) {
     const row = findById(patchMatch[1], values[0]);
     if (!row) return result([]);
+    if (normalized.includes("tenant_id") && row.tenant_id !== values[values.length - 1]) return result([]);
     const assignments = [...sql.matchAll(/"([^"]+)"\s*=\s*\$(\d+)/g)];
     for (const [, key, position] of assignments) {
       row[key] = values[Number(position) - 1];
@@ -780,15 +850,15 @@ function normalizeAgentResultWorkspace() {
   const company = firstByCreatedAsc("companies", tenantId)[0];
   if (!company) return;
 
-  company.name = "AgentResult";
-  company.website_url = "https://agentresult-crm.vercel.app/";
+  company.name = company.name || "AgentResult";
+  company.website_url = company.website_url || "https://agentresult-crm.vercel.app/";
   company.profile = {
-    ...(isRecord(company.profile) ? company.profile : {}),
-    ...agentResultProfileDefaults
+    ...agentResultProfileDefaults,
+    ...(isRecord(company.profile) ? company.profile : {})
   };
-  company.positioning =
+  company.positioning = company.positioning ||
     "AgentResult строит B2B AI-agent systems, которые помогают собственнику держать под контролем продажи, рост и операционные процессы через понятный Telegram-пульт.";
-  company.tone_of_voice = "Практично, прямо, уверенно, без хайпа.";
+  company.tone_of_voice = company.tone_of_voice || "Практично, прямо, уверенно, без хайпа.";
 
   patchRow("content_items", ids.contentTelegram, {
     title: "Почему одного AI-агента недостаточно, чтобы наладить продажи",
@@ -802,7 +872,7 @@ function normalizeAgentResultWorkspace() {
     title: "AI Growth OS для B2B-компаний",
     content_type: "landing_page",
     channel: "website",
-    status: "draft",
+    status: "approved",
     target_url: "https://agentresult-crm.vercel.app/",
     metadata: { owner: "Growth", module: "Programmatic SEO Pages" }
   });
@@ -859,25 +929,41 @@ function normalizeAgentResultWorkspace() {
     audience: "B2B-команды, которые пока живут в таблицах"
   });
   patchRow("approvals", ids.approvalTelegram, {
-    summary: "Согласовать Telegram-пост про контур продаж и контроль собственника"
+    summary: "Согласовать Telegram-пост про контур продаж и контроль собственника",
+    status: "pending",
+    decided_by: null,
+    decision_note: null,
+    decided_at: null
+  });
+  patchRow("approvals", ids.approvalComparison, {
+    summary: "Согласовать формулировки для страницы AI Growth OS",
+    status: "approved",
+    decided_by: ids.ownerUser,
+    decision_note: "Можно ставить в план публикаций.",
+    decided_at: now
   });
   patchRow("approvals", ids.approvalPack, {
-    summary: "Согласовать недельный пакет материалов AgentResult"
+    summary: "Согласовать недельный пакет материалов AgentResult",
+    status: "approved",
+    decided_by: ids.ownerUser,
+    decision_note: "Пакет можно использовать для передачи.",
+    decided_at: now
   });
   patchRow("publishing_calendar_items", ids.calendarTelegram, {
     title: "Telegram-пост: почему бизнесу нужен операционный контур, а не один AI-агент",
+    content_item_id: null,
     channel: "telegram",
-    status: "review"
+    status: "published"
   });
   patchRow("publishing_calendar_items", ids.calendarProductPage, {
     title: "AI Growth OS для B2B-компаний",
     channel: "website",
-    status: "draft"
+    status: "scheduled"
   });
   patchRow("publishing_calendar_items", ids.calendarPack, {
     title: "Недельный пакет публикаций AgentResult",
     channel: "manual_export",
-    status: "review"
+    status: "draft"
   });
 }
 

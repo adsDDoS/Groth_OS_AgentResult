@@ -450,6 +450,7 @@ create table if not exists publishing_calendar_items (
   scheduled_for timestamptz,
   timezone text not null default 'UTC',
   export_path text,
+  metadata jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

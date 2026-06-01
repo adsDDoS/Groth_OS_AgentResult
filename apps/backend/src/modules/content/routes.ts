@@ -52,7 +52,7 @@ export async function contentRoutes(app: FastifyInstance) {
 
   app.patch("/content/items/:id", async (request) => {
     const { id } = idParams.parse(request.params);
-    return { data: await patchJson("content_items", id, request.body as Record<string, unknown>) };
+    return { data: await patchJson("content_items", id, request.body as Record<string, unknown>, request.tenantId) };
   });
 
   app.post("/content/items/:id/generate-brief", async (request) => {

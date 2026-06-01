@@ -1,0 +1,498 @@
+# AgentResult OS Knowledge
+
+This file is the working memory for AgentResult OS. Read it before making product, UX, backend, agent, demo, copy, or documentation changes.
+
+## Product Identity
+
+AgentResult OS is an owner-facing operating system for B2B companies in the Russian market.
+
+It is not an internal engineering admin panel. It is not a generic AI dashboard. It is not a content toy. It is the control layer where a business owner sees what requires a decision, what the system prepared, what is blocking movement, and what business signal appeared after work went outside.
+
+The product language is:
+
+- money
+- leads
+- tasks
+- decisions
+- control
+- result
+- publication
+- handoff
+- CRM discipline
+- receivables
+
+Avoid product language that sounds like:
+
+- raw backend terminology
+- internal pipeline jargon
+- AI hype
+- tutorial copy for beginners
+- long explanations of obvious UI
+- "magic automation"
+- daily dashboard addiction
+
+## Core Offer
+
+AgentResult builds B2B AI-agent systems for sales, promotion, CRM automation, receivables, and operating processes.
+
+The main implementation format:
+
+- agent system
+- backend
+- Telegram WebApp
+- integrations
+- approval-first control loop
+
+Primary products:
+
+- AgentResult Sales OS
+- AgentResult Collect / DebtorPilot
+- AI Growth OS
+
+Current site:
+
+- https://agentresult-crm.vercel.app/
+
+Future domains:
+
+- agentresult.ru
+- app.agentresult.ru
+- api.agentresult.ru
+- agentresult.online
+
+## Target Customers
+
+Primary users are owners of B2B companies. They should not need to understand backend structure, agent internals, or implementation details to use the product.
+
+Target segments:
+
+- B2B company owners
+- agencies
+- integrators
+- SaaS teams
+- service providers
+- companies with long sales cycles
+- companies with overdue receivables
+- companies with weak CRM discipline
+- companies with chaotic promotion
+
+## Customer Pains
+
+AgentResult exists because owners face practical operational problems:
+
+- leads get lost
+- managers do not maintain CRM
+- follow-ups do not happen consistently
+- the owner does not see what is happening
+- content is chaotic
+- the site does not create demand
+- receivables hang without systematic follow-up
+- the owner manually controls tasks
+- the business wants AI but does not know how to implement it safely
+
+## Proof
+
+Use proof that exists or can be shown honestly:
+
+- working AgentResult WebApp prototype
+- backend -> Hermes -> Postgres -> Telegram/WebApp architecture
+- AI Growth OS prototype
+- build-in-public story: AgentResult builds AgentResult on AgentResult
+
+Do not overclaim. If something is only a prototype, call it a prototype. If something works locally, say it works locally.
+
+## Forbidden Claims
+
+Never promise:
+
+- guaranteed revenue growth
+- guaranteed receivables recovery
+- replacement of the whole sales department
+- AI will do everything without errors
+- legally significant actions without approval
+- automatic publication or email sends without approval
+- results without data, implementation, and discipline
+
+## Product Principle
+
+Approval-first is the default.
+
+Agents can research, prepare, draft, classify, recommend, assemble packs, and create tasks.
+
+Agents cannot publish, send, update live website content, approve risky claims, move money-sensitive actions, or act as the owner without explicit approval.
+
+The safest automation is not "AI does everything." The safest automation is a clear control loop:
+
+```text
+Hermes prepares -> owner approves -> system publishes or hands off -> result is tracked
+```
+
+## Dashboard Role
+
+The dashboard is not the main daily workplace forever. Long-term, Hermes should push decisions and summaries to the owner in Telegram.
+
+The dashboard should act as:
+
+- setup surface
+- source of truth
+- approval/control surface
+- result view
+- demo/sales surface
+- fallback when Telegram is not connected
+
+The owner should not feel forced to live inside the dashboard every day.
+
+If a dashboard section exists only to explain the product, remove or compress it. If a section does not help the owner decide, approve, configure, hand off, or see results, it is suspect.
+
+## Current UX Information Architecture
+
+Keep the RU/ENG switch.
+
+Current main navigation:
+
+- Today / Сегодня
+- Growth Plan / План роста
+- Company / Компания
+- Materials / Материалы
+- Publications / Публикации
+- Results / Результаты
+- Settings / Настройки
+
+Settings tabs:
+
+- Technical status / Технический статус
+- Autopilot / Автопилот
+- Channels / Каналы
+- Tools / Инструменты
+
+The main interface should not drift back into backend-admin language.
+
+## Ideal Owner Flow
+
+The product should be understandable through this chain:
+
+```text
+1. Today shows what requires the owner's decision.
+2. Owner approves or requests changes.
+3. Approved material moves to Publications.
+4. Publication is published directly or handed off manually.
+5. Results show business signals: leads, tasks, published materials, receivables, improvement tasks.
+6. Hermes later moves this loop into Telegram so the owner does not need to check the dashboard constantly.
+```
+
+Current demo-flow on Today:
+
+```text
+Hermes prepared -> Owner approved -> Went outside -> Result appeared
+```
+
+This flow is more important than adding more sections.
+
+## UX Standards
+
+Every screen must answer at least one of these:
+
+- What needs my decision?
+- What did the system do?
+- What blocks growth or money?
+- What is ready to go outside?
+- What result appeared?
+- What is the next owner-level action?
+
+Prefer:
+
+- short labels
+- one clear next action
+- compact cards
+- business outcome language
+- action loops
+- visible statuses
+- confidence through restraint
+
+Avoid:
+
+- wall-of-text sections
+- "how to use this dashboard" hero blocks
+- "role of dashboard" explanations
+- repeating the same CTA several times
+- visible implementation jargon on owner screens
+- raw backend words outside technical settings
+- fake metrics
+- empty-looking SaaS boilerplate
+- childish instruction tone
+
+Bad copy examples:
+
+- "Как работать с AgentResult"
+- "Роль дашборда"
+- "Не живите здесь"
+- "Сводка Hermes" if it reads like internal mechanics
+- "Backend API" on main owner screens
+- "workflow" in Russian owner-facing copy when "процесс", "контур", "путь", or "план" is clearer
+
+Better copy examples:
+
+- "Инструкция"
+- "Требует решения"
+- "Сделала система"
+- "Блокирует"
+- "Готово наружу"
+- "Опубликовано"
+- "Заявки"
+- "Следующий шаг собственника"
+- "Согласовать"
+- "Передать"
+- "Отметить выпуск"
+
+## Functional Standard
+
+Do not treat the dashboard as pure visual work.
+
+When adding or changing UI, connect it to real state when feasible:
+
+- tasks from backend
+- approvals from backend
+- content items from backend
+- publishing calendar from backend
+- analytics overview from backend
+- local mode persistence for demo/fallback
+
+Use localStorage only as fallback or for local-only workspace state. Avoid adding new localStorage-only product-critical actions if a backend path already exists or can reasonably be added.
+
+## Local Development
+
+Project path:
+
+```text
+/Applications/Работа/Учеба/Codex/ai-growth-os
+```
+
+Run local AgentResult mode:
+
+```bash
+npm run local:agentresult
+```
+
+Run clean sales/demo mode:
+
+```bash
+npm run local:agentresult:demo
+```
+
+Dashboard:
+
+```text
+http://127.0.0.1:4173
+```
+
+Backend:
+
+```text
+http://127.0.0.1:3000
+```
+
+Clean browser state for demo:
+
+```text
+http://127.0.0.1:4173/?demo=reset#/overview
+```
+
+Persisted local backend file:
+
+```text
+apps/backend/.runtime/agentresult.local-data.json
+```
+
+## Key Files
+
+Dashboard:
+
+- apps/dashboard/index.html
+- apps/dashboard/app.js
+- apps/dashboard/styles.css
+
+Backend:
+
+- apps/backend/src/db/memory.ts
+- apps/backend/src/routes.ts
+- apps/backend/src/modules/content/routes.ts
+- apps/backend/src/modules/publishing/routes.ts
+- apps/backend/src/modules/common/repository.ts
+- apps/backend/src/db/migrations
+
+Local run:
+
+- scripts/local-agentresult.mjs
+- package.json
+
+Docs:
+
+- README.md
+- knowledge.md
+
+## Current Backend Capabilities
+
+Local mode supports:
+
+- company profile
+- demand map
+- content items
+- approvals
+- publishing calendar
+- tasks
+- analytics overview
+- activity/workspace state
+- calendar status PATCH through `/publishing/items/:id/status`
+
+Important local script:
+
+```bash
+npm run local:agentresult:demo
+```
+
+This resets the local demo scenario and backs up previous runtime data.
+
+## Current Demo State
+
+The clean demo should start with:
+
+- one pending approval
+- one already published material/result
+- one scheduled material
+- three visible leads
+- two tasks
+- one improvement task
+
+The pending approval must not be linked to the already published item. Otherwise the story becomes incoherent after approval.
+
+Expected sales story:
+
+```text
+Today: owner sees a pending Telegram post.
+Owner approves.
+Publications: material is now ready to publish or hand off.
+Results: owner sees published materials and leads.
+Hermes later moves this decision loop into Telegram.
+```
+
+## Hermes Direction
+
+Hermes should eventually become the primary owner interaction layer.
+
+Target Hermes behavior:
+
+- sends owner a concise Telegram summary
+- asks for approval on posts, emails, CRM-sensitive actions, and receivables follow-ups
+- sends ready-to-publish materials
+- writes approved events into CRM or other systems
+- reports results back to owner
+- keeps dashboard as source of truth and setup/control surface
+
+Do not use Hermes as an excuse to make the dashboard sloppy. The dashboard still needs to be coherent, because it is the demo surface, setup layer, and trust anchor.
+
+## Product Decision Rules
+
+When choosing what to build next, prefer changes that:
+
+- shorten path to visible result
+- reduce owner cognitive load
+- make demo more sellable
+- connect UI to backend state
+- make approval loop clearer
+- remove unnecessary text
+- replace internal terms with business terms
+- preserve RU/ENG
+
+Deprioritize changes that:
+
+- add another dashboard section
+- add another explanatory block
+- create local-only actions without persistence
+- make the product feel like an admin panel
+- make the owner manage agents manually
+- optimize for engineering completeness over sales clarity
+
+## Verification Rules
+
+After dashboard JS changes, always run:
+
+```bash
+node --check apps/dashboard/app.js
+```
+
+When changing local script:
+
+```bash
+node --check scripts/local-agentresult.mjs
+```
+
+When feasible:
+
+```bash
+npm run lint
+npm run build
+```
+
+For UI work, verify in browser:
+
+```text
+http://127.0.0.1:4173/?demo=reset#/overview
+```
+
+Check:
+
+- no console errors
+- RU/ENG switch still works
+- no old tutorial/admin phrases returned
+- first screen is understandable in under 10 seconds
+- demo-flow still works
+- metrics are coherent with the shown state
+
+## Known Risk Areas
+
+Watch for:
+
+- dashboard text overload
+- duplicated CTAs
+- English strings leaking in RU mode
+- backend seed state conflicting with UI story
+- localStorage masking backend bugs
+- old AI Growth OS template language returning to AgentResult shell
+- settings/tools becoming the product instead of support surface
+- "daily dashboard" behavior replacing Telegram/Hermes owner loop
+
+## Next Logical Product Step
+
+The next high-value step is to reduce density below the first Today screen.
+
+Current issue:
+
+```text
+Demo-flow is clear, but below it Today still has too many parallel panels:
+Требует решения / Блокирует / Сделала система / result strip.
+```
+
+Recommended direction:
+
+```text
+Keep one main owner-loop.
+Compress secondary panels into a small "details if needed" area.
+Make Today feel like a command surface, not an operations report.
+```
+
+After that, build the Telegram/Hermes owner approval simulation:
+
+```text
+Hermes message -> owner approves -> backend updates approval -> publication status changes -> Results update.
+```
+
+## Non-Negotiables
+
+- Do not rewrite the dashboard from scratch.
+- Do not break RU/ENG.
+- Do not bring back backend-admin language.
+- Do not add text just because the product needs explanation.
+- Do not promise magic.
+- Do not bypass approval-first.
+- Do not let demo data contradict the story.
+- Always propose the next logical step after making changes.

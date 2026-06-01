@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -7,8 +7,12 @@ const runtimeDir = resolve(root, "apps/backend/.runtime");
 const backendPort = Number(process.env.PORT ?? 3000);
 const dashboardPort = Number(process.env.DASHBOARD_PORT ?? 4173);
 const localDataPath = process.env.AI_GROWTH_OS_LOCAL_DATA_PATH ?? resolve(runtimeDir, "agentresult.local-data.json");
+const resetDemoState = process.argv.includes("--reset-demo") || process.env.AGENTRESULT_RESET_DEMO === "1";
 
 mkdirSync(runtimeDir, { recursive: true });
+if (resetDemoState && existsSync(localDataPath)) {
+  renameSync(localDataPath, `${localDataPath}.${Date.now()}.bak`);
+}
 
 await run("npm", ["run", "backend:bundle"]);
 

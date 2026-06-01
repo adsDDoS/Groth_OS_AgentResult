@@ -26,6 +26,12 @@ Local AgentResult launch mode:
 npm run local:agentresult
 ```
 
+Clean demo mode for sales walkthroughs:
+
+```bash
+npm run local:agentresult:demo
+```
+
 Open:
 
 ```text
@@ -37,7 +43,7 @@ This starts both services:
 - Backend API: `http://127.0.0.1:3000`
 - Dashboard: `http://127.0.0.1:4173`
 
-This command uses explicit local storage mode, so it serves a local AgentResult workspace even if Postgres is available on your machine. The workspace includes Offer Brain, demand map, content, approvals, publishing calendar, agents and results counters. Local data is persisted in `apps/backend/.runtime/agentresult.local-data.json`.
+This command uses explicit local storage mode, so it serves a local AgentResult workspace even if Postgres is available on your machine. The workspace includes Offer Brain, demand map, content, approvals, publishing calendar, agents and results counters. Local data is persisted in `apps/backend/.runtime/agentresult.local-data.json`; demo mode backs up that file and starts from the clean AgentResult scenario.
 
 You can still run the two services separately:
 
@@ -132,6 +138,8 @@ They cannot publish, update live website content, send newsletters, post to soci
 
 ## Documentation
 
+- [AgentResult OS Knowledge](knowledge.md)
+- [Codex Agent Instructions](AGENTS.md)
 - [Product](docs/product.md)
 - [Commercial Product Roadmap](docs/commercial-product-roadmap.md)
 - [Architecture](docs/architecture.md)

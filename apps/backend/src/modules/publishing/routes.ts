@@ -17,7 +17,8 @@ export async function publishingRoutes(app: FastifyInstance) {
   });
 
   app.post("/publishing/schedule", async (request) => {
-    const item = await insertJson("publishing_calendar_items", request.body as Record<string, unknown>, request.tenantId);
+    const payload = { ...(request.body as Record<string, unknown>), status: "review" };
+    const item = await insertJson("publishing_calendar_items", payload, request.tenantId);
     await createApprovalRequest({
       tenantId: request.tenantId,
       scope: "publish",
@@ -63,6 +64,6 @@ export async function publishingRoutes(app: FastifyInstance) {
 
   app.patch("/publishing/items/:id", async (request) => {
     const { id } = idParams.parse(request.params);
-    return { data: await patchJson("publishing_calendar_items", id, request.body as Record<string, unknown>) };
+    return { data: await patchJson("publishing_calendar_items", id, request.body as Record<string, unknown>, request.tenantId) };
   });
 }
