@@ -15,19 +15,20 @@ export function createCompanyGrowthModule(ctx) {
 function renderGrowthPlan() {
   const topItems = topDemandItems();
   const top = topItems[0];
+  const queueItems = top ? topItems.slice(1) : topItems;
   return `
     ${growthPlanBrief(top)}
     <section class="growth-command-board">
       <article class="panel growth-queue-panel">
         <div class="panel-heading compact">
           <div>
-            <p class="eyebrow">${text("Action queue", "Очередь действий")}</p>
-            <h3>${text("What moves growth now", "Что сейчас двигает рост")}</h3>
+            <p class="eyebrow">${text("Next moves", "Следующие ходы")}</p>
+            <h3>${text("After the weekly priority", "После приоритета недели")}</h3>
           </div>
-          <span class="pill">${topItems.length} ${text("shown", "в фокусе")}</span>
+          <span class="pill">${queueItems.length} ${text("shown", "в фокусе")}</span>
         </div>
         <div class="growth-queue">
-          ${topItems.map(growthQueueRow).join("") || `<p class="empty-note">${tr("No records yet.")}</p>`}
+          ${queueItems.map(growthQueueRow).join("") || `<p class="empty-note">${tr("No records yet.")}</p>`}
         </div>
       </article>
     </section>

@@ -35,7 +35,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
 - Expected:
   - screen title is `Стратегия`;
   - one `Приоритет недели` is visible;
-  - queue contains 3 focused actions;
+  - queue shows next moves without repeating the weekly priority CTA;
   - old `Деньги / Скорость / Доказательство` filter is not visible;
   - top actions are empty;
   - each queue action says `Подготовить`.

@@ -76,14 +76,15 @@ async function run() {
     await page.goto(`${baseUrl}/?v=smoke#/growth-plan`);
     await page.waitForSelector(".plan-brief");
     await page.locator(".plan-brief").filter({ hasText: /Приоритет недели|Weekly priority/ }).waitFor();
-    await page.locator(".growth-queue-row").nth(2).waitFor();
+    await page.locator(".growth-queue-row").first().waitFor();
     const growthText = await page.locator(".plan-brief").innerText();
     const fullGrowthText = await getPageText(page);
     assert(includesAny(await page.locator("#sectionTitle").innerText(), ["Стратегия", "Strategy"]), "Strategy title is wrong");
     assert(includesAny(growthText, ["Приоритет недели", "Weekly priority"]), `Strategy must show weekly priority. Saw: ${growthText}`);
     assert(!includesAny(fullGrowthText, ["Фильтр решений", "Decision filter"]), "Old decision filter is visible");
     assert(!includesAny(fullGrowthText, ["Скорость", "Speed"]), "Old speed tile is visible");
-    assert((await page.locator(".growth-queue-row").count()) === 3, "Strategy should show 3 queue rows");
+    assert((await page.locator(".growth-queue-row").count()) >= 1, "Strategy should show next queue rows");
+    assert((await page.locator('[data-action="content-from-demand"][data-id="d1"]').count()) === 1, "Strategy should not repeat the weekly priority CTA");
     assert((await page.locator("#routeActions .button").count()) === 0, "Strategy top actions should be empty");
 
     await page.goto(`${baseUrl}/?v=smoke#/offer-brain`);

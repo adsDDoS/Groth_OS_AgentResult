@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-77";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-77";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-77";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-78";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-78";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-78";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -1240,16 +1240,13 @@ function renderActions() {
     "content-pipeline": [],
     publications: publicationActions[currentPublicationTab()],
     analytics: [
-      actionButton(text("Add signal", "Добавить сигнал"), "primary", "import-metrics"),
-      actionButton(text("Create tasks", "Создать задачи"), "secondary", "generate-improvements")
+      actionButton(text("Add signal", "Добавить сигнал"), "primary", "import-metrics")
     ],
     settings: currentSettingsTab() === "tools"
       ? [actionButton("Add tool", "primary", "new-tool")]
       : currentSettingsTab() === "technical"
         ? [actionButton("Refresh status", "secondary", "refresh-data")]
-        : currentSettingsTab() === "autopilot"
-          ? [actionButton(text("Save rules", "Сохранить правила"), "primary", "save-autopilot")]
-          : []
+        : []
   };
 
   elements.routeActions.innerHTML = (actions[routeKey] || []).join("");
@@ -1832,7 +1829,6 @@ function resultActionList(metrics) {
       <p>${escapeHtml(metrics.leads || metrics.published_materials
         ? text("Create tasks from the current signals when you are ready to tighten the loop.", "Создайте задачи по текущим сигналам, когда будете готовы усиливать контур.")
         : text("First get a release or recorded lead, then improvement tasks will become useful.", "Сначала нужен выпуск или зафиксированная заявка, потом задачи улучшения станут полезными."))}</p>
-      <button class="button secondary" data-action="generate-improvements">${escapeHtml(text("Create tasks", "Создать задачи"))}</button>
     </div>
   `;
 }
@@ -1978,6 +1974,9 @@ function settingsNextStep(tab) {
     }
   };
   const step = steps[tab] || steps.technical;
+  const action = tab === "technical"
+    ? `<button class="button primary" data-action="${escapeAttr(step.action)}" data-id="${escapeAttr(step.id)}">${escapeHtml(step.label)}</button>`
+    : "";
   return `
     <section class="settings-next-step">
       <div>
@@ -1985,7 +1984,7 @@ function settingsNextStep(tab) {
         <strong>${escapeHtml(step.title)}</strong>
         <span>${escapeHtml(step.note)}</span>
       </div>
-      <button class="button primary" data-action="${escapeAttr(step.action)}" data-id="${escapeAttr(step.id)}">${escapeHtml(step.label)}</button>
+      ${action}
     </section>
   `;
 }
@@ -2127,6 +2126,9 @@ function renderAutopilotSettings() {
           <div class="check-grid">
             ${channels.map(([key, label, checked]) => `<label class="check"><input type="checkbox" data-channel-key="${escapeAttr(key)}" ${state.channelSettings[key] ?? checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
           </div>
+        </div>
+        <div class="detail-actions">
+          <button type="button" class="button primary" data-action="save-autopilot">${escapeHtml(text("Save rules", "Сохранить правила"))}</button>
         </div>
       </article>
       <article class="panel">

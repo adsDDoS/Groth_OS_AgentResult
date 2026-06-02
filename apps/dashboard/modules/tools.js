@@ -40,7 +40,6 @@ export function createToolsModule(ctx) {
           <p class="eyebrow">${text("Launch access", "Доступы для запуска")}</p>
           <h3>${nextBlocker ? escapeHtml(nextBlocker.name) : text("No urgent access task", "Срочных доступов нет")}</h3>
           <p>${nextBlocker ? escapeHtml(toolNextAccessNote(nextBlocker)) : escapeHtml(text("The first loop can run through approvals, releases and result tracking.", "Первый цикл может идти через согласования, выпуск и отслеживание результата."))}</p>
-          ${nextBlocker ? `<button class="button primary" data-action="select-tool" data-id="${escapeAttr(nextBlocker.id)}">${text("Open access task", "Открыть задачу доступа")}</button>` : ""}
         </div>
         <div class="tool-readiness-metrics">
           ${compactMetric(text("Connected", "Подключено"), connected, text("ready now", "готово сейчас"))}
