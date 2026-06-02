@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-78";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-78";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-78";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-79";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-79";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-79";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -2598,7 +2598,7 @@ function displayWorkOwner(value) {
 function materialSecondaryAction(item) {
   if (item.status === "idea" || item.status === "brief" || item.status === "draft") return { action: "send-content-approval", label: text("Send to approval", "На согласование") };
   if (item.status === "review") return { action: "open-content-detail", label: text("Edit", "Править") };
-  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Hand off", "Передать") };
+  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Download text", "Скачать текст") };
   return { action: "open-content-detail", label: text("Details", "Детали") };
 }
 

@@ -63,7 +63,16 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - action `Подтвердить` is available;
   - no automatic publication is implied.
 
-### 5. Results
+### 5. Materials Actions
+
+- Open `#/content-pipeline`.
+- Expected:
+  - decision materials open the approval queue;
+  - draft materials can be sent to approval;
+  - text export is labelled as `Скачать текст`, not `Передать`;
+  - only actions that update the release plan use handoff language.
+
+### 6. Results
 
 - After manual handoff, open `#/analytics`.
 - Expected:
@@ -72,7 +81,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - note says `ждёт подтверждения выхода`;
   - owner can understand what still needs confirmation.
 
-### 6. Confirm Publication
+### 7. Confirm Publication
 
 - Return to publication plan.
 - Click `Подтвердить` for handed-off item.
@@ -82,7 +91,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - published output is counted in results;
   - toast confirms the release.
 
-### 7. Language Switch
+### 8. Language Switch
 
 - Switch to ENG on `Компания`, `Стратегия`, `Публикации`, `Результаты`.
 - Switch back to РУС.
