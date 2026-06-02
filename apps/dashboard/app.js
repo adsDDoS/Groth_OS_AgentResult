@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-84";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-84";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-84";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-85";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-85";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-85";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -2742,6 +2742,13 @@ function bindScreenEvents() {
       if (!button || !root.contains(button) || button.disabled) return;
       event.preventDefault();
       void handleAction(button.dataset.action, button.dataset.id);
+    });
+    root.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      const control = event.target.closest('[role="button"][data-action]');
+      if (!control || !root.contains(control)) return;
+      event.preventDefault();
+      void handleAction(control.dataset.action, control.dataset.id);
     });
   });
   [elements.screenRoot, elements.routeActions, elements.modalRoot].forEach((root) => {

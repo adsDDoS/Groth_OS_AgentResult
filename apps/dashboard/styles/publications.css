@@ -32,7 +32,14 @@
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
   background: #fffdf8;
+  cursor: pointer;
   text-align: left;
+}
+
+.approval-item:hover,
+.approval-item:focus-visible {
+  border-color: rgba(204, 120, 92, 0.45);
+  outline: 0;
 }
 
 .approval-item.selected {
@@ -89,8 +96,8 @@
 }
 
 .approval-detail .asset-preview-text {
-  max-height: 112px;
-  overflow: hidden;
+  max-height: 210px;
+  overflow: auto;
   font-size: 12px;
   line-height: 1.5;
 }

@@ -75,10 +75,10 @@ function renderApprovals() {
           ${pendingApprovals.map((item) => {
             const context = getApprovalContext(item);
             return `
-              <button class="approval-item ${item.id === selected?.id ? "selected" : ""}" data-action="select-approval" data-id="${escapeAttr(item.id)}">
+              <div class="approval-item ${item.id === selected?.id ? "selected" : ""}" role="button" tabindex="0" data-action="select-approval" data-id="${escapeAttr(item.id)}">
                 <strong>${escapeHtml(context.title)}</strong>
                 <span>${escapeHtml(displayChannel(context.channel))} · ${escapeHtml(context.when)} · ${escapeHtml(tr(labelize(item.status || "pending")))}</span>
-              </button>
+              </div>
             `;
           }).join("") || `<p class="empty-note">${text("No materials waiting for approval.", "Нет материалов на согласовании.")}</p>`}
         </div>
@@ -93,7 +93,6 @@ function renderApprovals() {
 
 function approvalDetail(item) {
   const context = getApprovalContext(item);
-  const previewExpanded = state.expandedApprovalPreviewId === item.id;
   return `
     <div class="panel-heading approval-heading-compact">
       <div>
@@ -116,12 +115,9 @@ function approvalDetail(item) {
         <strong>${escapeHtml(context.when)}</strong>
       </div>
     </div>
-    <div class="preview-pane approval-preview-pane ${previewExpanded ? "expanded" : ""}">
+    <div class="preview-pane approval-preview-pane">
       <p class="eyebrow">${text("Text preview", "Текст")}</p>
       ${renderAssetPreview(context)}
-      <button class="button secondary table-button approval-preview-toggle" data-action="toggle-approval-preview" data-id="${escapeAttr(item.id)}">
-        ${escapeHtml(previewExpanded ? text("Collapse", "Свернуть") : text("Expand", "Развернуть"))}
-      </button>
     </div>
     <div class="detail-actions">
       ${approvalDetailActions(item)}
