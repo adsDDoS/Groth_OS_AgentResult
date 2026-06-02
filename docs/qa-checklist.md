@@ -28,6 +28,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - result chain shows preparation, approval, release, signal;
   - no duplicate `Контроль` block;
   - top actions do not overload the screen.
+  - scheduled release action says handoff, and handed-off release action says confirmation.
 
 ### 2. Strategy
 
@@ -81,6 +82,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - metric `Передано вручную` is visible;
   - count is `1`;
   - note says `ждёт подтверждения выхода`;
+  - confirmed `Вышло` stays separate from manual handoff;
   - owner can understand what still needs confirmation.
 
 ### 7. Confirm Publication

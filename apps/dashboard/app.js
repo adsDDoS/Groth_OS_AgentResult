@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-81";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-81";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-81";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-82";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-82";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-82";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -1232,16 +1232,12 @@ function renderActions() {
     ]
   };
   const actions = {
-    overview: [
-      actionButton(text("Approvals", "Согласования"), "primary", "go-approvals")
-    ],
+    overview: [],
     "growth-plan": [],
     "offer-brain": [actionButton(text("Save", "Сохранить"), "primary", "save-offer")],
     "content-pipeline": [],
     publications: publicationActions[currentPublicationTab()],
-    analytics: [
-      actionButton(text("Add signal", "Добавить сигнал"), "primary", "import-metrics")
-    ],
+    analytics: [],
     settings: currentSettingsTab() === "tools"
       ? [actionButton("Add tool", "primary", "new-tool")]
       : currentSettingsTab() === "technical"
@@ -1259,23 +1255,23 @@ function actionButton(label, variant, action) {
 
 function renderOverview() {
   const pending = state.approvals.filter((item) => item.status === "pending");
-  const readyContent = state.content.filter((item) => ["review", "approved", "scheduled"].includes(item.status));
-  const publishedCount = shippedCalendarCount(state.calendar);
+  const publishedCount = state.calendar.filter((item) => item.status === "published").length;
+  const handedOffCount = handedOffCalendarCount(state.calendar);
   const blockers = growthBlockers(pending);
   const ownerMoves = ownerNextMoves(pending);
 
   return `
     ${hermesDailyBrief(pending, blockers, ownerMoves)}
     ${resultPath(pending, publishedCount)}
-    ${todaySignalStrip({ readyCount: readyContent.length, publishedCount })}
+    ${todaySignalStrip({ pendingCount: pending.length, handedOffCount })}
   `;
 }
 
-function todaySignalStrip({ readyCount, publishedCount }) {
+function todaySignalStrip({ pendingCount, handedOffCount }) {
   return `
     <section class="today-signal-strip">
-      ${compactMetric(text("Ready outside", "Готово наружу"), readyCount, text("approved, planned or ready", "согласовано или в плане"))}
-      ${compactMetric(text("Published", "Опубликовано"), publishedCount, text("live or handed off", "вышло или передано"))}
+      ${compactMetric(text("Decisions", "Решения"), pendingCount, text("waiting for owner", "ждут собственника"))}
+      ${compactMetric(text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting confirmation", "ждёт подтверждения"))}
       ${compactMetric(text("Leads", "Заявки"), state.metrics.leads || 0, text("from forms, CRM or replies", "из форм, CRM или ответов"))}
     </section>
   `;
@@ -1293,10 +1289,19 @@ function compactMetric(label, value, note) {
 
 function resultPath(pending, publishedCount) {
   const pendingApproval = pending[0] || state.approvals.find((item) => item.status === "pending");
-  const scheduled = state.calendar.find((item) => item.status === "scheduled" || item.status === "handed_off");
+  const releaseItem =
+    state.calendar.find((item) => item.status === "handed_off") ||
+    state.calendar.find((item) => item.status === "scheduled");
   const hasMaterial = state.content.length > 0;
   const hasApprovalDecision = state.approvals.some((item) => item.status === "approved");
   const hasLeads = Number(state.metrics.leads || 0) > 0;
+  const releaseAction = releaseItem?.status === "handed_off" ? "mark-calendar-published" : "mark-calendar-exported";
+  const releaseLabel = releaseItem?.status === "handed_off"
+    ? text("Confirm live", "Подтвердить выход")
+    : text("Mark handed off", "Отметить передачу");
+  const releaseNote = releaseItem?.status === "handed_off"
+    ? text("Waiting for live confirmation.", "Ждёт подтверждения выхода.")
+    : text("Ready for manual handoff.", "Готово к ручной передаче.");
   const steps = [
     {
       title: text("Prepared", "Подготовлено"),
@@ -1317,13 +1322,13 @@ function resultPath(pending, publishedCount) {
     },
     {
       title: text("Release", "Выпуск"),
-      note: scheduled
-        ? text("Ready to publish or confirm.", "Готово к публикации или подтверждению.")
+      note: releaseItem
+        ? releaseNote
         : text("Appears after approval.", "Появится после согласования."),
-      state: publishedCount ? "done" : scheduled ? "active" : "muted",
-      action: scheduled ? "mark-calendar-published" : "go-calendar",
-      id: scheduled?.id || "",
-      label: scheduled ? text("Mark live", "Отметить выпуск") : text("Publications", "Публикации")
+      state: publishedCount ? "done" : releaseItem ? "active" : "muted",
+      action: releaseItem ? releaseAction : "go-calendar",
+      id: releaseItem?.id || "",
+      label: releaseItem ? releaseLabel : text("Publications", "Публикации")
     },
     {
       title: text("Signal", "Сигнал"),
@@ -1795,10 +1800,11 @@ function primaryBusinessSignal(metrics) {
 
 function resultProofStrip(metrics) {
   const handedOffCount = handedOffCalendarCount(state.calendar);
+  const publishedCount = state.calendar.filter((item) => item.status === "published").length;
   const proof = [
-    [text("Output", "Выпуск"), metrics.published_materials, text("live or handed off", "вышло или передано")],
+    [text("Published", "Вышло"), publishedCount, text("confirmed live", "подтверждённый выход")],
     [text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting live confirmation", "ждёт подтверждения выхода")],
-    [text("Decisions", "Решения"), metrics.approvals_total, text(`${metrics.pending_approvals} pending`, `${metrics.pending_approvals} ждут`)],
+    [text("Waiting decision", "Ждёт решения"), metrics.pending_approvals, text("before release", "до выпуска")],
     [text("Leads", "Заявки"), metrics.leads, text("from forms, CRM or replies", "из форм, CRM или ответов")],
     [text("Money", "Деньги"), metrics.recovered_payments, text("confirmed return", "подтверждённый возврат")]
   ];
