@@ -51,9 +51,9 @@ export function createToolsModule(ctx) {
   }
 
   function ownerToolFocus(tools) {
-    const importantIds = ["telegram-webapp", "site-cms", "email", "crm", "tables"];
+    const importantIds = ["backend", "email", "telegram-webapp", "site-cms"];
     const important = importantIds.map((id) => tools.find((tool) => tool.id === id)).filter(Boolean);
-    const blockers = tools.filter((tool) => tool.status === "needs-setup" || tool.accessNeeded);
+    const blockers = tools.filter((tool) => importantIds.includes(tool.id) && (tool.status === "needs-setup" || tool.accessNeeded));
     return uniqueById([...blockers, ...important]).slice(0, 6);
   }
 

@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-82";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-82";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-82";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-83";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-83";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-83";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -1239,9 +1239,9 @@ function renderActions() {
     publications: publicationActions[currentPublicationTab()],
     analytics: [],
     settings: currentSettingsTab() === "tools"
-      ? [actionButton("Add tool", "primary", "new-tool")]
+      ? []
       : currentSettingsTab() === "technical"
-        ? [actionButton("Refresh status", "secondary", "refresh-data")]
+        ? []
         : []
   };
 
@@ -2036,7 +2036,7 @@ function renderTechnicalSettings() {
         : text("Shows the first controlled loop without local services.", "Показывает первый управляемый цикл без локальных сервисов.")
     }
   ];
-  const statusItems = [
+  const detailItems = [
     {
       label: text("Workspace", "Рабочий контур"),
       value: state.online ? text("Connected", "Подключён") : text("Demo", "Демо"),
@@ -2075,18 +2075,12 @@ function renderTechnicalSettings() {
           </article>
         `).join("")}
       </div>
-      <div class="system-status-grid">
-        ${statusItems.map((item) => `
-          <article>
-            <span>${escapeHtml(item.label)}</span>
-            <strong>${escapeHtml(item.value)}</strong>
-            <p>${escapeHtml(item.note)}</p>
-          </article>
-        `).join("")}
-      </div>
       <details class="technical-details">
-        <summary>${text("Implementation details", "Детали внедрения")}</summary>
+        <summary>${text("Workspace details", "Детали рабочего контура")}</summary>
         <div class="settings-list">
+          ${detailItems.map((item) => `
+            <div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)} · ${escapeHtml(item.note)}</strong></div>
+          `).join("")}
           <div><span>${text("Service address", "Адрес сервиса")}</span><strong>${escapeHtml(API_BASE || text("Not connected", "Не подключён"))}</strong></div>
           <div><span>${text("Workspace", "Рабочая область")}</span><strong>${escapeHtml(TENANT_ID)}</strong></div>
         </div>

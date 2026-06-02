@@ -98,6 +98,16 @@ async function run() {
     await page.locator('[data-lang="ru"]').click();
     assert(await page.locator("#sectionTitle").innerText() === "Компания", "RU switch failed on Company");
 
+    await page.goto(`${baseUrl}/?v=smoke#/settings`);
+    await page.waitForSelector(".settings-tabs-panel");
+    assert((await page.locator("#routeActions .button").count()) === 0, "Settings top actions should be empty");
+    assert((await page.locator(".launch-readiness-strip article").count()) === 3, "Settings readiness should show one compact strip");
+    assert(!(await page.locator(".technical-details").evaluate((node) => node.open)), "Workspace details should be collapsed");
+    await page.locator('.segmented-tabs [data-action="set-settings-tab"][data-id="tools"]').click();
+    assert((await page.locator(".tool-owner-row").count()) === 4, "Access queue should focus on first-launch access only");
+    const accessText = await getPageText(page);
+    assert(!accessText.includes("Bitrix24") && !accessText.includes("CSV / XLSX"), "Access queue includes later-stage tools");
+
     await page.goto(`${baseUrl}/?v=smoke#/publications`);
     await page.waitForSelector(".tabs-panel");
     await page.locator('[data-action="set-publication-tab"][data-id="pack"]').click();

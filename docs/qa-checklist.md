@@ -104,6 +104,16 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - no mixed admin wording appears;
   - route state is preserved.
 
+### 9. Settings
+
+- Open `#/settings`.
+- Expected:
+  - top actions are empty;
+  - launch readiness shows one compact owner-facing readiness strip;
+  - implementation details are collapsed by default;
+  - access queue shows only first-launch access: workspace, sender, Telegram control surface, CMS;
+  - no backend-admin refresh or generic add-tool action is visible.
+
 ## Regression Areas
 
 - Empty states for approvals, materials, publication plan, and results.
