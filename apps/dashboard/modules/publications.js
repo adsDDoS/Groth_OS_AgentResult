@@ -7,17 +7,13 @@ export function createPublicationsModule(ctx) {
     escapeAttr,
     text,
     tr,
-    compactMetric,
     getApprovalContext,
     displayChannel,
     labelize,
-    getSelectedApproval,
     statusChip,
     renderAssetPreview,
     actionButton,
     formatDate,
-    currentLangValue,
-    field,
     packageAssets
   } = ctx;
 
@@ -41,80 +37,6 @@ function renderPublications() {
       ${tab === "approvals" ? "" : `<div class="tab-context">${publicationTabContext(tab)}</div>`}
     </section>
     ${tabRenderers[tab]()}
-  `;
-}
-
-function publicationCockpit() {
-  const pending = state.approvals.filter((item) => item.status === "pending");
-  const calendarReview = state.calendar.filter((item) => item.status === "review");
-  const orphanCalendarReview = calendarReview.filter((item) => !state.approvals.some((approval) =>
-    approval.status === "pending" && (approval.target_id === item.id || approval.calendar_item_id === item.id)
-  ));
-  const scheduled = state.calendar.filter((item) => item.status === "scheduled");
-  const handedOff = state.calendar.filter((item) => item.status === "handed_off");
-  const published = state.calendar.filter((item) => item.status === "published");
-  const next = pending[0]
-    ? {
-        label: text("Needs decision", "Требует решения"),
-        title: getApprovalContext(pending[0]).title,
-        action: "go-approval",
-        id: pending[0].id,
-        actionLabel: text("Open", "Открыть"),
-        filter: text("Approval", "Согласование")
-      }
-    : orphanCalendarReview[0]
-      ? {
-          label: text("Needs approval", "Нужно согласование"),
-          title: orphanCalendarReview[0].title,
-          action: "go-calendar",
-          id: orphanCalendarReview[0].id,
-          actionLabel: text("Plan", "План"),
-          filter: text("Calendar", "Календарь")
-        }
-    : scheduled[0]
-      ? {
-          label: text("Ready", "Готово"),
-          title: scheduled[0].title,
-          action: "go-calendar",
-          id: scheduled[0].id,
-          actionLabel: text("Plan", "План"),
-          filter: text("Release", "Выпуск")
-        }
-      : handedOff[0]
-        ? {
-            label: text("Confirm", "Подтвердить"),
-            title: handedOff[0].title,
-            action: "go-calendar",
-            id: handedOff[0].id,
-            actionLabel: text("Plan", "План"),
-            filter: text("Handoff", "Передача")
-          }
-      : {
-          label: text("Published", "Опубликовано"),
-          title: published[0]?.title || text("No urgent publication action", "Срочных действий по публикациям нет"),
-          action: "go-analytics",
-          id: "",
-          actionLabel: text("Results", "Результаты"),
-          filter: text("Result", "Результат")
-        };
-
-  return `
-    <section class="publication-cockpit">
-      <div class="publication-cockpit-main">
-        <p class="eyebrow">${escapeHtml(next.filter)}</p>
-        <h3>${escapeHtml(next.title)}</h3>
-        <div class="publication-cockpit-action">
-          <span>${escapeHtml(next.label)}</span>
-          <button class="button primary" data-action="${escapeAttr(next.action)}" data-id="${escapeAttr(next.id || "")}">${escapeHtml(next.actionLabel)}</button>
-        </div>
-      </div>
-      <div class="publication-cockpit-stats">
-        ${compactMetric(text("Decision", "Решение"), pending.length + orphanCalendarReview.length, text("before release", "до выпуска"))}
-        ${compactMetric(text("Ready", "Готово"), scheduled.length, text("release", "выпуск"))}
-        ${compactMetric(text("Handoff", "Передано"), handedOff.length, text("confirm", "подтвердить"))}
-        ${compactMetric(text("Live", "Вышло"), published.length, text("in Results", "в результатах"))}
-      </div>
-    </section>
   `;
 }
 
@@ -313,7 +235,7 @@ function releaseQueueCard(item, queueId) {
       ${note ? `<p>${escapeHtml(note)}</p>` : ""}
       <div class="card-actions">
         ${releaseQueueAction(item, queueId)}
-        <a class="button secondary table-button" href="./#/publications/note/${escapeAttr(item.id)}">${escapeHtml(text("Note", "Заметка"))}</a>
+        ${note ? `<a class="button secondary table-button" href="./#/publications/note/${escapeAttr(item.id)}">${escapeHtml(text("Instruction", "Инструкция"))}</a>` : ""}
       </div>
     </article>
   `;
@@ -324,152 +246,6 @@ function releaseQueueAction(item, queueId) {
   if (queueId === "handoff" && item.status === "handed_off") return `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Confirm", "Подтвердить"))}</button>`;
   if (queueId === "handoff") return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Handed off", "Передано"))}</button>`;
   return `<span class="muted">${escapeHtml(text("In Results", "В результатах"))}</span>`;
-}
-
-function calendarBulkControl(count) {
-  return `
-    <div class="calendar-bulk-control">
-      <div>
-        <span>${escapeHtml(text("Manual handoff", "Передано вручную"))}</span>
-        <strong>${escapeHtml(text(`${count} to confirm`, `${count} на подтверждение`))}</strong>
-      </div>
-      <button class="button primary table-button" data-action="confirm-handed-off">${escapeHtml(text("Confirm", "Подтвердить"))}</button>
-    </div>
-  `;
-}
-
-function publishingCalendarFilters() {
-  return [
-    ["all", text("All", "Все")],
-    ["handed_off", text("Manual handoff", "Передано вручную")],
-    ["scheduled", text("Ready to release", "Готово к выпуску")],
-    ["review", text("Needs decision", "Ждёт решения")],
-    ["published", text("Published", "Опубликовано")]
-  ].map(([id, label]) => ({
-    id,
-    label,
-    count: id === "all" ? state.calendar.length : state.calendar.filter((item) => item.status === id).length
-  }));
-}
-
-function publicationChannelMatrix() {
-  const channels = [
-    {
-      name: text("Website / CMS", "Сайт / CMS"),
-      status: text("manual release", "ручной выпуск"),
-      note: text("Best for search demand, proof pages and conversion forms.", "Для поискового спроса, страниц доверия и форм заявки."),
-      action: "set-publication-tab",
-      id: "pack",
-      label: text("Take approved text", "Забрать текст")
-    },
-    {
-      name: "Telegram",
-      status: text("manual release", "ручной выпуск"),
-      note: text("Works through subscribers, forwards, reactions and founder distribution.", "Работает через подписчиков, репосты, реакции и дистрибуцию основателя."),
-      action: "set-publication-tab",
-      id: "pack",
-      label: text("Take post", "Забрать пост")
-    },
-    {
-      name: "Email",
-      status: text("needs sender access", "нужен доступ отправителя"),
-      note: text("Strong when CRM or a segmented contact base is connected.", "Силен, когда подключена CRM или сегментированная база."),
-      action: "select-tool",
-      id: "email",
-      label: text("Open access", "Открыть доступ")
-    },
-    {
-      name: "VC.ru / Habr",
-      status: text("manual release", "ручной выпуск"),
-      note: text("Useful for expert articles, technical trust and market arguments.", "Для экспертных статей, технического доверия и рыночных аргументов."),
-      action: "set-publication-tab",
-      id: "pack",
-      label: text("Take article", "Забрать статью")
-    }
-  ];
-  return `
-    <div class="publication-channel-matrix" aria-label="${escapeAttr(text("Publishing channels", "Каналы выпуска"))}">
-      ${channels.map((channel) => `
-        <article>
-          <strong>${escapeHtml(channel.name)}</strong>
-          <span>${escapeHtml(channel.status)}</span>
-          <p>${escapeHtml(channel.note)}</p>
-          <button class="button secondary table-button" data-action="${escapeAttr(channel.action)}" data-id="${escapeAttr(channel.id)}">${escapeHtml(channel.label)}</button>
-        </article>
-      `).join("")}
-    </div>
-  `;
-}
-
-function calendarAction(item) {
-  if (item.status === "published") return `<span class="muted">${escapeHtml(text("Published", "Выпущено"))}</span>`;
-  if (item.status === "handed_off") return `<button class="button secondary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Confirm", "Подтвердить"))}</button>`;
-  if (item.status === "scheduled") {
-    return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Handed off", "Передано"))}</button>`;
-  }
-  if (item.status === "review") {
-    return `<button class="button secondary table-button" data-action="go-approvals" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Approve", "Согласовать"))}</button>`;
-  }
-  return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Handed off", "Передано"))}</button>`;
-}
-
-function publishingWeekGroups(items = null) {
-  const groups = new Map();
-  for (const item of [...(items || state.calendar)].sort((a, b) => String(a.scheduled_for || "").localeCompare(String(b.scheduled_for || "")))) {
-    const key = publishingDayKey(item.scheduled_for);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
-  }
-  return [...groups.entries()];
-}
-
-function calendarEmptyState(filter) {
-  const message = filter === "handed_off"
-    ? text("No handoff to confirm.", "Нет передач на подтверждение.")
-    : text("No items.", "Нет материалов.");
-  return `
-    <section class="calendar-empty-state">
-      <strong>${escapeHtml(message)}</strong>
-    </section>
-  `;
-}
-
-function publishingDayKey(value) {
-  if (!value) return "no-date";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "no-date";
-  return date.toISOString().slice(0, 10);
-}
-
-function formatPublishingDay(dayKey) {
-  if (dayKey === "no-date") return text("No date", "Без даты");
-  const date = new Date(`${dayKey}T12:00:00`);
-  return new Intl.DateTimeFormat(currentLangValue() === "ru" ? "ru-RU" : "en", {
-    weekday: "short",
-    day: "numeric",
-    month: "short"
-  }).format(date);
-}
-
-function publishingCalendarCard(item) {
-  const note = publishingOwnerNote(item);
-  return `
-    <article class="calendar-card">
-      <div class="calendar-card-top">
-        <strong>${escapeHtml(item.title)}</strong>
-        ${statusChip(item.status || "draft")}
-      </div>
-      <span>${escapeHtml(displayChannel(item.channel || "manual"))} · ${escapeHtml(formatDate(item.scheduled_for))}</span>
-      <a class="calendar-note-block ${note ? "filled" : ""}" href="./#/publications/note/${escapeAttr(item.id)}">
-        <span>${escapeHtml(text("Note", "Заметка"))}</span>
-        <strong>${escapeHtml(note || text("No note", "Нет заметки"))}</strong>
-      </a>
-      <div class="card-actions">
-        ${calendarAction(item)}
-        <a class="button secondary table-button" href="./#/publications/note/${escapeAttr(item.id)}">${escapeHtml(text("Note", "Заметка"))}</a>
-      </div>
-    </article>
-  `;
 }
 
 function publishingOwnerNote(item) {
@@ -518,7 +294,7 @@ function renderManualExport() {
           <p class="eyebrow">${text("Text", "Текст")}</p>
           <pre class="asset-preview-text">${escapeHtml(selectedAsset.preview)}</pre>
         </div>
-        <button class="button secondary handoff-plan-link" data-action="open-calendar">${escapeHtml(text("Release plan", "План выпуска"))}</button>
+        ${selectedHandoff ? "" : `<button class="button secondary handoff-plan-link" data-action="open-calendar">${escapeHtml(text("Release plan", "План выпуска"))}</button>`}
       </article>
     </div>
   `;

@@ -62,6 +62,8 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - item status becomes `Передано вручную`;
   - action `Подтвердить` is available;
   - no automatic publication is implied.
+  - after handoff there is one clear route to the release plan, not duplicate plan buttons.
+  - publication plan cards show an instruction link only when a handoff instruction exists.
 
 ### 5. Materials Actions
 

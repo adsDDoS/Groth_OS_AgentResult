@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-79";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-79";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-79";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-81";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-81";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-81";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -3283,14 +3283,6 @@ function packageAssets() {
       preview: text(
         "AI Growth OS Readiness Checklist\n- Offer clarity\n- ICP and pains\n- Proof assets\n- Demand map coverage\n- Approval owner\n- Manual export readiness",
         "Чеклист готовности к AI Growth OS\n- Ясность оффера\n- Кому продаём и какие боли закрываем\n- Доказательства\n- Покрытие тем привлечения\n- Кто согласует публикации\n- Готовность пакета материалов"
-      )
-    },
-    {
-      id: "calendar",
-      label: text("Publishing calendar CSV", "Календарь публикаций CSV"),
-      preview: text(
-        "date,channel,title,status,approval_owner\n2026-05-26,telegram,AI Growth OS launch post,review,Egor\n2026-05-27,website,AI Growth OS overview page,draft,Egor",
-        "date,channel,title,status,approval_owner\n2026-05-26,telegram,Launch-пост AI Growth OS,review,Egor\n2026-05-27,website,Обзорная страница AI Growth OS,draft,Egor"
       )
     }
   ];
