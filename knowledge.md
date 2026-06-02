@@ -165,7 +165,7 @@ Keep the RU/ENG switch.
 Current main navigation:
 
 - Today / Сегодня
-- Growth Plan / План роста
+- Strategy / Стратегия
 - Company / Компания
 - Materials / Материалы
 - Publications / Публикации
@@ -201,7 +201,7 @@ Hermes prepared -> Owner approved -> Went outside -> Result appeared
 
 This flow is more important than adding more sections.
 
-Growth Plan should be a decision surface, not a planning workspace. It should show one priority, one main action, and a short queue of next moves. Avoid showing competing CTAs such as separate "task", "material", "speed", "proof" controls unless the owner clearly needs to choose between them.
+Strategy should be a decision surface, not a planning workspace. It should show one priority, one main action, and a short queue of next moves. Avoid showing competing CTAs such as separate "task", "material", "speed", "proof" controls unless the owner clearly needs to choose between them.
 
 Company should not feel like a long onboarding questionnaire. Show the minimum launch context first: offer, buyer, pains, proof, forbidden claims, and approval rules. Put competitors, channels, domains, tone, and extra details below or behind a compact advanced block.
 

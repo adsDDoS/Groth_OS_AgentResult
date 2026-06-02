@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-76";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-76";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-76";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-77";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-77";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-77";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -27,7 +27,7 @@ const RU = {
   "Growth Control": "Рост компании",
   "Home": "Сегодня",
   "Today": "Сегодня",
-  "Growth Plan": "План роста",
+  "Strategy": "Стратегия",
   "Company": "Компания",
   "Publications": "Публикации",
   "Where to Find Clients": "Где искать клиентов",
@@ -44,7 +44,7 @@ const RU = {
   "Launch readiness": "Готовность запуска",
   "Rules": "Правила",
   "Rules, access, and launch": "Правила, доступы и запуск",
-  "Revenue priorities": "Приоритеты выручки",
+  "Revenue direction": "Куда двигаем выручку",
   "Work that can go outside": "Материалы для внешнего выпуска",
   "Approve, hand off, publish": "Согласовать, передать, выпустить",
   "Business signals": "Бизнес-сигналы",
@@ -337,7 +337,7 @@ function text(en, ru) {
 
 const navItems = [
   { route: "overview", title: "Today" },
-  { route: "growth-plan", title: "Growth Plan" },
+  { route: "growth-plan", title: "Strategy" },
   { route: "offer-brain", title: "Company" },
   { route: "content-pipeline", title: "Materials" },
   { route: "publications", title: "Publications" },
@@ -369,13 +369,13 @@ const settingsTabs = {
 
 const routes = {
   overview: { title: "Today", kicker: "Summary" },
-  "growth-plan": { title: "Growth Plan", kicker: "Revenue priorities" },
+  "growth-plan": { title: "Strategy", kicker: "Revenue direction" },
   "offer-brain": { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
   "content-pipeline": { title: "Materials", kicker: "Work that can go outside" },
   publications: { title: "Publications", kicker: "Approve, hand off, publish" },
   analytics: { title: "Results", kicker: "Business signals" },
   settings: { title: "Settings", kicker: "Rules, access, and launch" },
-  "demand-map": { title: "Growth Plan", kicker: "Client acquisition workflow" },
+  "demand-map": { title: "Strategy", kicker: "Client acquisition workflow" },
   approvals: { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "publishing-calendar": { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "manual-export": { title: "Publications", kicker: "What can be approved, planned, or exported" },
@@ -997,7 +997,7 @@ function renderFormModal() {
   const scheduleContent = state.content.find((item) => item.id === modal.contentId) || state.content[0] || null;
   const configs = {
     demand: {
-      eyebrow: text("Growth plan", "План роста"),
+      eyebrow: text("Strategy", "Стратегия"),
       title: text("Add demand topic", "Добавить тему спроса"),
       submit: "submit-demand-form",
       button: text("Add topic", "Добавить тему"),
@@ -1468,7 +1468,7 @@ function renderGrowthPlan() {
 function workflowStrip(activeStep = canonicalRoute()) {
   const steps = [
     ["offer-brain", "offer-brain", text("Company", "Компания"), text("Set the offer and boundaries", "Настроили оффер и рамки")],
-    ["growth-plan", "growth-plan", text("Plan", "План"), text("Found demand and priorities", "Нашли спрос и приоритеты")],
+    ["growth-plan", "growth-plan", text("Strategy", "Стратегия"), text("Found demand and priorities", "Нашли спрос и приоритеты")],
     ["content-pipeline", "content-pipeline", text("Materials", "Материалы"), text("Prepared drafts and proofs", "Подготовили тексты и доказательства")],
     ["publications", "publications", text("Publications", "Публикации"), text("Approve, schedule, export", "Согласовать, поставить, забрать")],
     ["analytics", "analytics", text("Results", "Результаты"), text("See what worked", "Понять, что сработало")],
@@ -1538,7 +1538,7 @@ function renderContentPipeline() {
       <div>
         <p class="eyebrow">${text("Next material", "Следующий материал")}</p>
         <h3>${escapeHtml(nextItem ? materialQueueTitle(nextItem) : text("No material is waiting", "Материалов в очереди нет"))}</h3>
-        <p>${escapeHtml(nextItem ? materialQueueNote(nextItem) : text("Create a material from the growth plan when there is a real demand topic.", "Создайте материал из плана роста, когда есть реальная тема спроса."))}</p>
+        <p>${escapeHtml(nextItem ? materialQueueNote(nextItem) : text("Create a material from strategy when there is a real demand topic.", "Создайте материал из стратегии, когда есть реальная тема спроса."))}</p>
       </div>
       <div class="material-summary compact">
         ${compactMaterialMetric(text("Needs decision", "Ждёт решения"), waiting)}
@@ -2944,7 +2944,7 @@ async function createContentFromDemand(id) {
   state.content = mergeLocalItems(state.content, [saved]);
   state.metrics.content_items = state.content.length;
   addActivity("Growth Orchestrator", `Created material from demand: ${demand.title}`);
-  showToast(text("Material created from growth plan.", "Материал создан из плана роста."));
+  showToast(text("Material created from strategy.", "Материал создан из стратегии."));
   setRoute("content-pipeline");
 }
 
@@ -3416,7 +3416,7 @@ function submitDemandForm() {
   state.demand = mergeLocalItems(state.demand, [item]);
   saveLocalJson("aiGrowthOsLocalDemand", state.localDemand);
   state.formModal = null;
-  showToast(text("Topic added to the growth plan.", "Тема добавлена в план роста."));
+  showToast(text("Topic added to strategy.", "Тема добавлена в стратегию."));
   setRoute("growth-plan");
 }
 

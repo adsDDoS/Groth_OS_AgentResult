@@ -8,7 +8,7 @@ AI Growth OS is currently a working single-company alpha:
 
 - Owner-facing dashboard and workflow IA are in place.
 - AgentResult local workspace can run without Postgres.
-- Company, growth plan, publications, approvals, tools, and results are visible in one product surface.
+- Company, strategy, publications, approvals, tools, and results are visible in one product surface.
 - Local fallback data is available for development and customer demos.
 
 It is not yet a production SaaS. The remaining work is mainly durability, onboarding, integrations, trust, and deployment.

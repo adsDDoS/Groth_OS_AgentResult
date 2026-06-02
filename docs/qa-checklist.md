@@ -29,11 +29,11 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
   - no duplicate `Контроль` block;
   - top actions do not overload the screen.
 
-### 2. Growth Plan
+### 2. Strategy
 
 - Open `#/growth-plan`.
 - Expected:
-  - screen title is `План роста`;
+  - screen title is `Стратегия`;
   - one `Приоритет недели` is visible;
   - queue contains 3 focused actions;
   - old `Деньги / Скорость / Доказательство` filter is not visible;
@@ -84,7 +84,7 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
 
 ### 7. Language Switch
 
-- Switch to ENG on `Компания`, `План роста`, `Публикации`, `Результаты`.
+- Switch to ENG on `Компания`, `Стратегия`, `Публикации`, `Результаты`.
 - Switch back to РУС.
 - Expected:
   - titles, buttons, and key labels change;

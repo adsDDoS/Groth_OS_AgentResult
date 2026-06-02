@@ -18,7 +18,7 @@ npm run dashboard:deploy
 This runs the owner-flow smoke suite before production deploy:
 
 - Today cockpit
-- Growth Plan
+- Strategy
 - Company setup
 - Publications manual handoff
 - Results handoff signal

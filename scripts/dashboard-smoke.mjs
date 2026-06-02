@@ -79,12 +79,12 @@ async function run() {
     await page.locator(".growth-queue-row").nth(2).waitFor();
     const growthText = await page.locator(".plan-brief").innerText();
     const fullGrowthText = await getPageText(page);
-    assert(includesAny(await page.locator("#sectionTitle").innerText(), ["План роста", "Growth Plan"]), "Growth Plan title is wrong");
-    assert(includesAny(growthText, ["Приоритет недели", "Weekly priority"]), `Growth Plan must show weekly priority. Saw: ${growthText}`);
+    assert(includesAny(await page.locator("#sectionTitle").innerText(), ["Стратегия", "Strategy"]), "Strategy title is wrong");
+    assert(includesAny(growthText, ["Приоритет недели", "Weekly priority"]), `Strategy must show weekly priority. Saw: ${growthText}`);
     assert(!includesAny(fullGrowthText, ["Фильтр решений", "Decision filter"]), "Old decision filter is visible");
     assert(!includesAny(fullGrowthText, ["Скорость", "Speed"]), "Old speed tile is visible");
-    assert((await page.locator(".growth-queue-row").count()) === 3, "Growth Plan should show 3 queue rows");
-    assert((await page.locator("#routeActions .button").count()) === 0, "Growth Plan top actions should be empty");
+    assert((await page.locator(".growth-queue-row").count()) === 3, "Strategy should show 3 queue rows");
+    assert((await page.locator("#routeActions .button").count()) === 0, "Strategy top actions should be empty");
 
     await page.goto(`${baseUrl}/?v=smoke#/offer-brain`);
     await page.waitForSelector(".company-launch-panel");
