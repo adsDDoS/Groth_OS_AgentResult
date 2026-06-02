@@ -144,6 +144,20 @@ The owner should not feel forced to live inside the dashboard every day.
 
 If a dashboard section exists only to explain the product, remove or compress it. If a section does not help the owner decide, approve, configure, hand off, or see results, it is suspect.
 
+## Production Demo Surface
+
+The Vercel dashboard can be used as a static product demo before the production backend is connected.
+
+In that mode:
+
+- do not call or show `localhost` as the service address
+- do not imply that the production workspace is connected
+- use "демо-контур", "готово к просмотру", "следующий шаг" instead of backend/admin language
+- keep the owner loop visible: decision -> handoff/release -> result
+- keep service details inside collapsed implementation details
+
+Local development may still default to `http://localhost:3000`.
+
 ## Current UX Information Architecture
 
 Keep the RU/ENG switch.
@@ -160,10 +174,9 @@ Current main navigation:
 
 Settings tabs:
 
-- Technical status / Технический статус
-- Autopilot / Автопилот
-- Channels / Каналы
-- Tools / Инструменты
+- Launch readiness / Готовность запуска
+- Rules / Правила
+- Access / Доступы
 
 The main interface should not drift back into backend-admin language.
 
@@ -188,6 +201,10 @@ Hermes prepared -> Owner approved -> Went outside -> Result appeared
 
 This flow is more important than adding more sections.
 
+Growth Plan should be a decision surface, not a planning workspace. It should show one priority, one main action, and a short queue of next moves. Avoid showing competing CTAs such as separate "task", "material", "speed", "proof" controls unless the owner clearly needs to choose between them.
+
+Company should not feel like a long onboarding questionnaire. Show the minimum launch context first: offer, buyer, pains, proof, forbidden claims, and approval rules. Put competitors, channels, domains, tone, and extra details below or behind a compact advanced block.
+
 ## UX Standards
 
 Every screen must answer at least one of these:
@@ -202,6 +219,7 @@ Every screen must answer at least one of these:
 Prefer:
 
 - short labels
+- laconic, professional language
 - one clear next action
 - compact cards
 - business outcome language
@@ -218,6 +236,7 @@ Avoid:
 - visible implementation jargon on owner screens
 - raw backend words outside technical settings
 - fake metrics
+- verbose, childish, or tutorial-style copy
 - empty-looking SaaS boilerplate
 - childish instruction tone
 

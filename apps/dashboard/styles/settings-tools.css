@@ -1,0 +1,334 @@
+.settings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 11px 12px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.settings-list span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-list strong {
+  color: var(--ink);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.system-status-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.system-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.launch-readiness-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.system-status-grid article,
+.launch-readiness-strip article {
+  min-height: 116px;
+  padding: 14px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.system-status-grid article {
+  min-height: 96px;
+}
+
+.system-status-grid span,
+.launch-readiness-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.system-status-grid strong,
+.launch-readiness-strip strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.system-status-grid p,
+.launch-readiness-strip p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.technical-details {
+  padding: 12px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.technical-details summary {
+  color: var(--body-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.technical-details .settings-list {
+  margin-top: 10px;
+}
+
+.settings-next-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(204, 120, 92, 0.22);
+  border-radius: 8px;
+  background: #fff7ef;
+}
+
+.settings-next-step strong,
+.settings-next-step span {
+  display: block;
+}
+
+.settings-next-step strong {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.settings-next-step span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rules-control-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.rules-main-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.rules-check-block {
+  display: grid;
+  gap: 10px;
+}
+
+.tools-owner-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.tool-readiness-cockpit {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--surface-dark);
+  color: var(--on-dark);
+}
+
+.tool-readiness-cockpit .eyebrow {
+  color: var(--on-dark-soft);
+}
+
+.tool-readiness-cockpit h3 {
+  color: var(--on-dark);
+  font-size: 28px;
+  line-height: 1.18;
+}
+
+.tool-readiness-cockpit p {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--on-dark-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.tool-readiness-cockpit .button {
+  width: fit-content;
+  margin-top: 18px;
+}
+
+.tool-readiness-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tool-owner-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tool-owner-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  padding: 12px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: #fffdf8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tool-owner-row.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.12);
+}
+
+.tool-owner-row strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.tool-owner-row span:not(.tool-status) {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tool-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tool-status.connected {
+  background: rgba(93, 184, 114, 0.16);
+  color: #2f7a42;
+}
+
+.tool-status.needs-setup {
+  background: rgba(232, 165, 90, 0.22);
+  color: #8a5b20;
+}
+
+.tool-status.not-used {
+  background: rgba(108, 106, 100, 0.12);
+  color: var(--muted);
+}
+
+.tool-status.later {
+  background: rgba(93, 184, 166, 0.14);
+  color: #31796d;
+}
+
+.permission-block {
+  display: grid;
+  gap: 8px;
+}
+
+.check-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--warning);
+  box-shadow: 0 0 0 4px rgba(212, 160, 23, 0.16);
+}
+
+.status-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 0 4px rgba(93, 184, 114, 0.16);
+}
+
+.status-dot.offline {
+  background: var(--error);
+  box-shadow: 0 0 0 4px rgba(198, 69, 69, 0.16);
+}
+
+@media (max-width: 1220px) {
+  .tool-readiness-metrics,
+  .launch-readiness-strip,
+  .system-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tools-owner-grid,
+  .rules-control-grid,
+  .tool-readiness-cockpit {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .tool-readiness-metrics,
+  .launch-readiness-strip,
+  .system-status-grid,
+  .tools-owner-grid,
+  .rules-control-grid,
+  .tool-readiness-cockpit,
+  .check-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .tools-owner-grid,
+  .tool-readiness-cockpit {
+    gap: 12px;
+  }
+
+  .tool-owner-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-next-step {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -1,3 +1,7 @@
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-76";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-76";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-76";
+
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {
@@ -7,7 +11,10 @@ if (params.get("demo") === "reset") {
   localStorage.setItem("aiGrowthOsLang", "ru");
 }
 
-const API_BASE = localStorage.getItem("aiGrowthOsApiBase") || "http://localhost:3000";
+const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
+const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
+const IS_PRODUCTION_DEMO = !isLocalHost && !configuredApiBase;
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
   rawTenantId && rawTenantId !== "null" && rawTenantId !== "undefined"
@@ -33,12 +40,14 @@ const RU = {
   "Results": "Результаты",
   "Settings": "Настройки",
   "Tools": "Инструменты",
-  "Rules, channels, and tools": "Правила, каналы и инструменты",
+  "Access": "Доступы",
+  "Launch readiness": "Готовность запуска",
+  "Rules": "Правила",
+  "Rules, access, and launch": "Правила, доступы и запуск",
   "Revenue priorities": "Приоритеты выручки",
   "Work that can go outside": "Материалы для внешнего выпуска",
   "Approve, hand off, publish": "Согласовать, передать, выпустить",
   "Business signals": "Бизнес-сигналы",
-  "Owner cockpit": "Пульт собственника",
   "Summary": "Сводка",
   "Client acquisition workflow": "Цикл привлечения клиентов",
   "What can be approved, planned, or exported": "Что можно согласовать, запланировать или забрать",
@@ -179,12 +188,6 @@ const RU = {
   "No sensitive claim scope detected.": "Чувствительных утверждений не найдено.",
   "Decision": "Решение",
   "Approval request": "Заявка на согласование",
-  "Decision comment required": "Комментарий обязателен",
-  "Decision note optional": "Комментарий необязателен",
-  "Explain what must change or why this is rejected.": "Напишите, что нужно изменить или почему отклоняем.",
-  "Add a publication note, approval condition, or handoff instruction.": "Добавьте заметку к публикации, условие согласования или инструкцию для передачи.",
-  "This note will be written to the audit trail and sent back to the workflow.": "Комментарий попадёт в историю решений и вернётся в workflow.",
-  "Approving unlocks the next publishing step, but does not bypass channel-specific publishing controls.": "Согласование разблокирует следующий шаг, но не обходит правила конкретного канала.",
   "Calendar": "Календарь",
   "Pack builder": "Сборщик пакета",
   "Weekly content pack": "Недельный контент-пакет",
@@ -359,10 +362,9 @@ const publicationTabs = {
 const publicationRoutes = Object.fromEntries(Object.entries(publicationTabs).map(([tab, item]) => [item.route, tab]));
 
 const settingsTabs = {
-  technical: { label: "Technical status" },
-  autopilot: { label: "Autopilot" },
-  channels: { label: "Channels" },
-  tools: { label: "Tools" }
+  technical: { label: "Launch readiness" },
+  autopilot: { label: "Rules" },
+  tools: { label: "Access" }
 };
 
 const routes = {
@@ -372,12 +374,12 @@ const routes = {
   "content-pipeline": { title: "Materials", kicker: "Work that can go outside" },
   publications: { title: "Publications", kicker: "Approve, hand off, publish" },
   analytics: { title: "Results", kicker: "Business signals" },
-  settings: { title: "Settings", kicker: "Rules, channels, and tools" },
+  settings: { title: "Settings", kicker: "Rules, access, and launch" },
   "demand-map": { title: "Growth Plan", kicker: "Client acquisition workflow" },
   approvals: { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "publishing-calendar": { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "manual-export": { title: "Publications", kicker: "What can be approved, planned, or exported" },
-  agents: { title: "Settings", kicker: "Rules, channels, and tools" }
+  agents: { title: "Settings", kicker: "Rules, access, and launch" }
 };
 
 const demo = {
@@ -388,7 +390,7 @@ const demo = {
       "AgentResult строит B2B AI-agent systems, которые помогают собственнику держать под контролем продажи, рост и операционные процессы через понятный Telegram-пульт.",
     profile: {
       positioning:
-        "B2B AI-agent systems для продаж, роста, CRM-автоматизации и операционного контроля. Основной формат: агентная система + backend + Telegram WebApp + интеграции.",
+        "B2B AI-agent systems для продаж, роста, CRM-автоматизации и операционного контроля. Основной формат: агентная система + рабочий контур + Telegram-контур управления + интеграции.",
       icp:
         "Собственники B2B-компаний, агентства, интеграторы, SaaS-команды, сервисные компании и бизнесы с длинным циклом сделки, дебиторкой и слабой CRM-дисциплиной.",
       pains:
@@ -403,7 +405,7 @@ const demo = {
       products:
         "AgentResult Sales OS — AI-agent sales system / CRM automation\nAgentResult Collect / DebtorPilot — AI collection automation / receivables\nAI Growth OS — B2B growth/content/SEO/GEO operating system",
       domains: "agentresult-crm.vercel.app\nagentresult.ru\napp.agentresult.ru\napi.agentresult.ru\nagentresult.online",
-      channels: "Telegram WebApp, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
+      channels: "Telegram-контур управления, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
       approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and receivables actions."
     }
   },
@@ -426,6 +428,8 @@ const demo = {
       summary: "Согласовать Telegram-пост про контур продаж и контроль собственника",
       scope: "social_post",
       target_type: "content_item",
+      target_id: "c1",
+      content_item_id: "c1",
       status: "pending",
       risk_flags: ["public claim", "channel publishing"],
       requested_by: "Growth Orchestrator",
@@ -436,6 +440,8 @@ const demo = {
       summary: "Согласовать формулировки для страницы AI Growth OS",
       scope: "sensitive_claim",
       target_type: "content_item",
+      target_id: "c2",
+      content_item_id: "c2",
       status: "pending",
       risk_flags: ["competitor comparison", "proof required"],
       requested_by: "Publishing QA",
@@ -446,6 +452,8 @@ const demo = {
       summary: "Согласовать недельный пакет публикаций AgentResult",
       scope: "publish",
       target_type: "publishing_calendar_item",
+      target_id: "p3",
+      calendar_item_id: "p3",
       status: "pending",
       risk_flags: ["multi-channel distribution"],
       requested_by: "Content Factory",
@@ -507,8 +515,9 @@ const state = {
   helpOpen: false,
   exportAssembled: loadLocalJson("aiGrowthOsWorkspaceState", {}).exportAssembled === true,
   publicationTab: "approvals",
+  calendarFilter: "all",
   settingsTab: "technical",
-  selectedToolId: "telegram-webapp",
+  selectedToolId: "",
   selectedPackItem: "seo",
   localDemand: loadLocalJson("aiGrowthOsLocalDemand", []),
   localContent: loadLocalJson("aiGrowthOsLocalContent", []),
@@ -539,7 +548,14 @@ const elements = {
 
 function normalizeRoute(hash) {
   const route = String(hash || "#/overview").replace(/^#\/?/, "") || "overview";
+  if (calendarNoteIdFromHash(hash)) return "publications";
   return routes[route] ? route : "overview";
+}
+
+function calendarNoteIdFromHash(hash = location.hash) {
+  const route = String(hash || "").replace(/^#\/?/, "");
+  const match = route.match(/^publications\/note\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 function canonicalRoute(route = state.route) {
@@ -564,12 +580,18 @@ function openPublicationTab(tab, selectedId = "") {
   setRoute("publications");
 }
 
+function openPublicationCalendar(filter = "all") {
+  state.calendarFilter = ["all", "review", "scheduled", "handed_off", "published"].includes(filter) ? filter : "all";
+  openPublicationTab("calendar");
+}
+
 function openSettingsTab(tab) {
   state.settingsTab = settingsTabs[tab] ? tab : "technical";
   setRoute("settings");
 }
 
 async function api(path, options = {}) {
+  if (!API_BASE) throw new Error("Workspace API is not configured");
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -772,6 +794,10 @@ function shippedCalendarCount(items = state.calendar) {
   return (items || []).filter((item) => isShippedStatus(item.status)).length;
 }
 
+function handedOffCalendarCount(items = state.calendar) {
+  return (items || []).filter((item) => item.status === "handed_off").length;
+}
+
 function normalizeTask(task) {
   const payload = task?.payload || {};
   const rawStatus = payload.status || task.status || "queued";
@@ -824,6 +850,12 @@ function deriveMetrics(source = {}) {
 }
 
 function render() {
+  const calendarNoteId = calendarNoteIdFromHash();
+  if (calendarNoteId) {
+    state.publicationTab = "calendar";
+    state.decisionModal = null;
+    state.formModal = { type: "calendarNote", itemId: calendarNoteId };
+  }
   const routeMeta = currentRouteMeta();
   const routeKey = canonicalRoute();
   document.documentElement.lang = currentLang === "ru" ? "ru" : "en";
@@ -845,15 +877,26 @@ function render() {
 
   elements.screenRoot.innerHTML = renderers[routeKey]();
   renderModal();
+  renderRouteModal();
   translateTree(elements.routeActions);
   translateTree(elements.screenRoot);
   translateTree(elements.modalRoot);
   bindScreenEvents();
 }
 
+function renderRouteModal() {
+  const calendarNoteId = calendarNoteIdFromHash();
+  if (!calendarNoteId) return;
+  state.decisionModal = null;
+  state.formModal = { type: "calendarNote", itemId: calendarNoteId };
+  elements.modalRoot.innerHTML = renderFormModal();
+}
+
 function renderChrome() {
   document.querySelector(".brand-lockup h1").textContent = tr("Growth Control");
-  document.querySelector("#helpButton").textContent = text("Guide", "Инструкция");
+  const helpButton = document.querySelector("#helpButton");
+  helpButton.textContent = text("Guide", "Инструкция");
+  helpButton.hidden = true;
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLang);
   });
@@ -920,9 +963,8 @@ function renderModal() {
   const context = item ? getApprovalContext(item) : null;
   const action = state.decisionModal.action;
   const requiresNote = action === "reject" || action === "request-changes";
-  const labelEn = action === "approve" ? "Approve" : action === "reject" ? "Reject" : "Request changes";
-  const label = tr(labelEn);
-  const modalTitle = action === "approve" ? text("Approve approval", "Согласовать заявку") : action === "reject" ? text("Reject approval", "Отклонить заявку") : text("Request changes approval", "Нужны правки");
+  const modalTitle = action === "approve" ? text("Approve", "Согласовать") : action === "reject" ? text("Reject", "Отклонить") : text("Request changes", "Нужны правки");
+  const submitLabel = action === "approve" ? text("Confirm", "Подтвердить") : modalTitle;
 
   elements.modalRoot.innerHTML = `
     <div class="modal-backdrop" role="presentation" data-action="close-modal"></div>
@@ -932,22 +974,19 @@ function renderModal() {
           <p class="eyebrow">${text("Decision", "Решение")}</p>
           <h3 id="decisionTitle">${escapeHtml(modalTitle)}</h3>
         </div>
-        <button class="button secondary" data-action="close-modal">Close</button>
+        <button class="button secondary" data-action="close-modal">${escapeHtml(text("Close", "Закрыть"))}</button>
       </div>
       <div class="decision-context">
         <strong>${escapeHtml(tr(context?.title || "Approval request"))}</strong>
         <span>${escapeHtml(displayChannel(context?.channel || "channel"))} · ${escapeHtml(context?.when || tr("not scheduled"))}</span>
       </div>
       <label>
-        ${requiresNote ? tr("Decision comment required") : tr("Decision note optional")}
-        <textarea id="decisionNote" rows="5" placeholder="${requiresNote ? tr("Explain what must change or why this is rejected.") : tr("Add a publication note, approval condition, or handoff instruction.")}"></textarea>
+        ${escapeHtml(text("Comment", "Комментарий"))}${requiresNote ? "" : ` <span>${escapeHtml(text("optional", "необязательно"))}</span>`}
+        <textarea id="decisionNote" rows="4" placeholder="${escapeAttr(requiresNote ? text("What to change", "Что изменить") : text("Note", "Заметка"))}"></textarea>
       </label>
-      <div class="modal-warning">
-        ${requiresNote ? tr("This note will be written to the audit trail and sent back to the workflow.") : tr("Approving unlocks the next publishing step, but does not bypass channel-specific publishing controls.")}
-      </div>
       <div class="detail-actions">
-        <button class="button ${action === "reject" ? "danger" : "primary"}" data-action="submit-decision">${escapeHtml(label)}</button>
-        <button class="button secondary" data-action="close-modal">Cancel</button>
+        <button class="button ${action === "reject" ? "danger" : "primary"}" data-action="submit-decision">${escapeHtml(submitLabel)}</button>
+        <button class="button secondary" data-action="close-modal">${escapeHtml(text("Cancel", "Отмена"))}</button>
       </div>
     </section>
   `;
@@ -1047,10 +1086,10 @@ function renderFormModal() {
       `
     },
     schedule: {
-      eyebrow: text("Publishing plan", "План публикаций"),
-      title: text("Schedule material", "Запланировать материал"),
+      eyebrow: text("Release", "Выпуск"),
+      title: text("Plan item", "Пункт плана"),
       submit: "submit-schedule-form",
-      button: text("Add to plan", "Добавить в план"),
+      button: text("Save", "Сохранить"),
       body: `
         ${selectField(text("Material", "Материал"), "scheduleContentId", state.content.map((item) => [item.id, item.title]), scheduleContent?.id || "")}
         <div class="form-grid two-col">
@@ -1064,17 +1103,17 @@ function renderFormModal() {
       `
     },
     calendarNote: {
-      eyebrow: text("Publishing plan", "План публикаций"),
-      title: text("Add handoff note", "Добавить заметку для передачи"),
+      eyebrow: text("Release", "Выпуск"),
+      title: text("Note", "Заметка"),
       submit: "submit-calendar-note-form",
-      button: text("Save note", "Сохранить заметку"),
+      button: text("Save", "Сохранить"),
       body: calendarNoteForm(modal.itemId)
     },
     contentDetail: {
       eyebrow: text("Material", "Материал"),
-      title: text("Edit material", "Редактировать материал"),
+      title: text("Edit", "Правка"),
       submit: "submit-content-edit-form",
-      button: text("Save material", "Сохранить материал"),
+      button: text("Save", "Сохранить"),
       body: contentDetailForm(modal.itemId)
     }
   };
@@ -1103,20 +1142,8 @@ function renderFormModal() {
 
 function contentDetailForm(itemId) {
   const item = state.content.find((entry) => entry.id === itemId) || state.content[0] || {};
-  const detail = state.contentDetails[item.id] || buildContentDetailFallback(item.id);
-  const demand = detail?.demandItem;
-  const approvals = detail?.approvals || [];
-  const calendar = detail?.calendar || [];
-  const comments = detail?.comments || [];
   return `
     <input id="contentEditId" type="hidden" value="${escapeAttr(item.id || "")}" />
-    <section class="content-detail-summary">
-      ${detailCard(text("Источник спроса", "Источник спроса"), demand?.title || text("Not linked yet", "Пока не связан"))}
-      ${detailCard(text("Согласования", "Согласования"), String(approvals.length))}
-      ${detailCard(text("Публикации", "Публикации"), String(calendar.length))}
-      ${detailCard(text("Proof", "Proof"), item.metadata?.proof || text("Needed", "Нужно добавить"))}
-    </section>
-    ${detailContextBlock(text("Почему это делаем", "Почему это делаем"), demand ? `${demand.title}. ${demandBusinessReason(demand)}` : text("This material is still missing a linked demand source.", "У этого материала пока нет связанного источника спроса."))}
     ${field(text("Title", "Название"), "contentEditTitle", item.title || "")}
     <div class="form-grid two-col">
       ${selectField(text("Format", "Формат"), "contentEditType", [
@@ -1134,22 +1161,26 @@ function contentDetailForm(itemId) {
       ${field(text("Owner", "Ответственный"), "contentEditOwner", item.owner || item.metadata?.owner || "Egor")}
     </div>
     ${textarea(text("Brief", "Бриф"), "contentEditBrief", item.metadata?.brief || item.metadata?.goal || "")}
-    ${textarea(text("Working text", "Рабочий текст"), "contentEditBody", item.metadata?.body || "")}
-    ${textarea(text("Proof / source", "Доказательство / источник"), "contentEditProof", item.metadata?.proof || "")}
-    ${textarea(text("Comment for the team", "Комментарий для команды"), "contentCommentBody", "")}
+    ${textarea(text("Text", "Текст"), "contentEditBody", item.metadata?.body || "")}
+    ${textarea(text("Proof", "Доказательство"), "contentEditProof", item.metadata?.proof || "")}
+    ${textarea(text("Comment", "Комментарий"), "contentCommentBody", "")}
     <div class="detail-actions">
-      <button type="button" class="button secondary" data-action="submit-content-comment" data-id="${escapeAttr(item.id || "")}">${text("Add comment", "Добавить комментарий")}</button>
+      <button type="button" class="button secondary" data-action="submit-content-comment" data-id="${escapeAttr(item.id || "")}">${text("Add", "Добавить")}</button>
     </div>
-    ${detailListBlock(text("Approval history", "История согласований"), approvals.map((approval) => `${approvalTitle(approval)} · ${tr(labelize(approval.status || "pending"))}`))}
-    ${detailListBlock(text("Publication trail", "История публикации"), calendar.map((entry) => `${entry.title} · ${displayChannel(entry.channel)} · ${tr(labelize(entry.status || "draft"))}`))}
-    ${detailListBlock(text("Comments", "Комментарии"), comments.map((comment) => `${ownerActor(comment.user_id || comment.user_name || state.me.name)} · ${comment.body}`))}
   `;
 }
 
 function calendarNoteForm(itemId) {
   const item = state.calendar.find((entry) => entry.id === itemId);
   if (!item) {
-    return `<p class="empty-note">${escapeHtml(text("Calendar item was not found.", "Пункт календаря не найден."))}</p>`;
+    return `
+      <input id="calendarNoteId" type="hidden" value="${escapeAttr(itemId || "")}" />
+      <div class="decision-context">
+        <strong>${escapeHtml(text("Release plan item", "Пункт плана"))}</strong>
+        <span>${escapeHtml(text("Release note", "Заметка к выпуску"))}</span>
+      </div>
+      ${textarea(text("Note", "Заметка"), "calendarNoteBody", "")}
+    `;
   }
   return `
     <input id="calendarNoteId" type="hidden" value="${escapeAttr(item.id)}" />
@@ -1157,31 +1188,7 @@ function calendarNoteForm(itemId) {
       <strong>${escapeHtml(item.title)}</strong>
       <span>${escapeHtml(displayChannel(item.channel || "manual"))} · ${escapeHtml(formatDate(item.scheduled_for))}</span>
     </div>
-    ${textarea(text("Owner handoff note", "Заметка для передачи"), "calendarNoteBody", publishingOwnerNote(item))}
-  `;
-}
-
-function detailCard(label, value) {
-  return `<article class="detail-mini-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`;
-}
-
-function detailContextBlock(title, body) {
-  return `
-    <article class="detail-context-block">
-      <p class="eyebrow">${escapeHtml(title)}</p>
-      <p>${escapeHtml(body)}</p>
-    </article>
-  `;
-}
-
-function detailListBlock(title, items) {
-  return `
-    <article class="detail-list-block">
-      <p class="eyebrow">${escapeHtml(title)}</p>
-      <div class="stack-list">
-        ${(items.length ? items : [text("No records yet.", "Записей пока нет.")]).map((item) => `<div class="mini-row">${escapeHtml(item)}</div>`).join("")}
-      </div>
-    </article>
+    ${textarea(text("Note", "Заметка"), "calendarNoteBody", publishingOwnerNote(item))}
   `;
 }
 
@@ -1216,14 +1223,8 @@ function renderNav() {
 function renderActions() {
   const routeKey = canonicalRoute();
   const publicationActions = {
-    approvals: [
-      actionButton("Approve", "primary", "open-approve-modal"),
-      actionButton("Open material", "secondary", "open-source")
-    ],
-    calendar: [
-      actionButton("Schedule material", "primary", "schedule-item"),
-      actionButton("Download CSV", "secondary", "export-calendar")
-    ],
+    approvals: [],
+    calendar: [],
     pack: [
       actionButton("Assemble package", "primary", "assemble-pack"),
       actionButton(text("Download TXT", "Скачать TXT"), state.exportAssembled ? "secondary" : "secondary disabled", "download-pack"),
@@ -1234,18 +1235,13 @@ function renderActions() {
     overview: [
       actionButton(text("Approvals", "Согласования"), "primary", "go-approvals")
     ],
-    "growth-plan": [
-      actionButton(text("Create material", "Создать материал"), "primary", "new-content"),
-      actionButton("Add topic", "secondary", "add-demand")
-    ],
-    "offer-brain": [actionButton("Save company", "primary", "save-offer")],
-    "content-pipeline": [
-      actionButton("New material", "primary", "new-content")
-    ],
+    "growth-plan": [],
+    "offer-brain": [actionButton(text("Save", "Сохранить"), "primary", "save-offer")],
+    "content-pipeline": [],
     publications: publicationActions[currentPublicationTab()],
     analytics: [
-      actionButton("Import results", "primary", "import-metrics"),
-      actionButton("Suggest improvements", "secondary", "generate-improvements")
+      actionButton(text("Add signal", "Добавить сигнал"), "primary", "import-metrics"),
+      actionButton(text("Create tasks", "Создать задачи"), "secondary", "generate-improvements")
     ],
     settings: currentSettingsTab() === "tools"
       ? [actionButton("Add tool", "primary", "new-tool")]
@@ -1253,9 +1249,7 @@ function renderActions() {
         ? [actionButton("Refresh status", "secondary", "refresh-data")]
         : currentSettingsTab() === "autopilot"
           ? [actionButton(text("Save rules", "Сохранить правила"), "primary", "save-autopilot")]
-          : currentSettingsTab() === "channels"
-            ? [actionButton(text("Save channels", "Сохранить каналы"), "primary", "save-channels")]
-            : []
+          : []
   };
 
   elements.routeActions.innerHTML = (actions[routeKey] || []).join("");
@@ -1268,26 +1262,35 @@ function actionButton(label, variant, action) {
 
 function renderOverview() {
   const pending = state.approvals.filter((item) => item.status === "pending");
-  const reviewContent = state.content.filter((item) => item.status === "review");
   const readyContent = state.content.filter((item) => ["review", "approved", "scheduled"].includes(item.status));
   const publishedCount = shippedCalendarCount(state.calendar);
-  const nextActions = buildTodayActions(pending, reviewContent);
   const blockers = growthBlockers(pending);
   const ownerMoves = ownerNextMoves(pending);
 
   return `
     ${hermesDailyBrief(pending, blockers, ownerMoves)}
     ${resultPath(pending, publishedCount)}
-    <section class="today-focus-grid">
-      ${queuePanel(text("Needs decision", "Требует решения"), nextActions.slice(0, 3).map((item) => row(item.title, item.meta, item.actionLabel, item.action, item.id)))}
-      ${queuePanel(text("Blocked", "Блокирует"), blockers.slice(0, 3).map((item) => row(item.title, item.meta, item.label, item.action, item.id)))}
-      ${queuePanel(text("Done by system", "Сделала система"), systemDoneRows().slice(0, 3))}
+    ${todaySignalStrip({ readyCount: readyContent.length, publishedCount })}
+  `;
+}
+
+function todaySignalStrip({ readyCount, publishedCount }) {
+  return `
+    <section class="today-signal-strip">
+      ${compactMetric(text("Ready outside", "Готово наружу"), readyCount, text("approved, planned or ready", "согласовано или в плане"))}
+      ${compactMetric(text("Published", "Опубликовано"), publishedCount, text("live or handed off", "вышло или передано"))}
+      ${compactMetric(text("Leads", "Заявки"), state.metrics.leads || 0, text("from forms, CRM or replies", "из форм, CRM или ответов"))}
     </section>
-    <section class="quiet-result-strip">
-      ${quietResult(text("Ready outside", "Готово наружу"), readyContent.length, text("approval / calendar / handoff", "согласование / план / передача"))}
-      ${quietResult(text("Published", "Опубликовано"), publishedCount, text("confirmed live or handed off", "подтверждено или передано"))}
-      ${quietResult(text("Leads", "Заявки"), state.metrics.leads || 0, text("after CRM/forms import", "после импорта CRM/forms"))}
-    </section>
+  `;
+}
+
+function compactMetric(label, value, note) {
+  return `
+    <article class="compact-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+      <p>${escapeHtml(note)}</p>
+    </article>
   `;
 }
 
@@ -1299,37 +1302,37 @@ function resultPath(pending, publishedCount) {
   const hasLeads = Number(state.metrics.leads || 0) > 0;
   const steps = [
     {
-      title: text("Hermes prepared", "Hermes подготовил"),
-      note: text("Material is ready for owner decision.", "Материал готов к решению владельца."),
+      title: text("Prepared", "Подготовлено"),
+      note: text("Material or task is ready.", "Материал или задача готовы."),
       state: hasMaterial ? "done" : "active",
       action: "go-content",
-      label: text("Open", "Открыть")
+      label: text("Materials", "Материалы")
     },
     {
-      title: text("Owner approved", "Владелец согласовал"),
+      title: text("Decision", "Решение"),
       note: pendingApproval
-        ? text("One public action is waiting.", "Одно публичное действие ждёт решения.")
-        : text("Approval gate is clear.", "Согласование пройдено."),
+        ? text("Owner approval is needed.", "Нужно согласование собственника.")
+        : text("Approval gate is clear.", "Контур согласования чист."),
       state: pendingApproval ? "active" : hasApprovalDecision ? "done" : "muted",
       action: pendingApproval ? "open-demo-approval" : "go-approvals",
       id: pendingApproval?.id || "",
-      label: pendingApproval ? text("Approve", "Согласовать") : text("Open", "Открыть")
+      label: pendingApproval ? text("Approve", "Согласовать") : text("Approvals", "Согласования")
     },
     {
-      title: text("Went outside", "Вышло наружу"),
+      title: text("Release", "Выпуск"),
       note: scheduled
-        ? text("Approved material is ready to publish or confirm.", "Согласованный материал готов к выпуску или подтверждению.")
-        : text("Publication appears here after approval.", "Публикация появится здесь после согласования."),
+        ? text("Ready to publish or confirm.", "Готово к публикации или подтверждению.")
+        : text("Appears after approval.", "Появится после согласования."),
       state: publishedCount ? "done" : scheduled ? "active" : "muted",
       action: scheduled ? "mark-calendar-published" : "go-calendar",
       id: scheduled?.id || "",
-      label: scheduled ? text("Mark live", "Отметить выпуск") : text("Calendar", "Календарь")
+      label: scheduled ? text("Mark live", "Отметить выпуск") : text("Publications", "Публикации")
     },
     {
-      title: text("Result appeared", "Появился результат"),
+      title: text("Signal", "Сигнал"),
       note: hasLeads
-        ? text(`${state.metrics.leads} leads are visible in Results.`, `${state.metrics.leads} заявки видны в результатах.`)
-        : text("Import CRM/forms when the first signal arrives.", "Загрузите CRM/forms, когда появится первый сигнал."),
+        ? text(`${state.metrics.leads} leads in Results.`, `${state.metrics.leads} заявки в результатах.`)
+        : text("Record the first lead or reply after release.", "Зафиксируйте первую заявку или ответ после выпуска."),
       state: hasLeads ? "done" : publishedCount ? "active" : "muted",
       action: "go-analytics",
       label: text("Results", "Результаты")
@@ -1339,8 +1342,8 @@ function resultPath(pending, publishedCount) {
   return `
     <section class="result-path" aria-label="${escapeAttr(text("Path to result", "Путь до результата"))}">
       <div class="result-path-head">
-        <p class="eyebrow">${text("Demo flow", "Демо-цепочка")}</p>
-        <h3>${text("From Hermes to a visible business signal", "От Hermes до видимого бизнес-сигнала")}</h3>
+        <p class="eyebrow">${text("Path to result", "Цепочка до результата")}</p>
+        <h3>${text("Prepared -> approved -> released -> signal", "Подготовлено -> согласовано -> выпущено -> сигнал")}</h3>
       </div>
       <div class="result-path-steps">
         ${steps.map((step, index) => `
@@ -1359,139 +1362,23 @@ function resultPath(pending, publishedCount) {
 function hermesDailyBrief(pending, blockers, ownerMoves) {
   const urgent = pending[0] ? getApprovalContext(pending[0]) : null;
   const title = urgent
-    ? text(`Approval: ${urgent.title}`, `На согласовании: ${urgent.title}`)
+    ? text(`Approve: ${urgent.title}`, `Согласовать: ${urgent.title}`)
     : blockers[0]?.title || text("No urgent decisions", "Срочных решений нет");
   const note = urgent
-    ? text("Decision required before publication.", "Решение нужно до публикации.")
-    : text("Check priorities, publications and results when needed.", "Проверяйте приоритеты, публикации и результаты по необходимости.");
+    ? text("Nothing goes public before this decision.", "До этого решения наружу ничего не уйдёт.")
+    : text("No owner action is needed right now.", "Сейчас действие собственника не нужно.");
   const action = urgent ? "go-approval" : ownerMoves[0]?.action || "go-demand-map";
   const label = urgent ? text("Open decision", "Открыть решение") : ownerMoves[0]?.label || text("Open plan", "Открыть план");
 
   return `
     <section class="hermes-brief">
       <div>
-        <p class="eyebrow">${text("Today", "Сегодня")}</p>
+        <p class="eyebrow">${text("Main", "Главное")}</p>
         <h3>${escapeHtml(title)}</h3>
         <p>${escapeHtml(note)}</p>
         <button class="button primary" data-action="${escapeAttr(action)}" data-id="${escapeAttr(pending[0]?.id || ownerMoves[0]?.id || "")}">${escapeHtml(label)}</button>
       </div>
     </section>
-  `;
-}
-
-function quietResult(label, value, note) {
-  return `
-    <article class="quiet-result">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(note)}</p>
-    </article>
-  `;
-}
-
-function ownerCockpitHero(pending, blockers, ownerMoves) {
-  const urgent = pending[0] ? getApprovalContext(pending[0]) : null;
-  const leadLine = urgent
-    ? text(`Decide on "${urgent.title}" before it can move outside.`, `Решите по «${urgent.title}», чтобы материал мог выйти наружу.`)
-    : text("No public action waits for approval right now.", "Сейчас нет публичных действий, которые ждут согласования.");
-
-  return `
-    <section class="cockpit-hero">
-      <div>
-        <p class="eyebrow">${text("Owner cockpit", "Пульт собственника")}</p>
-        <h3>${escapeHtml(leadLine)}</h3>
-        <p>${text("The system prepares work, but public materials, risky claims and money-sensitive actions stay approval-first.", "Система готовит работу, но публичные материалы, рискованные утверждения и денежные действия остаются через согласование.")}</p>
-      </div>
-      <div class="cockpit-next">
-        <span>${text("Next owner step", "Следующий шаг собственника")}</span>
-        <strong>${escapeHtml(ownerMoves[0]?.title || text("Open the growth plan", "Открыть план роста"))}</strong>
-        <button class="button primary" data-action="${escapeAttr(ownerMoves[0]?.action || "go-demand-map")}" data-id="${escapeAttr(ownerMoves[0]?.id || "")}">${escapeHtml(ownerMoves[0]?.label || text("Open", "Открыть"))}</button>
-      </div>
-    </section>
-    <section class="cockpit-strip">
-      ${cockpitTile(text("Requires decision", "Требует решения"), pending.length, pending.length ? text("Blocks public movement", "Блокирует внешний выпуск") : text("No urgent approvals", "Срочных согласований нет"), "decision")}
-      ${cockpitTile(text("System prepared", "Система подготовила"), state.content.length, text("Materials and drafts", "Материалы и черновики"))}
-      ${cockpitTile(text("Blocks growth", "Блокирует рост"), blockers.length, text("Fix the first blocker today", "Закрыть первый блокер сегодня"), "warning")}
-      ${cockpitTile(text("Next actions", "Следующие действия"), ownerMoves.length, text("Owner-level work only", "Только действия собственника"))}
-    </section>
-  `;
-}
-
-function cockpitTile(label, value, note, tone = "") {
-  return `
-    <article class="cockpit-tile ${tone}">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(note)}</p>
-    </article>
-  `;
-}
-
-function ownerSnapshotGrid(pending, blockers, ownerMoves, publishedCount) {
-  const firstDecision = pending[0] ? getApprovalContext(pending[0]).title : text("No urgent approvals right now", "Срочных согласований сейчас нет");
-  const firstBlocker = blockers[0]?.title || text("No critical blocker detected", "Критичных блокеров не видно");
-  const doneSummary = [
-    text(`${state.content.length} materials prepared`, `${state.content.length} материалов подготовлено`),
-    text(`${state.calendar.length} publications planned`, `${state.calendar.length} публикаций стоит в плане`),
-    text(`${publishedCount} already moved outside`, `${publishedCount} уже вышли наружу`)
-  ];
-
-  return `
-    <section class="owner-snapshot-grid">
-      ${ownerSnapshotCard(
-        text("What requires a decision", "Что требует решения"),
-        String(pending.length),
-        firstDecision,
-        text("Open approvals", "Открыть согласования"),
-        "go-approvals",
-        "decision"
-      )}
-      ${ownerSnapshotCard(
-        text("What the system did", "Что система сделала"),
-        String(state.content.length + state.calendar.length),
-        doneSummary.join(" · "),
-        text("Open materials", "Открыть материалы"),
-        "go-content",
-        "system"
-      )}
-      ${ownerSnapshotCard(
-        text("What blocks growth", "Что блокирует рост"),
-        String(blockers.length),
-        firstBlocker,
-        blockers[0]?.label || text("Open", "Открыть"),
-        blockers[0]?.action || "go-demand-map",
-        "warning",
-        blockers[0]?.id || ""
-      )}
-      <article class="owner-snapshot-card next">
-        <div class="owner-snapshot-head">
-          <span>${escapeHtml(text("Next 3 owner actions", "Следующие 3 действия собственника"))}</span>
-          <strong>${escapeHtml(String(ownerMoves.length))}</strong>
-        </div>
-        <div class="owner-snapshot-list">
-          ${ownerMoves.map((item) => `
-            <button class="owner-snapshot-item" data-action="${escapeAttr(item.action)}" data-id="${escapeAttr(item.id || "")}">
-              <strong>${escapeHtml(item.title)}</strong>
-              <span>${escapeHtml(item.meta)}</span>
-              <em>${escapeHtml(item.label)}</em>
-            </button>
-          `).join("")}
-        </div>
-      </article>
-    </section>
-  `;
-}
-
-function ownerSnapshotCard(title, value, note, label, action, tone = "", id = "") {
-  return `
-    <article class="owner-snapshot-card ${tone}">
-      <div class="owner-snapshot-head">
-        <span>${escapeHtml(title)}</span>
-        <strong>${escapeHtml(value)}</strong>
-      </div>
-      <p>${escapeHtml(note)}</p>
-      <button class="button ${tone === "decision" ? "primary" : "secondary"}" data-action="${escapeAttr(action)}" data-id="${escapeAttr(id)}">${escapeHtml(label)}</button>
-    </article>
   `;
 }
 
@@ -1575,32 +1462,7 @@ function ownerNextMoves(pending) {
 }
 
 function renderGrowthPlan() {
-  return `
-    ${growthPlanBrief()}
-    <article class="panel full">
-      <div class="panel-heading compact">
-        <div>
-          <p class="eyebrow">${text("What brings clients faster", "Что быстрее ведёт к клиентам")}</p>
-          <h3>${text("Demand map by money, speed and proof", "Карта спроса по деньгам, скорости и доказательствам")}</h3>
-        </div>
-      </div>
-      ${growthPriorityBoard()}
-    </article>
-  `;
-}
-
-function growthPlanBrief() {
-  const top = [...state.demand].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0))[0];
-  return `
-    <section class="plan-brief">
-      <div>
-        <p class="eyebrow">${text("Priority", "Приоритет")}</p>
-        <h3>${escapeHtml(top?.title || text("Choose one revenue topic", "Выберите одну тему выручки"))}</h3>
-        <p>${escapeHtml(text("Choose the next commercial topic and turn it into a material, approval and market signal.", "Выберите следующую коммерческую тему и доведите её до материала, согласования и рыночного сигнала."))}</p>
-      </div>
-      <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(top?.id || "")}">${escapeHtml(text("Create material", "Создать материал"))}</button>
-    </section>
-  `;
+  return companyGrowthModule.renderGrowthPlan();
 }
 
 function workflowStrip(activeStep = canonicalRoute()) {
@@ -1653,326 +1515,113 @@ function guideStep(number, title, note) {
 }
 
 function renderOfferBrain() {
-  const profile = state.offer?.profile || {};
-  const setupCompleteness = ownerSetupCompleteness(profile);
-  const onboarding = [
-    text("What do we sell?", "Что продаём?"),
-    text("Who do we sell to?", "Кому продаём?"),
-    text("In which regions?", "В каких регионах?"),
-    text("Which services and products?", "Какие услуги/продукты?"),
-    text("What proof do we have?", "Какие есть доказательства?"),
-    text("Which channels do we use?", "Какие каналы используем?"),
-    text("What must we never promise?", "Что нельзя обещать?"),
-    text("How should we sound?", "Какой тон общения?"),
-    text("Who do buyers compare us with?", "С кем нас сравнивают?")
-  ];
-  return `
-    <section class="owner-setup-strip">
-      ${ownerSetupCard(text("Setup complete", "Заполненность"), `${setupCompleteness}%`, text("Enough to generate safe first materials", "Достаточно для безопасных первых материалов"))}
-      ${ownerSetupCard(text("Approval mode", "Режим согласований"), text("Approval first", "Сначала согласование"), text("No public action without approval", "Без согласования наружу ничего не уходит"))}
-      ${ownerSetupCard(text("Main cockpit", "Главный пульт"), text("Telegram control", "Telegram-пульт"), text("Tasks, approvals and results in one place", "Задачи, согласования и результаты в одном месте"))}
-      ${ownerSetupCard(text("Next unlock", "Следующее подключение"), "CRM / Email", text("Leads, follow-ups and debtor touches", "Заявки, касания и дебиторка"))}
-    </section>
-    ${ownerSetupGapsPanel(profile)}
-    <div class="screen-grid two">
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Company setup", "Настройка компании")}</p>
-            <h3>${text("What we sell and why we are trusted", "Что продаём и почему нам верят")}</h3>
-          </div>
-        </div>
-        <form class="form-grid" id="offerForm">
-          ${field(text("Company name", "Название компании"), "companyName", state.offer?.name || "")}
-          ${field(text("Website", "Сайт"), "companyWebsite", state.offer?.website_url || "")}
-          ${textarea(text("What we sell", "Что продаём"), "companyPositioning", state.offer?.positioning || profile.positioning || "")}
-          ${textarea(text("Products and formats", "Продукты и форматы"), "companyProducts", textValue(profile.products))}
-          ${textarea(text("Who we sell to", "Кому продаём"), "companyIcp", profile.icp || "")}
-          ${textarea(text("Which problems we solve", "Какие проблемы решаем"), "companyPains", profile.pains || "")}
-          ${textarea(text("Proof we can use", "Доказательства"), "companyProof", profile.proof || "")}
-          ${textarea(text("What we must not promise", "Что нельзя обещать"), "forbiddenClaims", profile.forbiddenClaims || "")}
-          ${textarea(text("How we speak", "Как говорим"), "toneRules", profile.tone || "")}
-          ${textarea(text("Competitors and alternatives", "Конкуренты и альтернативы"), "companyCompetitors", profile.competitors || "")}
-          ${textarea(text("Domains and entry points", "Домены и точки входа"), "companyDomains", profile.domains || "")}
-          ${textarea(text("Channels and integrations", "Каналы и интеграции"), "companyChannels", profile.channels || "")}
-          ${textarea(text("Approval owner rules", "Правила согласования"), "approvalOwner", profile.approvalOwner || "")}
-        </form>
-      </article>
-
-      <div class="stack-panels">
-        <article class="panel compact-panel">
-          <div class="panel-heading compact">
-            <div>
-              <p class="eyebrow">${text("Onboarding", "Первичная настройка")}</p>
-              <h3>${text("Questions the OS needs answered", "Что нужно заполнить")}</h3>
-            </div>
-          </div>
-          <div class="setup-list">
-            ${onboarding.map((item, index) => `<div class="setup-step"><span>${index + 1}</span><strong>${escapeHtml(item)}</strong></div>`).join("")}
-          </div>
-        </article>
-        ${miniSection(text("Proof library", "Библиотека доказательств"), [
-          text("Case stories", "Кейсы"),
-          text("Numbers with source", "Цифры с источником"),
-          text("Screenshots and demos", "Скриншоты и демонстрации"),
-          text("Testimonials", "Отзывы"),
-          text("Before/after stories", "Истории до/после")
-        ])}
-        ${miniSection(text("Who compares us with whom", "С кем нас сравнивают"), [
-          text("CRM integrators", "CRM-интеграторы"),
-          text("AI automation shops", "AI-автоматизаторы"),
-          text("Generic AI tools", "Обычные AI-инструменты"),
-          text("Manual agency retainers", "Ручные агентские ретейнеры")
-        ])}
-      </div>
-    </div>
-  `;
-}
-
-function ownerSetupCompleteness(profile) {
-  const keys = ["positioning", "products", "icp", "pains", "proof", "forbiddenClaims", "tone", "competitors", "domains", "channels", "approvalOwner"];
-  const completed = keys.filter((key) => String(profile[key] || "").trim()).length;
-  return Math.round((completed / keys.length) * 100);
+  return companyGrowthModule.renderOfferBrain();
 }
 
 function ownerSetupGaps(profile) {
-  const fields = [
-    ["positioning", text("What we sell", "Что продаём")],
-    ["products", text("Products and formats", "Продукты и форматы")],
-    ["icp", text("Who we sell to", "Кому продаём")],
-    ["pains", text("Which problems we solve", "Какие проблемы решаем")],
-    ["proof", text("Proof we can use", "Доказательства")],
-    ["forbiddenClaims", text("Forbidden promises", "Запрещённые обещания")],
-    ["tone", text("Tone rules", "Правила тона")],
-    ["competitors", text("Competitors and alternatives", "Конкуренты и альтернативы")],
-    ["domains", text("Domains and entry points", "Домены и точки входа")],
-    ["channels", text("Channels and integrations", "Каналы и интеграции")],
-    ["approvalOwner", text("Approval owner rules", "Правила согласования")]
-  ];
-  return fields.filter(([key]) => !String(profile[key] || "").trim()).map(([, label]) => label);
-}
-
-function ownerSetupGapsPanel(profile) {
-  const gaps = ownerSetupGaps(profile);
-  const ready = gaps.length === 0;
-  const visibleGaps = ready ? [text("Ready for first workflow run", "Готово к первому рабочему циклу")] : gaps.slice(0, 5);
-  return `
-    <article class="panel full setup-readiness-panel">
-      <div class="panel-heading compact">
-        <div>
-          <p class="eyebrow">${text("Owner setup readiness", "Готовность настройки")}</p>
-          <h3>${ready ? text("The company profile is ready for safe execution", "Профиль компании готов к безопасной работе") : text("What still blocks better agent work", "Что ещё мешает агентам работать точнее")}</h3>
-        </div>
-        <button class="button secondary" data-action="create-setup-tasks" ${ready ? "disabled" : ""}>${text("Create tasks", "Создать задачи")}</button>
-      </div>
-      <div class="readiness-chip-row">
-        ${visibleGaps.map((gap) => `<span>${escapeHtml(gap)}</span>`).join("")}
-      </div>
-    </article>
-  `;
-}
-
-function ownerSetupCard(label, value, note) {
-  return `
-    <article class="owner-setup-card">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(note)}</p>
-    </article>
-  `;
-}
-
-function renderDemandMap() {
-  return `
-    <article class="panel full">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">${text("Client acquisition opportunities", "Возможности привлечения клиентов")}</p>
-          <h3>${text("Where buyers can find us", "Где нас могут найти клиенты")}</h3>
-        </div>
-        <span class="pill">${state.demand.length} ${text("topics", "тем")}</span>
-      </div>
-      <div class="demand-card-grid">
-        ${state.demand.map(demandOpportunityCard).join("") || `<p class="empty-note">${tr("No records yet.")}</p>`}
-      </div>
-    </article>
-  `;
-}
-
-function growthPriorityBoard() {
-  const topItems = [...state.demand].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0)).slice(0, 3);
-  return `
-    <div class="priority-board">
-      ${topItems.map((item, index) => `
-        <article class="priority-card">
-          <span>${text("Priority", "Приоритет")} ${index + 1}</span>
-          <strong>${escapeHtml(item.title)}</strong>
-          <p>${escapeHtml(demandBusinessReason(item))}</p>
-          <div class="priority-score">
-            ${priorityPill(text("Revenue", "Выручка"), demandScore(item, "revenue"))}
-            ${priorityPill(text("Speed", "Скорость"), demandScore(item, "speed"))}
-            ${priorityPill(text("Proof", "Доказательства"), demandScore(item, "proof"))}
-          </div>
-          <div class="priority-card-note">
-            <span>${escapeHtml(text("Next move", "Следующий ход"))}</span>
-            <strong>${escapeHtml(demandNextAction(item))}</strong>
-          </div>
-          <div class="card-actions">
-            <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
-          </div>
-        </article>
-      `).join("")}
-    </div>
-  `;
-}
-
-function growthFocusGrid() {
-  const byRevenue = bestDemandItem("revenue");
-  const bySpeed = bestDemandItem("speed");
-  const byProof = bestDemandItem("proof");
-
-  return `
-    <section class="growth-focus-grid">
-      ${growthFocusCard(text("Fastest path to revenue", "Самый короткий путь к выручке"), byRevenue, text("Commercial page or offer page first.", "Сначала коммерческая или офферная страница."))}
-      ${growthFocusCard(text("Fastest path to launch", "Самый быстрый запуск"), bySpeed, text("Pick the topic that can leave the system this week.", "Выбрать тему, которую можно выпустить уже на этой неделе."))}
-      ${growthFocusCard(text("Strongest proof angle", "Самый сильный угол доказательства"), byProof, text("Use internal prototype, architecture and build-in-public proof.", "Опирайтесь на прототип, архитектуру и build-in-public доказательства."))}
-    </section>
-  `;
-}
-
-function growthFocusCard(title, item, note) {
-  if (!item) {
-    return `
-      <article class="growth-focus-card">
-        <span>${escapeHtml(title)}</span>
-        <strong>${escapeHtml(text("Add the first demand topic", "Добавьте первую тему спроса"))}</strong>
-        <p>${escapeHtml(note)}</p>
-        <button class="button secondary" data-action="add-demand-topic">${escapeHtml(text("Add topic", "Добавить тему"))}</button>
-      </article>
-    `;
-  }
-
-  return `
-    <article class="growth-focus-card">
-      <span>${escapeHtml(title)}</span>
-      <strong>${escapeHtml(item.title)}</strong>
-      <p>${escapeHtml(demandBusinessReason(item))}</p>
-      <div class="focus-meta">
-        <em>${escapeHtml(note)}</em>
-        <em>${escapeHtml(text("Audience", "Аудитория"))}: ${escapeHtml(item.audience || text("B2B owner", "Собственник B2B"))}</em>
-      </div>
-      <div class="card-actions">
-        <button class="button secondary" data-action="task-from-demand" data-id="${escapeAttr(item.id)}">${text("Create task", "Поставить задачу")}</button>
-        <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
-      </div>
-    </article>
-  `;
-}
-
-function bestDemandItem(axis) {
-  return [...state.demand]
-    .sort((a, b) => demandScore(b, axis) - demandScore(a, axis) || Number(b.priority || 0) - Number(a.priority || 0))[0] || null;
-}
-
-function priorityPill(label, value) {
-  return `<span><em>${escapeHtml(label)}</em><strong>${escapeHtml(String(value))}</strong></span>`;
-}
-
-function demandOpportunityCard(item) {
-  const approvalState = demandApprovalState(item);
-  return `
-    <article class="demand-card">
-      <div class="demand-card-top">
-        <div>
-          <p class="eyebrow">${escapeHtml(displayDemandType(item.item_type))}</p>
-          <h3>${escapeHtml(item.title)}</h3>
-        </div>
-        <strong class="demand-priority">${escapeHtml(String(item.priority || 0))}</strong>
-      </div>
-      <p>${escapeHtml(demandBusinessReason(item))}</p>
-      <div class="demand-facts">
-        <span>${escapeHtml(item.audience || text("B2B owner", "Собственник B2B"))}</span>
-        <span>${escapeHtml(demandNextAction(item))}</span>
-        <span>${escapeHtml(approvalState)}</span>
-      </div>
-      <div class="card-actions">
-        <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Create material", "Создать материал")}</button>
-        <button class="button secondary" data-action="task-from-demand" data-id="${escapeAttr(item.id)}">${text("Create task", "Поставить задачу")}</button>
-      </div>
-    </article>
-  `;
-}
-
-function demandApprovalState(item) {
-  const relatedContent = state.content.find((entry) => entry.demand_map_item_id === item.id || entry.title === item.title);
-  if (!relatedContent) return text("No material yet", "Материал ещё не создан");
-  const pendingApproval = state.approvals.find((approval) => approval.target_id === relatedContent.id && approval.status === "pending");
-  if (pendingApproval) return text("Waiting for owner decision", "Ждёт решения собственника");
-  if (relatedContent.status === "published" || relatedContent.status === "scheduled") return text("Already moving to market", "Уже движется в рынок");
-  return text("Material is in work", "Материал в работе");
+  return companyGrowthModule.ownerSetupGaps(profile);
 }
 
 function demandBusinessReason(item) {
-  const type = labelize(item.item_type || "");
-  if (type.includes("product")) return text("Commercial page for buyers already looking for an AI-agent system.", "Коммерческая страница для тех, кто уже ищет AI-agent system.");
-  if (type.includes("pain")) return text("Turns a costly operational pain into a clear first conversation.", "Превращает дорогую операционную боль в понятный первый разговор.");
-  if (type.includes("comparison")) return text("Helps the owner compare AgentResult with familiar alternatives.", "Помогает собственнику сравнить AgentResult с привычными альтернативами.");
-  if (type.includes("lead")) return text("Creates a low-risk handoff point before a sales call.", "Создаёт безопасную точку передачи до звонка.");
-  return text("Adds one useful entry point into the demand system.", "Добавляет полезную точку входа в систему спроса.");
-}
-
-function demandScore(item, axis) {
-  const priority = Number(item.priority || 60);
-  const type = labelize(item.item_type || "");
-  if (axis === "revenue") return Math.min(100, priority + (type.includes("product") ? 8 : 0));
-  if (axis === "speed") return type.includes("telegram") || type.includes("post") ? 90 : type.includes("lead") ? 76 : 68;
-  if (axis === "proof") return type.includes("case") || type.includes("proof") ? 90 : type.includes("comparison") ? 62 : 72;
-  return priority;
-}
-
-function displayDemandType(value) {
-  const label = labelize(value || "topic");
-  if (label.includes("product")) return text("Product page", "Продуктовая страница");
-  if (label.includes("pain")) return text("Pain page", "Страница боли");
-  if (label.includes("comparison")) return text("Comparison", "Сравнение");
-  if (label.includes("lead")) return text("Lead magnet", "Лид-магнит");
-  if (label.includes("use case")) return text("Use case", "Сценарий");
-  return tr(label);
+  return companyGrowthModule.demandBusinessReason(item);
 }
 
 function renderContentPipeline() {
-  const columns = ["idea", "brief", "draft", "review", "approved", "scheduled", "published"];
-  const counts = columns.map((status) => ({
-    status,
-    count: state.content.filter((item) => item.status === status).length
-  }));
-  const focusedItems = materialFocusItems().slice(0, 6);
+  const queues = materialOwnerQueues();
+  const nextItem = queues.flatMap((queue) => queue.items)[0] || null;
+  const waiting = state.content.filter((item) => item.status === "review").length;
+  const ready = state.content.filter((item) => ["approved", "scheduled"].includes(item.status)).length;
+  const needsWork = state.content.filter((item) => ["idea", "brief", "draft"].includes(item.status)).length;
 
   return `
     <section class="material-command">
       <div>
-        <p class="eyebrow">${text("Materials", "Материалы")}</p>
-        <h3>${text("Ready for review, handoff and publishing", "Готовность к проверке, передаче и публикации")}</h3>
-        <p>${text("Materials are sorted by the next action: edit, approve, schedule or export.", "Материалы отсортированы по следующему действию: правка, согласование, планирование или экспорт.")}</p>
+        <p class="eyebrow">${text("Next material", "Следующий материал")}</p>
+        <h3>${escapeHtml(nextItem ? materialQueueTitle(nextItem) : text("No material is waiting", "Материалов в очереди нет"))}</h3>
+        <p>${escapeHtml(nextItem ? materialQueueNote(nextItem) : text("Create a material from the growth plan when there is a real demand topic.", "Создайте материал из плана роста, когда есть реальная тема спроса."))}</p>
       </div>
       <div class="material-summary compact">
-        ${counts.filter((item) => item.count || ["review", "approved", "scheduled"].includes(item.status)).map((item) => `
-          <article>
-            <span>${escapeHtml(tr(labelize(item.status)))}</span>
-            <strong>${item.count}</strong>
-          </article>
-        `).join("")}
+        ${compactMaterialMetric(text("Needs decision", "Ждёт решения"), waiting)}
+        ${compactMaterialMetric(text("Ready outside", "Готово наружу"), ready)}
+        ${compactMaterialMetric(text("Needs work", "Нужно дописать"), needsWork)}
       </div>
     </section>
-    <section class="material-list">
-      ${focusedItems.map(materialListCard).join("") || `<p class="empty-note">${text("No materials yet.", "Материалов пока нет.")}</p>`}
+    <section class="material-queue-grid">
+      ${queues.map(materialQueueColumn).join("")}
     </section>
+  `;
+}
+
+function compactMaterialMetric(label, value) {
+  return `
+    <article>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(String(value))}</strong>
+    </article>
   `;
 }
 
 function materialFocusItems() {
   const order = { review: 0, approved: 1, scheduled: 2, draft: 3, brief: 4, idea: 5, published: 6 };
   return [...state.content].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+}
+
+function materialOwnerQueues() {
+  return [
+    {
+      title: text("Needs decision", "Ждёт решения"),
+      note: text("Approve or return before release.", "Согласовать или вернуть перед выпуском."),
+      items: materialFocusItems().filter((item) => item.status === "review"),
+      empty: text("No decisions waiting.", "Нет материалов на решении.")
+    },
+    {
+      title: text("Ready outside", "Готово наружу"),
+      note: text("Put into release plan or hand off.", "Поставить в план выпуска или передать."),
+      items: materialFocusItems().filter((item) => ["approved", "scheduled"].includes(item.status)),
+      empty: text("Nothing ready for release yet.", "Пока ничего не готово к выпуску.")
+    },
+    {
+      title: text("Needs work", "Нужно дописать"),
+      note: text("Finish text before approval.", "Дописать текст перед согласованием."),
+      items: materialFocusItems().filter((item) => ["idea", "brief", "draft"].includes(item.status)),
+      empty: text("No drafts waiting.", "Нет черновиков в ожидании.")
+    }
+  ];
+}
+
+function materialQueueColumn(queue) {
+  return `
+    <section class="material-queue-column">
+      <div class="material-queue-head">
+        <div>
+          <strong>${escapeHtml(queue.title)}</strong>
+          <span>${escapeHtml(queue.note)}</span>
+        </div>
+        <em>${escapeHtml(String(queue.items.length))}</em>
+      </div>
+      <div class="material-queue-items">
+        ${queue.items.length ? queue.items.map(materialQueueCard).join("") : `<p class="empty-note">${escapeHtml(queue.empty)}</p>`}
+      </div>
+    </section>
+  `;
+}
+
+function materialQueueCard(item) {
+  const primary = materialPrimaryAction(item);
+  const secondary = materialSecondaryAction(item);
+  return `
+    <article class="material-queue-card">
+      <div>
+        <span>${escapeHtml(materialOwnerStage(item))} · ${escapeHtml(displayChannel(item.channel || item.content_type || "content"))}</span>
+        <strong>${escapeHtml(item.title)}</strong>
+        <p>${escapeHtml(materialOwnerOutcome(item))}</p>
+      </div>
+      <div class="card-actions">
+        <button class="button primary table-button" data-action="${escapeAttr(primary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(primary.label)}</button>
+        <button class="button secondary table-button" data-action="${escapeAttr(secondary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(secondary.label)}</button>
+      </div>
+    </article>
+  `;
 }
 
 function materialListCard(item) {
@@ -1982,9 +1631,13 @@ function materialListCard(item) {
     <article class="material-list-card">
       <div class="material-list-main">
         <div class="material-card-top">
-          <strong>${escapeHtml(item.title)}</strong>
-          ${statusChip(item.status || "idea")}
+          <div>
+            <span class="material-stage">${escapeHtml(materialOwnerStage(item))}</span>
+            <strong>${escapeHtml(item.title)}</strong>
+          </div>
+          <span class="material-type">${escapeHtml(displayChannel(item.channel || item.content_type || "content"))}</span>
         </div>
+        <div class="material-path-mini">${materialStagePath(item)}</div>
         <p>${escapeHtml(materialOneLine(item))}</p>
         ${materialWorkflowFacts(item)}
       </div>
@@ -1996,348 +1649,50 @@ function materialListCard(item) {
   `;
 }
 
+function materialQueueTitle(item) {
+  if (item.status === "review") return text(`Decide: ${item.title}`, `Решить: ${item.title}`);
+  if (item.status === "approved") return text(`Ready to publish: ${item.title}`, `Готово к выпуску: ${item.title}`);
+  if (item.status === "scheduled") return text(`Confirm release: ${item.title}`, `Подтвердить выпуск: ${item.title}`);
+  if (["idea", "brief", "draft"].includes(item.status)) return text(`Finish: ${item.title}`, `Дописать: ${item.title}`);
+  return item.title;
+}
+
+function materialQueueNote(item) {
+  if (item.status === "review") return text("Owner decision is needed before this goes outside.", "Нужно решение собственника, прежде чем материал выйдет наружу.");
+  if (item.status === "approved") return text("The material is approved. Put it into the publication plan or hand it off.", "Материал согласован. Поставьте его в план публикаций или передайте вручную.");
+  if (item.status === "scheduled") return text("The material is in the publication plan. Confirm when it goes live.", "Материал стоит в плане публикаций. Подтвердите, когда он выйдет.");
+  if (["idea", "brief", "draft"].includes(item.status)) return text("The material is not ready for approval yet.", "Материал ещё не готов к согласованию.");
+  return text("Open the material to choose the next action.", "Откройте материал, чтобы выбрать следующий шаг.");
+}
+
+function materialStagePath(item) {
+  const stages = [
+    ["draft", text("Draft", "Черновик")],
+    ["review", text("Review", "Проверка")],
+    ["approved", text("Approval", "Согласование")],
+    ["scheduled", text("Publication", "Публикация")]
+  ];
+  const current = materialPathIndex(item.status);
+  return stages.map(([key, label], index) => `<span class="${index < current ? "done" : index === current ? "active" : ""}">${escapeHtml(label)}</span>`).join("");
+}
+
+function materialPathIndex(status = "") {
+  if (status === "review") return 1;
+  if (status === "approved") return 2;
+  if (status === "scheduled" || status === "published") return 3;
+  return 0;
+}
+
 function materialOneLine(item) {
   return [
     displayChannel(item.channel || item.content_type || "content"),
     materialAudience(item),
-    tr(nextContentAction(item.status))
+    materialOwnerOutcome(item)
   ].filter(Boolean).join(" · ");
 }
 
 function renderPublications() {
-  const tab = currentPublicationTab();
-  const tabRenderers = {
-    approvals: renderApprovals,
-    calendar: renderPublishingCalendar,
-    pack: renderManualExport
-  };
-
-  return `
-    <section class="tabs-panel" aria-label="${escapeAttr(text("Publication workspace", "Работа с публикациями"))}">
-      <div class="segmented-tabs" role="tablist">
-        ${Object.entries(publicationTabs).map(([key, item]) => `
-          <button class="tab-button ${tab === key ? "active" : ""}" role="tab" aria-selected="${tab === key ? "true" : "false"}" data-action="set-publication-tab" data-id="${escapeAttr(key)}">
-            ${escapeHtml(tr(item.label))}
-          </button>
-        `).join("")}
-      </div>
-      <div class="tab-context">
-        ${publicationTabContext(tab)}
-      </div>
-    </section>
-    ${tabRenderers[tab]()}
-  `;
-}
-
-function publicationTabContext(tab) {
-  const contexts = {
-    approvals: [
-      text("What needs your decision", "Что требует решения"),
-      text("Public materials, risky claims and channel handoffs stay here until the owner approves or asks for changes.", "Публичные материалы, рискованные утверждения и передачи в каналы ждут здесь решения собственника.")
-    ],
-    calendar: [
-      text("What can be published", "Что можно публиковать"),
-      text("Approved materials become a simple plan: channel, date, status and next handoff.", "Согласованные материалы превращаются в понятный план: канал, дата, статус и следующий шаг.")
-    ],
-    pack: [
-      text("What can be handed off", "Что можно забрать"),
-      text("The weekly material pack keeps handoff reliable until direct channel publishing is connected in settings.", "Недельный пакет помогает передавать материалы, пока прямая публикация в каналы настраивается в разделе настроек.")
-    ]
-  };
-  const [title, note] = contexts[tab] || contexts.approvals;
-  return `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(note)}</span>`;
-}
-
-function renderApprovals() {
-  const selected = getSelectedApproval();
-  return `
-    <div class="approval-workspace">
-      <section class="approval-list panel">
-        <div class="panel-heading compact">
-          <div>
-            <p class="eyebrow">${text("Decision inbox", "Очередь решений")}</p>
-            <h3>${state.approvals.filter((item) => item.status === "pending").length} ${text("waiting", "ждут решения")}</h3>
-          </div>
-        </div>
-        <div class="approval-items">
-          ${state.approvals.map((item) => {
-            const context = getApprovalContext(item);
-            return `
-              <button class="approval-item ${item.id === state.selectedApprovalId ? "selected" : ""}" data-action="select-approval" data-id="${escapeAttr(item.id)}">
-                <strong>${escapeHtml(context.title)}</strong>
-                <span>${escapeHtml(displayChannel(context.channel))} · ${escapeHtml(context.when)} · ${escapeHtml(tr(labelize(item.status || "pending")))}</span>
-              </button>
-            `;
-          }).join("") || `<p class="empty-note">${text("No materials waiting for approval.", "Нет материалов на согласовании.")}</p>`}
-        </div>
-      </section>
-
-      <section class="approval-detail panel">
-        ${selected ? approvalDetail(selected) : `<div class="empty-state"><h3>${text("No approval selected", "Материал не выбран")}</h3><p>${text("Select a request from the list.", "Выберите заявку из списка.")}</p></div>`}
-      </section>
-    </div>
-  `;
-}
-
-function approvalDetail(item) {
-  const context = getApprovalContext(item);
-  const flags = context.riskFlags;
-  return `
-    <div class="panel-heading">
-      <div>
-        <p class="eyebrow">${text("What we approve", "Что согласуем")}</p>
-        <h3>${escapeHtml(context.title)}</h3>
-      </div>
-      ${statusChip(item.status || "pending")}
-    </div>
-    <div class="decision-summary">
-      <div>
-        <span class="meta-label">${text("Why approval is needed", "Почему нужно согласование")}</span>
-        <strong>${escapeHtml(context.reason)}</strong>
-      </div>
-      <div>
-        <span class="meta-label">${text("After approval", "Что изменится после согласования")}</span>
-        <strong>${escapeHtml(context.outcome)}</strong>
-      </div>
-    </div>
-    <div class="detail-grid">
-      <div>
-        <span class="meta-label">${text("Channel", "Канал")}</span>
-        <strong>${escapeHtml(displayChannel(context.channel))}</strong>
-      </div>
-      <div>
-        <span class="meta-label">${text("When", "Когда")}</span>
-        <strong>${escapeHtml(context.when)}</strong>
-      </div>
-      <div>
-        <span class="meta-label">${text("What will be published", "Что будет опубликовано")}</span>
-        <strong>${escapeHtml(context.assetType)}</strong>
-      </div>
-      <div>
-        <span class="meta-label">${text("Prepared by", "Кто подготовил")}</span>
-        <strong>${escapeHtml(context.requestedBy)}</strong>
-      </div>
-      <div>
-        <span class="meta-label">${text("What to check", "На что обратить внимание")}</span>
-        <div class="flag-row">${flags.length ? flags.map((flag) => `<span class="flag">${escapeHtml(tr(flag))}</span>`).join("") : `<span class="muted">${text("Standard public check", "Стандартная проверка публичного текста")}</span>`}</div>
-      </div>
-    </div>
-    <div class="preview-pane">
-      <p class="eyebrow">${text("Text preview", "Текст")}</p>
-      ${renderAssetPreview(context)}
-    </div>
-    <div class="risk-checklist">
-      <p class="eyebrow">${text("Review checklist", "На что проверить")}</p>
-      ${context.checklist.map((check) => `
-        <div class="checkline ${check.ok ? "ok" : "warn"}">
-          <span>${check.ok ? "✓" : "!"}</span>
-          <strong>${escapeHtml(tr(check.label))}</strong>
-          <em>${escapeHtml(tr(check.note))}</em>
-        </div>
-      `).join("")}
-    </div>
-    <div class="audit-trail">
-      <p class="eyebrow">${text("Decision history", "История решений")}</p>
-      ${context.audit.map((event) => `
-        <div class="audit-event">
-          <span>${escapeHtml(event.at)}</span>
-          <strong>${escapeHtml(event.actor)}</strong>
-          <p>${escapeHtml(event.event)}</p>
-        </div>
-      `).join("")}
-    </div>
-    <div class="detail-actions">
-      ${actionButton("Approve", "primary", "open-approve-modal")}
-      ${actionButton("Request changes", "secondary", "open-changes-modal")}
-      ${actionButton("Reject", "danger", "open-reject-modal")}
-    </div>
-  `;
-}
-
-function renderPublishingCalendar() {
-  const groupedDays = publishingWeekGroups();
-  return `
-    <section class="publishing-summary-strip">
-      ${ownerSetupCard(text("Waiting for decision", "Ждут решения"), state.calendar.filter((item) => item.status === "review").length, text("Cannot go out before approval", "Не могут выйти без согласования"))}
-      ${ownerSetupCard(text("Ready for handoff", "Готовы к передаче"), state.calendar.filter((item) => item.status === "scheduled").length, text("Approved and planned", "Согласованы и стоят в плане"))}
-      ${ownerSetupCard(text("Handed off", "Переданы"), state.calendar.filter((item) => item.status === "handed_off").length, text("Moved outside the system manually", "Переданы наружу вручную"))}
-      ${ownerSetupCard(text("Published", "Опубликованы"), state.calendar.filter((item) => item.status === "published").length, text("Already live", "Уже вышли"))}
-    </section>
-    <section class="publication-ops-strip">
-      ${publicationOpsCard(text("Needs approval", "Нужно согласование"), state.calendar.filter((item) => item.status === "review").length, text("Owner decision is required before any public move.", "До любого внешнего шага нужно решение собственника."))}
-      ${publicationOpsCard(text("Needs handoff note", "Нужна note для передачи"), state.calendar.filter((item) => needsHandoffNote(item)).length, text("Add channel note, owner condition or handoff instruction.", "Добавьте заметку по каналу, условие собственника или инструкцию для передачи."))}
-      ${publicationOpsCard(text("Manual-first handoff", "Ручная передача"), state.calendar.filter((item) => item.channel === "manual_export" || item.status === "handed_off").length, text("Weekly pack and manual channel loop stay visible here.", "Недельный пакет и ручной контур публикации держим в этом экране."))}
-    </section>
-    <article class="panel full">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">${text("Publication plan", "Календарь выхода")}</p>
-          <h3>${text("Week view with approval gate and handoff", "Неделя с контуром согласования и передачей")}</h3>
-        </div>
-      </div>
-      <div class="approval-gate-banner">
-        <strong>${text("Approval gate", "Контур согласования")}</strong>
-        <span>${text("Nothing public leaves the system until the owner approves it. After approval, the material is either published directly or handed off manually.", "Пока собственник не согласует материал, наружу ничего не уходит. После согласования материал либо публикуется, либо передаётся вручную.")}</span>
-      </div>
-      <div class="week-calendar">
-        ${groupedDays.map(([dayKey, items]) => `
-          <section class="week-day-column">
-            <div class="week-day-header">
-              <strong>${escapeHtml(formatPublishingDay(dayKey))}</strong>
-              <span>${escapeHtml(String(items.length))}</span>
-            </div>
-            <div class="week-day-items">
-              ${items.map((item) => publishingCalendarCard(item)).join("")}
-            </div>
-          </section>
-        `).join("")}
-      </div>
-    </article>
-  `;
-}
-
-function calendarAction(item) {
-  if (item.status === "published") return `<span class="muted">${escapeHtml(text("Already shipped", "Уже выпущено"))}</span>`;
-  if (item.status === "handed_off") return `<button class="button secondary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Mark as published", "Отметить как опубликованное"))}</button>`;
-  if (item.status === "scheduled") {
-    return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Mark as handed off", "Отметить как переданное"))}</button>`;
-  }
-  if (item.status === "review") {
-    return `<button class="button secondary table-button" data-action="go-approvals" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Approve first", "Сначала согласовать"))}</button>`;
-  }
-  return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Mark as handed off", "Отметить как переданное"))}</button>`;
-}
-
-function publishingWeekGroups() {
-  const groups = new Map();
-  for (const item of [...state.calendar].sort((a, b) => String(a.scheduled_for || "").localeCompare(String(b.scheduled_for || "")))) {
-    const key = publishingDayKey(item.scheduled_for);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
-  }
-  return [...groups.entries()];
-}
-
-function publishingDayKey(value) {
-  if (!value) return "no-date";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "no-date";
-  return date.toISOString().slice(0, 10);
-}
-
-function formatPublishingDay(dayKey) {
-  if (dayKey === "no-date") return text("No date", "Без даты");
-  const date = new Date(`${dayKey}T12:00:00`);
-  return new Intl.DateTimeFormat(currentLang === "ru" ? "ru-RU" : "en", {
-    weekday: "short",
-    day: "numeric",
-    month: "short"
-  }).format(date);
-}
-
-function publishingCalendarCard(item) {
-  const handoff = publishingHandoffText(item);
-  const note = publishingOwnerNote(item);
-  return `
-    <article class="calendar-card">
-      <div class="calendar-card-top">
-        <strong>${escapeHtml(item.title)}</strong>
-        ${statusChip(item.status || "draft")}
-      </div>
-      <span>${escapeHtml(displayChannel(item.channel || "manual"))} · ${escapeHtml(formatDate(item.scheduled_for))}</span>
-      <p>${escapeHtml(handoff)}</p>
-      <div class="calendar-note-block ${note ? "filled" : ""}">
-        <span>${escapeHtml(text("Owner handoff note", "Заметка для передачи"))}</span>
-        <strong>${escapeHtml(note || text("No note yet. Add handoff instruction before manual publishing.", "Пока нет заметки. Добавьте инструкцию перед ручной публикацией."))}</strong>
-      </div>
-      <div class="card-actions">
-        ${calendarAction(item)}
-        <button class="button secondary table-button" data-action="edit-calendar-note" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Add handoff note", "Добавить note"))}</button>
-      </div>
-    </article>
-  `;
-}
-
-function publishingHandoffText(item) {
-  if (item.status === "review") return text("Waiting for owner decision before any public action.", "Ждёт решения собственника перед любым публичным действием.");
-  if (item.status === "scheduled") return text("Approved and ready for manual handoff or direct publication.", "Согласовано и готово к ручной передаче или прямой публикации.");
-  if (item.status === "handed_off") return text("Transferred outside the system; waiting for confirmation that it is live.", "Передано наружу; ждём подтверждения, что материал вышел.");
-  if (item.status === "published") return text("Already live and counted in the result loop.", "Материал уже вышел и учтён в контуре результатов.");
-  return text("Still being prepared for publication.", "Материал ещё готовится к публикации.");
-}
-
-function publicationOpsCard(title, value, note) {
-  return `
-    <article class="publication-ops-card">
-      <span>${escapeHtml(title)}</span>
-      <strong>${escapeHtml(String(value))}</strong>
-      <p>${escapeHtml(note)}</p>
-    </article>
-  `;
-}
-
-function publishingOwnerNote(item) {
-  return String(item?.metadata?.handoff_note || item?.metadata?.owner_note || "").trim();
-}
-
-function needsHandoffNote(item) {
-  return ["scheduled", "handed_off"].includes(String(item.status || "")) && !publishingOwnerNote(item);
-}
-
-function renderManualExport() {
-  const assets = packageAssets();
-  const selectedAsset = assets.find((asset) => asset.id === state.selectedPackItem) || assets[0];
-  return `
-    <div class="screen-grid two">
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Material pack", "Пакет материалов")}</p>
-            <h3>${text("Approved texts for the week", "Утверждённые тексты на неделю")}</h3>
-          </div>
-        </div>
-        <div class="form-grid">
-          ${field(text("Week", "Неделя"), "exportWeek", "2026-05-week-1")}
-          <label>${text("Channels", "Каналы")}
-            <div class="check-grid">
-              ${[
-                text("Website pages", "Страницы сайта"),
-                "Telegram",
-                "VC.ru",
-                "Email",
-                text("Lead magnet", "Лид-магнит"),
-                text("Publishing calendar", "Календарь публикаций")
-              ].map((channel) =>
-                `<label class="check"><input type="checkbox" checked /> ${escapeHtml(channel)}</label>`
-              ).join("")}
-            </div>
-          </label>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Preview", "Предпросмотр")}</p>
-            <h3>${text("What will be handed off", "Что уйдёт в работу")}</h3>
-          </div>
-        </div>
-        <div class="pack-preview">
-          ${assets.map((asset) =>
-            `<div class="pack-row ${asset.id === state.selectedPackItem ? "selected" : ""}"><span>${escapeHtml(asset.label)}</span><button class="button secondary" data-action="preview-pack-item" data-id="${escapeAttr(asset.id)}">Preview</button></div>`
-          ).join("")}
-        </div>
-        <div class="pack-detail">
-          <p class="eyebrow">${escapeHtml(selectedAsset.label)}</p>
-          <pre class="asset-preview-text">${escapeHtml(selectedAsset.preview)}</pre>
-        </div>
-        <div class="pack-handoff-panel">
-          <p class="eyebrow">${text("Owner handoff rule", "Правило передачи от собственника")}</p>
-          <strong>${escapeHtml(state.workspaceState.pack_handoff_note || text("Use this pack only after approval. Manual send, manual publish, then confirm what actually went live.", "Использовать пакет только после согласования. Сначала ручная передача, потом ручная публикация, затем подтверждение, что реально вышло."))}</strong>
-        </div>
-      </article>
-    </div>
-  `;
+  return publicationsModule.renderPublications();
 }
 
 function renderAgents() {
@@ -2384,35 +1739,101 @@ function renderAnalytics() {
   const metrics = deriveMetrics(state.metrics);
   return `
     ${resultNextMovePanel(metrics)}
-    <div class="metric-grid">
-      ${metricCard(text("Approvals", "Согласования"), metrics.approvals_total, text(`${metrics.pending_approvals} pending`, `${metrics.pending_approvals} ждут решения`), "coral")}
-      ${metricCard(text("Published materials", "Опубликовано материалов"), metrics.published_materials, text("Live or handed off", "Вышли или переданы"))}
-      ${metricCard(text("Leads", "Заявки"), metrics.leads, text("Imported from forms or CRM", "Из форм или CRM"), "dark")}
-      ${metricCard(text("Recovered payments", "Возвращённые оплаты"), metrics.recovered_payments, text("Confirmed by status or import", "Подтверждены статусом или импортом"), "coral")}
-      ${metricCard(text("Tasks created", "Создано задач"), metrics.tasks_created, text("Open work items", "Рабочие задачи"))}
-      ${metricCard(text("Ready to improve", "На улучшение"), metrics.improvement_tasks, text("Tasks from analytics", "Задачи из аналитики"))}
-    </div>
+    ${resultSignalPanel(metrics)}
+    ${resultProofStrip(metrics)}
     <article class="panel full">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">${text("Improvement work", "Работа по улучшениям")}</p>
-          <h3>${text("Tasks generated from results", "Задачи из результатов")}</h3>
+          <p class="eyebrow">${text("Next work", "Следующая работа")}</p>
+          <h3>${text("What to fix next", "Что исправить дальше")}</h3>
         </div>
       </div>
-      ${table([
-        text("Task", "Задача"),
-        text("Owner", "Ответственный"),
-        text("Status", "Статус"),
-        text("Why now", "Почему сейчас"),
-        text("Next action", "Следующее действие")
-      ], state.tasks.map((task) => [
-        task.title,
-        displayWorkOwner(task.owner),
-        statusChip(task.status || "next"),
-        task.note || text("Action required", "Требуется действие"),
-        taskAction(task)
-      ]))}
+      ${resultActionList(metrics)}
     </article>
+  `;
+}
+
+function resultSignalPanel(metrics) {
+  const signal = primaryBusinessSignal(metrics);
+  return `
+    <section class="result-signal-panel">
+      <div>
+        <p class="eyebrow">${text("Business signal", "Бизнес-сигнал")}</p>
+        <h3>${escapeHtml(signal.title)}</h3>
+        <p>${escapeHtml(signal.note)}</p>
+      </div>
+      <strong>${escapeHtml(signal.value)}</strong>
+    </section>
+  `;
+}
+
+function primaryBusinessSignal(metrics) {
+  if (metrics.leads) {
+    return {
+      value: String(metrics.leads),
+      title: text("New demand is visible", "Появился спрос"),
+      note: text("Leads are recorded from forms, CRM or replies. Next step: check quality and source.", "Заявки зафиксированы из форм, CRM или ответов. Дальше проверяем качество и источник.")
+    };
+  }
+  if (metrics.recovered_payments) {
+    return {
+      value: String(metrics.recovered_payments),
+      title: text("Money returned", "Деньги вернулись"),
+      note: text("Recovered payments are counted only after confirmation.", "Возврат денег считается только после подтверждения.")
+    };
+  }
+  if (metrics.published_materials) {
+    return {
+      value: String(metrics.published_materials),
+      title: text("Work went outside", "Работа вышла наружу"),
+      note: text("Published or handed-off materials are visible. Next signal should come from a lead, form or reply.", "Видны опубликованные или переданные материалы. Следующий сигнал ждём из заявки, формы или ответа.")
+    };
+  }
+  return {
+    value: "0",
+    title: text("No market signal yet", "Рыночного сигнала пока нет"),
+    note: text("Preparation is visible, but demand or money has not been recorded yet.", "Подготовка видна, но спрос или деньги ещё не зафиксированы.")
+  };
+}
+
+function resultProofStrip(metrics) {
+  const handedOffCount = handedOffCalendarCount(state.calendar);
+  const proof = [
+    [text("Output", "Выпуск"), metrics.published_materials, text("live or handed off", "вышло или передано")],
+    [text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting live confirmation", "ждёт подтверждения выхода")],
+    [text("Decisions", "Решения"), metrics.approvals_total, text(`${metrics.pending_approvals} pending`, `${metrics.pending_approvals} ждут`)],
+    [text("Leads", "Заявки"), metrics.leads, text("from forms, CRM or replies", "из форм, CRM или ответов")],
+    [text("Money", "Деньги"), metrics.recovered_payments, text("confirmed return", "подтверждённый возврат")]
+  ];
+  return `<div class="metric-grid">${proof.map(([label, value, note], index) => metricCard(label, value, note, index === 3 ? "dark" : index === 4 ? "coral" : "")).join("")}</div>`;
+}
+
+function resultActionList(metrics) {
+  const openTasks = state.tasks.filter((task) => !["done", "approved"].includes(task.status));
+  if (openTasks.length) {
+    return `
+      <div class="result-action-list">
+        ${openTasks.slice(0, 5).map((task) => `
+          <article class="result-action-row">
+            <div>
+              <span>${escapeHtml(displayWorkOwner(task.owner))} · ${escapeHtml(tr(labelize(task.status || "next")))}</span>
+              <strong>${escapeHtml(task.title)}</strong>
+              <p>${escapeHtml(task.note || text("Action required", "Требуется действие"))}</p>
+            </div>
+            ${taskAction(task)}
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+  return `
+    <div class="result-empty-action">
+      <strong>${escapeHtml(text("No improvement tasks yet", "Задач улучшения пока нет"))}</strong>
+      <p>${escapeHtml(metrics.leads || metrics.published_materials
+        ? text("Create tasks from the current signals when you are ready to tighten the loop.", "Создайте задачи по текущим сигналам, когда будете готовы усиливать контур.")
+        : text("First get a release or recorded lead, then improvement tasks will become useful.", "Сначала нужен выпуск или зафиксированная заявка, потом задачи улучшения станут полезными."))}</p>
+      <button class="button secondary" data-action="generate-improvements">${escapeHtml(text("Create tasks", "Создать задачи"))}</button>
+    </div>
   `;
 }
 
@@ -2425,26 +1846,38 @@ function resultNextMovePanel(metrics) {
         <h3>${escapeHtml(next.title)}</h3>
         <p>${escapeHtml(next.note)}</p>
       </div>
-      <button class="button ${next.variant}" data-action="${escapeAttr(next.action)}">${escapeHtml(next.label)}</button>
+      <button class="button ${next.variant}" data-action="${escapeAttr(next.action)}" data-id="${escapeAttr(next.id || "")}">${escapeHtml(next.label)}</button>
     </article>
   `;
 }
 
 function resultNextMove(metrics) {
+  const handedOffCount = handedOffCalendarCount(state.calendar);
   if (!metrics.leads && !metrics.published_materials) {
     return {
       title: text("Get the first public signal and first demand signal into the system", "Дайте системе первый внешний выпуск и первый сигнал спроса"),
-      note: text("Until a material is published and leads are imported, results are only preparation.", "Пока нет публикации и заявок, результаты показывают подготовку, а не рынок."),
+      note: text("Until a material is released and a lead is recorded, results show preparation, not the market.", "Пока нет выпуска и заявки, результаты показывают подготовку, а не рынок."),
       action: "generate-improvements",
       label: text("Create improvement tasks", "Создать задачи улучшения"),
       variant: "primary"
     };
   }
+  if (handedOffCount) {
+    return {
+      title: text("Confirm manually handed-off materials after they go live", "Подтвердите выход материалов, переданных вручную"),
+      note: text("Open the publishing plan and mark the handed-off items as published once the channel owner confirms release.", "Откройте план публикаций и отметьте переданные вручную материалы как опубликованные после подтверждения выхода."),
+      action: "go-calendar-handoff",
+      label: text("Open publishing plan", "Открыть план публикаций"),
+      variant: "primary"
+    };
+  }
   if (metrics.pending_approvals) {
+    const pendingApproval = state.approvals.find((item) => item.status === "pending");
     return {
       title: text("Clear pending approvals before pushing more materials", "Разберите согласования перед новым выпуском"),
       note: text("Approval-first only works if owner decisions do not pile up.", "Approval-first работает, когда решения собственника не копятся."),
       action: "go-approvals",
+      id: pendingApproval?.id || "",
       label: text("Open approvals", "Открыть согласования"),
       variant: "primary"
     };
@@ -2454,7 +1887,7 @@ function resultNextMove(metrics) {
       title: text("Add the first receivables list to start Collect safely", "Добавьте первую дебиторку для безопасного старта Collect"),
       note: text("The system can prepare follow-up work, but money-related actions stay manual-first.", "Система подготовит дожим, но денежные действия остаются manual-first."),
       action: "import-metrics",
-      label: text("Import results", "Импортировать результаты"),
+      label: text("Add signal", "Добавить сигнал"),
       variant: "secondary"
     };
   }
@@ -2472,24 +1905,11 @@ function taskAction(task) {
   return `<button class="button secondary table-button" data-action="complete-task" data-id="${escapeAttr(task.id)}">${escapeHtml(text("Mark done", "Отметить готово"))}</button>`;
 }
 
-function resultsMetricRows() {
-  return [
-    [text("Tasks created", "Создано задач"), text("Shows whether the system turns signals into work.", "Показывает, превращает ли система сигналы в работу."), text("Task list", "Список задач"), text("Telegram", "Telegram")],
-    [text("Approvals", "Согласования"), text("Shows owner load and blocked public actions.", "Показывает нагрузку собственника и заблокированные публичные действия."), text("Approvals table", "Таблица согласований"), "Telegram"],
-    [text("Published materials", "Опубликовано материалов"), text("Shows market-facing output without counting drafts as results.", "Показывает внешний выпуск, не считая черновики результатом."), text("Publishing calendar", "Календарь публикаций"), text("Website / CMS", "Сайт / CMS")],
-    [text("Leads", "Заявки"), text("Connects growth work to demand.", "Связывает работу по росту со спросом."), text("Import", "Импорт"), "CRM / forms"],
-    [text("Receivables in progress", "Дебиторка в работе"), text("Shows money currently under systematic follow-up.", "Показывает деньги в системном дожиме."), "CSV / XLSX", "CRM / 1C"],
-    [text("Promised payments", "Обещанные оплаты"), text("Separates real debtor promises from ordinary reminders.", "Отделяет обещания оплатить от обычных напоминаний."), text("Payment status", "Статус оплаты"), "Email / CRM"],
-    [text("Recovered payments", "Возвращённые оплаты"), text("Shows confirmed cash return without promising guarantees.", "Показывает подтверждённый возврат денег без обещаний гарантии."), text("Import", "Импорт"), text("Bank / accounting", "Банк / учёт")]
-  ];
-}
-
 function renderSettings() {
   const tab = currentSettingsTab();
   const tabRenderers = {
     technical: renderTechnicalSettings,
     autopilot: renderAutopilotSettings,
-    channels: renderChannelSettings,
     tools: renderToolsSettings
   };
 
@@ -2506,6 +1926,7 @@ function renderSettings() {
         ${settingsTabContext(tab)}
       </div>
     </section>
+    ${settingsNextStep(tab)}
     ${tabRenderers[tab]()}
   `;
 }
@@ -2513,763 +1934,222 @@ function renderSettings() {
 function settingsTabContext(tab) {
   const contexts = {
     technical: [
-      text("Technical status", "Технический статус"),
-      text("Service connection details stay here, away from daily decisions.", "Детали подключений остаются здесь и не мешают ежедневным решениям.")
+      text("Launch readiness", "Готовность запуска"),
+      text("Rules, access and the first controlled release.", "Правила, доступы и первый управляемый выпуск.")
     ],
     autopilot: [
-      text("Autopilot", "Автопилот"),
-      text("Choose what the system may do itself and where owner approval stays required.", "Выберите, что система может делать сама, а где нужно решение собственника.")
-    ],
-    channels: [
-      text("Channels", "Каналы"),
-      text("Control where approved materials can go next.", "Настройте, куда могут уходить согласованные материалы.")
+      text("Rules", "Правила"),
+      text("What Hermes may prepare, what needs approval, and where materials may go.", "Что Hermes может готовить, что требует согласования и куда можно выпускать.")
     ],
     tools: [
-      text("Tools", "Инструменты"),
-      text("See what is used now, what is not used yet, and what is needed to connect each tool.", "Посмотрите, что уже используется, что пока не используется и что нужно для подключения.")
+      text("Access", "Доступы"),
+      text("What is connected, what blocks launch, and who should give access.", "Что подключено, что блокирует запуск и кто должен дать доступ.")
     ]
   };
   const [title, note] = contexts[tab] || contexts.technical;
   return `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(note)}</span>`;
 }
 
-function renderTechnicalSettings() {
+function settingsNextStep(tab) {
+  const steps = {
+    technical: {
+      eyebrow: text("What to do now", "Что сделать сейчас"),
+      title: text("Close the first launch blocker", "Закрыть первый блокер запуска"),
+      note: text("Open Access and assign who gives the production workspace, domain or sender access.", "Откройте Доступы и назначьте, кто даёт рабочий контур, домен или отправителя."),
+      action: "set-settings-tab",
+      id: "tools",
+      label: text("Open Access", "Открыть Доступы")
+    },
+    autopilot: {
+      eyebrow: text("What to do now", "Что сделать сейчас"),
+      title: text("Keep release approval-first", "Оставить выпуск через согласование"),
+      note: text("Hermes may prepare work. Public release should still wait for the owner's final click.", "Hermes может готовить работу. Публичный выпуск должен ждать финального клика собственника."),
+      action: "save-autopilot",
+      id: "",
+      label: text("Save rules", "Сохранить правила")
+    },
+    tools: {
+      eyebrow: text("What to do now", "Что сделать сейчас"),
+      title: text("Assign the owner for the next access", "Назначить владельца следующего доступа"),
+      note: text("Start with the AgentResult workspace or sender access. Without this, release stays manual.", "Начните с рабочего контура AgentResult или отправителя. Без этого выпуск остаётся ручным."),
+      action: "select-tool",
+      id: "backend",
+      label: text("Open access task", "Открыть задачу доступа")
+    }
+  };
+  const step = steps[tab] || steps.technical;
   return `
-    <div class="screen-grid two">
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Technical status", "Технический статус")}</p>
-            <h3>${state.online ? text("System data is connected", "Данные подключены") : text("Demo data is active", "Включены демо-данные")}</h3>
-          </div>
-          <span class="status-dot ${state.online ? "online" : "offline"}"></span>
+    <section class="settings-next-step">
+      <div>
+        <p class="eyebrow">${escapeHtml(step.eyebrow)}</p>
+        <strong>${escapeHtml(step.title)}</strong>
+        <span>${escapeHtml(step.note)}</span>
+      </div>
+      <button class="button primary" data-action="${escapeAttr(step.action)}" data-id="${escapeAttr(step.id)}">${escapeHtml(step.label)}</button>
+    </section>
+  `;
+}
+
+function approvalWaitNote(count) {
+  if (currentLang === "ru") {
+    const verb = pluralRu(count, "ждёт", "ждут", "ждут");
+    return `${count} ${pluralRu(count, "согласование", "согласования", "согласований")} ${verb} перед выпуском.`;
+  }
+  return count === 1 ? "1 approval waits before release." : `${count} approvals wait before release.`;
+}
+
+function pluralRu(count, one, few, many) {
+  const lastTwo = Math.abs(count) % 100;
+  const last = lastTwo % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return many;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
+
+function renderTechnicalSettings() {
+  const pendingApprovals = state.approvals.filter((item) => item.status === "pending").length;
+  const readyMaterials = state.content.filter((item) => ["approved", "scheduled", "published"].includes(item.status)).length;
+  const launchItems = [
+    {
+      label: text("Control loop", "Контур контроля"),
+      value: pendingApprovals ? text("Needs decisions", "Есть решения") : text("Clear", "Чисто"),
+      note: pendingApprovals
+        ? approvalWaitNote(pendingApprovals)
+        : text("No public action is waiting on the owner.", "Публичные действия не ждут собственника.")
+    },
+    {
+      label: text("Materials", "Материалы"),
+      value: String(readyMaterials),
+      note: text("Approved, planned or already published.", "Согласовано, запланировано или уже вышло.")
+    },
+    {
+      label: text("Result data", "Данные результата"),
+      value: state.online ? text("Connected", "Подключены") : text("Demo surface", "Демо-контур"),
+      note: state.online
+        ? text("Tasks, approvals and materials are saved in the workspace.", "Задачи, согласования и материалы сохраняются в контуре.")
+        : text("Shows the first controlled loop without local services.", "Показывает первый управляемый цикл без локальных сервисов.")
+    }
+  ];
+  const statusItems = [
+    {
+      label: text("Workspace", "Рабочий контур"),
+      value: state.online ? text("Connected", "Подключён") : text("Demo", "Демо"),
+      note: state.online
+        ? text("Shared workspace is available.", "Рабочее пространство доступно.")
+        : IS_PRODUCTION_DEMO
+          ? text("Approvals, handoff and results are shown without local services.", "Согласования, передача и результаты показаны без локальных сервисов.")
+          : text("Approvals, handoff and results are shown as a product scenario.", "Согласования, передача и результаты показаны как продуктовый сценарий.")
+    },
+    {
+      label: text("Owner", "Владелец"),
+      value: state.me?.name || text("Owner", "Собственник"),
+      note: displayWorkOwner(state.me?.role || "owner")
+    },
+    {
+      label: text("Production workspace", "Рабочий запуск"),
+      value: state.online ? text("Active", "Активен") : text("Next step", "Следующий шаг"),
+      note: text("Connect the workspace, domain and access after approval of the demo loop.", "Подключить рабочий контур, домен и доступы после согласования демо-цикла.")
+    }
+  ];
+  return `
+    <article class="panel full system-status-panel">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Launch readiness", "Готовность запуска")}</p>
+          <h3>${state.online ? text("Ready for controlled work", "Можно вести управляемую работу") : text("Ready to review", "Готово к просмотру")}</h3>
         </div>
+        <span class="status-dot ${state.online ? "online" : "offline"}"></span>
+      </div>
+      <div class="launch-readiness-strip">
+        ${launchItems.map((item) => `
+          <article>
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${escapeHtml(item.value)}</strong>
+            <p>${escapeHtml(item.note)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="system-status-grid">
+        ${statusItems.map((item) => `
+          <article>
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${escapeHtml(item.value)}</strong>
+            <p>${escapeHtml(item.note)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <details class="technical-details">
+        <summary>${text("Implementation details", "Детали внедрения")}</summary>
         <div class="settings-list">
-          <div><span>${text("Service address", "Адрес сервиса")}</span><strong>${escapeHtml(API_BASE)}</strong></div>
+          <div><span>${text("Service address", "Адрес сервиса")}</span><strong>${escapeHtml(API_BASE || text("Not connected", "Не подключён"))}</strong></div>
           <div><span>${text("Workspace", "Рабочая область")}</span><strong>${escapeHtml(TENANT_ID)}</strong></div>
-          <div><span>${text("Current user", "Текущий пользователь")}</span><strong>${escapeHtml(`${state.me?.name || text("Owner", "Собственник")} · ${displayWorkOwner(state.me?.role || "owner")}`)}</strong></div>
-          <div><span>${text("Data connection", "Подключение данных")}</span><strong>${state.online ? text("connected", "подключено") : text("not connected", "не подключено")}</strong></div>
         </div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Owner view", "Вид для собственника")}</p>
-            <h3>${text("Technical details stay here", "Технические детали остаются здесь")}</h3>
-          </div>
-        </div>
-        <p class="empty-note">${text("Daily screens stay focused on priorities, materials, approvals and results. Service details are separated for setup and support.", "Рабочие экраны показывают приоритеты, материалы, согласования и результаты. Сервисные детали вынесены отдельно для настройки и поддержки.")}</p>
-      </article>
-    </div>
+      </details>
+    </article>
   `;
 }
 
 function renderAutopilotSettings() {
   const toggles = [
-    [text("Prepare topics", "Готовить темы"), true],
-    [text("Write drafts", "Писать черновики"), true],
-    [text("Assemble weekly pack", "Собирать недельный пакет"), true],
-    [text("Remind about approvals", "Напоминать о согласовании"), true],
-    [text("Publish after approval", "Публиковать после согласования"), false]
+    ["prepare-topics", text("Prepare topics", "Готовить темы"), true],
+    ["write-drafts", text("Write drafts", "Писать черновики"), true],
+    ["assemble-pack", text("Assemble weekly pack", "Собирать недельный пакет"), true],
+    ["approval-reminders", text("Remind about approvals", "Напоминать о согласовании"), true],
+    ["direct-publishing", text("Publish without final owner click", "Публиковать без финального клика собственника"), false]
   ];
-
-  return `
-    <div class="screen-grid two">
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Autopilot", "Автопилот")}</p>
-            <h3>${text("What the system may do itself", "Что система может делать сама")}</h3>
-          </div>
-        </div>
-        <div class="check-grid single">
-          ${toggles.map(([label, checked]) => `<label class="check"><input type="checkbox" ${checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
-        </div>
-      </article>
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">${text("Work split", "Разделение работы")}</p>
-            <h3>${text("Where owner approval stays required", "Где остаётся решение собственника")}</h3>
-          </div>
-        </div>
-        <div class="automation-list">
-          ${automationRow(text("Done by the system", "Система делает сама"), text("Finds topics, prepares briefs, drafts materials, assembles weekly packs.", "Ищет темы, готовит ТЗ, пишет черновики, собирает недельные пакеты."), 76)}
-          ${automationRow(text("Needs your decision", "Нужно ваше решение"), text("Public publishing, risky claims, client names, competitor comparisons.", "Публичные публикации, рискованные обещания, имена клиентов, сравнения с конкурентами."), 34)}
-          ${automationRow(text("Blocked by connected tools", "Ждёт подключённых инструментов"), text("Direct posting, website updates, email sends, package storage.", "Прямая публикация, обновления сайта, рассылки, хранение пакетов."), 58)}
-        </div>
-      </article>
-    </div>
-  `;
-}
-
-function renderChannelSettings() {
   const channels = [
     ["website", text("Website pages", "Страницы сайта"), true],
     ["telegram", "Telegram", true],
-    ["vc", "VC.ru", false],
-    ["habr", "Habr", false],
     ["email", "Email", true],
-    ["calendar", text("Publishing calendar", "Календарь публикаций"), true]
+    ["calendar", text("Publishing calendar", "Календарь публикаций"), true],
+    ["vc", "VC.ru", false],
+    ["habr", "Habr", false]
   ];
 
   return `
-    <div class="screen-grid two">
-      <article class="panel">
+    <section class="rules-control-grid">
+      <article class="panel rules-main-panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">${text("Channels", "Каналы")}</p>
-            <h3>${text("Where publishing is allowed", "Куда можно передавать материалы")}</h3>
+            <p class="eyebrow">${text("Hermes rules", "Правила Hermes")}</p>
+            <h3>${text("Preparation is automatic. Release is approval-first.", "Подготовка автоматическая. Выпуск через согласование.")}</h3>
           </div>
         </div>
-        <div class="check-grid">
-          ${channels.map(([key, label, checked]) => `<label class="check"><input type="checkbox" data-channel-key="${escapeAttr(key)}" ${state.channelSettings[key] ?? checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
+        <div class="rules-check-block">
+          <span class="meta-label">${text("Hermes may do", "Hermes может делать")}</span>
+          <div class="check-grid single">
+            ${toggles.map(([key, label, checked]) => `<label class="check"><input type="checkbox" data-autopilot-key="${escapeAttr(key)}" ${state.autopilotSettings[key] ?? checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
+          </div>
+        </div>
+        <div class="rules-check-block">
+          <span class="meta-label">${text("Approved materials may go to", "Согласованные материалы можно выпускать в")}</span>
+          <div class="check-grid">
+            ${channels.map(([key, label, checked]) => `<label class="check"><input type="checkbox" data-channel-key="${escapeAttr(key)}" ${state.channelSettings[key] ?? checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
+          </div>
         </div>
       </article>
       <article class="panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">${text("Channel rules", "Правила каналов")}</p>
-            <h3>${text("What stays manual-first", "Что пока делаем вручную")}</h3>
+            <p class="eyebrow">${text("Approval gate", "Контур согласования")}</p>
+            <h3>${text("What never goes out automatically", "Что не уходит наружу автоматически")}</h3>
           </div>
         </div>
         <div class="automation-list">
-          ${automationRow(text("Ready now", "Готово сейчас"), text("Approved materials can be copied from the weekly pack and placed manually.", "Согласованные материалы можно забрать из недельного пакета и разместить вручную."), 76)}
-          ${automationRow(text("Needs owner decision", "Нужно решение собственника"), text("Public posts, strong claims, client names and competitor comparisons.", "Публичные посты, сильные обещания, имена клиентов и сравнения с конкурентами."), 34)}
-          ${automationRow(text("Can be connected later", "Можно подключить позже"), text("Direct social posting, website updates, email sends and package storage.", "Прямая публикация в соцсети, обновления сайта, email-рассылки и хранение пакетов."), 58)}
+          ${automationRow(text("Hermes prepares", "Hermes готовит"), text("Topics, briefs, drafts, weekly packs and approval reminders.", "Темы, ТЗ, черновики, недельные пакеты и напоминания о согласовании."), 78)}
+          ${automationRow(text("Owner decides", "Собственник решает"), text("Public publishing, strong claims, client names and competitor comparisons.", "Публичный выпуск, сильные обещания, имена клиентов и сравнения с конкурентами."), 100)}
+          ${automationRow(text("Manual handoff stays available", "Ручная передача остаётся"), text("Until direct posting, site updates and email sends are connected safely.", "Пока прямой выпуск, обновление сайта и email не подключены безопасно."), 58)}
         </div>
       </article>
-    </div>
-  `;
-}
-
-function renderToolsSettings() {
-  const tools = toolInventory();
-  const usedNow = tools.filter((tool) => tool.group === "active");
-  const unused = tools.filter((tool) => tool.group === "unused");
-  const selected = selectedTool();
-  const clientTools = tools.filter((tool) => tool.clientUse === "active" || tool.clientUse === "testing");
-
-  return `
-    <article class="panel full">
-      <div class="panel-heading compact">
-        <div>
-          <p class="eyebrow">${text("Client setup", "Что уже есть у клиента")}</p>
-          <h3>${text("Tools already used in the business", "Инструменты, с которыми уже работает клиент")}</h3>
-        </div>
-      </div>
-      <div class="client-tool-strip">
-        ${clientTools.map((tool) => `
-          <div class="client-tool-chip">
-            <strong>${escapeHtml(tool.name)}</strong>
-            <span>${escapeHtml(clientUseLabel(tool.clientUse))} · ${escapeHtml(tool.modules.map(moduleShortLabel).join(", "))}</span>
-          </div>
-        `).join("")}
-      </div>
-    </article>
-
-    ${toolReadinessPanel(tools)}
-
-    <div class="tools-grid">
-      <div class="stack-panels">
-        <article class="panel">
-          <div class="panel-heading compact">
-            <div>
-              <p class="eyebrow">${text("Used now", "Используем сейчас")}</p>
-              <h3>${text("Which tools we use", "Какие инструменты используем")}</h3>
-            </div>
-          </div>
-          <div class="tool-summary-list">
-            ${usedNow.map(toolSummaryRow).join("")}
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-heading compact">
-            <div>
-              <p class="eyebrow">${text("Not used", "Не используется")}</p>
-              <h3>${text("What we do not use yet", "Что пока не используем")}</h3>
-            </div>
-          </div>
-          <div class="tool-summary-list compact">
-            ${unused.map(toolSummaryRow).join("")}
-          </div>
-        </article>
-      </div>
-
-      <article class="panel">
-        <div class="panel-heading compact">
-          <div>
-            <p class="eyebrow">${text("Can be connected", "Можно подключить")}</p>
-            <h3>${text("What is connected", "Что подключено")}</h3>
-          </div>
-        </div>
-        <div class="connector-list">
-          ${tools.map(toolConnectorCard).join("")}
-        </div>
-      </article>
-    </div>
-
-    ${growthModulesPanel()}
-    ${toolConnectionForm(selected)}
-  `;
-}
-
-function toolReadinessPanel(tools) {
-  const connected = tools.filter((tool) => tool.status === "connected").length;
-  const needsSetup = tools.filter((tool) => tool.status === "needs-setup").length;
-  const later = tools.filter((tool) => tool.status === "later" || tool.status === "not-used").length;
-  const blockers = tools.filter((tool) => tool.status === "needs-setup" || tool.accessNeeded);
-  const nextBlocker = blockers[0] || tools.find((tool) => tool.status === "later");
-  return `
-    <section class="tool-readiness-strip">
-      ${ownerSetupCard(text("Connected", "Подключено"), connected, text("Ready for controlled work", "Готово к управляемой работе"))}
-      ${ownerSetupCard(text("Needs setup", "Нужно настроить"), needsSetup, text("Blocks automation or evidence flow", "Блокирует автоматизацию или данные"))}
-      ${ownerSetupCard(text("Later", "Позже"), later, text("Do not distract the first workflow", "Не отвлекает первый workflow"))}
-      ${ownerSetupCard(text("Next access task", "Следующая задача доступа"), nextBlocker?.name || text("None", "Нет"), nextBlocker?.owner || text("Owner is clear", "Владелец понятен"))}
     </section>
   `;
 }
 
-function toolInventory() {
-  const tools = [
-    {
-      id: "telegram-webapp",
-      name: text("Telegram WebApp", "Telegram WebApp"),
-      type: text("owner control panel", "пульт собственника"),
-      formType: "social",
-      group: "active",
-      status: "connected",
-      clientUse: "active",
-      modules: ["offer-brain", "publishing-approval", "results-loop"],
-      owner: "Egor / AgentResult",
-      url: "https://agentresult-crm.vercel.app/",
-      summary: text("Shows tasks, approvals, statuses and next actions.", "Показывает задачи, согласования, статусы и следующие действия."),
-      permissions: ["read", "approval"],
-      limits: text("No direct model calls or external messages without backend approval.", "Не обращаться напрямую к моделям и не отправлять внешние сообщения без backend approval.")
-    },
-    {
-      id: "backend",
-      name: text("AgentResult Backend", "AgentResult Backend"),
-      type: text("API and control layer", "API и контур управления"),
-      formType: "other",
-      group: "active",
-      status: "needs-setup",
-      clientUse: "testing",
-      modules: ["publishing-approval", "results-loop", "proof-engine"],
-      owner: "AgentResult",
-      url: "https://api.agentresult.ru",
-      summary: text("Runs auth, tasks, approvals, audit and integrations.", "Держит auth, задачи, согласования, audit и интеграции."),
-      permissions: ["read", "prepare", "approval"],
-      limits: text("Do not store secrets in the frontend and do not bypass approval rules.", "Не хранить секреты во frontend и не обходить правила согласования.")
-    },
-    {
-      id: "hermes",
-      name: "Hermes Agent",
-      type: text("agent runtime", "agent runtime"),
-      formType: "other",
-      group: "active",
-      status: "connected",
-      clientUse: "testing",
-      modules: ["content-factory", "proof-engine", "results-loop"],
-      owner: "AgentResult",
-      url: "internal Docker network",
-      summary: text("Handles reasoning, drafts, analysis and action proposals.", "Делает reasoning, черновики, анализ и action proposals."),
-      permissions: ["read", "prepare"],
-      limits: text("No public API access and no side effects without backend approval.", "Не давать публичный API-доступ и не выполнять side effects без backend approval.")
-    },
-    {
-      id: "postgres",
-      name: "Postgres",
-      type: text("operational database", "операционная база"),
-      formType: "other",
-      group: "active",
-      status: "connected",
-      clientUse: "active",
-      modules: ["offer-brain", "results-loop", "proof-engine"],
-      owner: "AgentResult / backend",
-      url: "Internal database",
-      summary: text("Stores tenants, tasks, approvals, receivables, CRM and events.", "Хранит tenants, задачи, согласования, дебиторку, CRM и события."),
-      permissions: ["read"],
-      limits: text("No direct frontend access.", "Не давать прямой доступ из frontend.")
-    },
-    {
-      id: "openrouter",
-      name: "OpenRouter",
-      type: text("model provider", "model provider"),
-      formType: "other",
-      group: "active",
-      status: "connected",
-      clientUse: "active",
-      modules: ["content-factory", "proof-engine"],
-      owner: "AgentResult",
-      url: "Provider connection through backend",
-      summary: text("Provides model calls through Hermes and backend.", "Даёт вызовы моделей через Hermes и backend."),
-      permissions: ["prepare"],
-      limits: text("No direct calls from the WebApp.", "Не вызывать напрямую из WebApp.")
-    },
-    {
-      id: "email",
-      name: "SMTP / Email",
-      type: "email",
-      formType: "email",
-      group: "active",
-      status: "needs-setup",
-      clientUse: "planned",
-      modules: ["content-factory", "distribution"],
-      owner: "Egor / AgentResult",
-      url: "Add SMTP host or sender address",
-      summary: text("Used for approved client emails and follow-ups.", "Используется для согласованных писем и follow-up."),
-      permissions: ["prepare", "approval"],
-      limits: text("No mass sends or legally sensitive emails without approval.", "Не отправлять массовые или юридически чувствительные письма без согласования.")
-    },
-    {
-      id: "site-cms",
-      name: text("Website / CMS", "Сайт / CMS"),
-      type: text("site", "сайт"),
-      formType: "site",
-      group: "active",
-      status: "connected",
-      clientUse: "active",
-      modules: ["programmatic-seo", "ai-search", "publishing-approval"],
-      owner: "Egor / AgentResult",
-      url: "https://agentresult-crm.vercel.app/",
-      summary: text("Hosts demand pages, trust pages and product explanations.", "Здесь живут страницы спроса, доверия и продуктовые страницы."),
-      permissions: ["read", "prepare", "approval"],
-      limits: text("Do not update public pages without explicit owner approval.", "Не обновлять публичные страницы без явного согласования собственника.")
-    },
-    {
-      id: "crm",
-      name: "Bitrix24 / amoCRM",
-      type: "CRM",
-      formType: "crm",
-      group: "active",
-      status: "later",
-      clientUse: "planned",
-      modules: ["results-loop", "proof-engine"],
-      owner: text("Sales owner", "Ответственный за продажи"),
-      url: text("Add CRM URL or endpoint", "Добавьте URL или endpoint CRM"),
-      summary: text("Needed for deal stages, lead handoff and follow-up discipline.", "Нужна для этапов сделки, передачи лидов и дисциплины follow-up."),
-      permissions: ["read", "approval"],
-      limits: text("Do not create or move deals without a clear owner rule.", "Не создавать и не двигать сделки без понятного правила от собственника.")
-    },
-    {
-      id: "tables",
-      name: text("CSV / XLSX", "CSV / XLSX"),
-      type: text("spreadsheet", "таблица"),
-      formType: "sheet",
-      group: "active",
-      status: "connected",
-      clientUse: "active",
-      modules: ["proof-engine", "results-loop"],
-      owner: "Egor / AgentResult",
-      url: text("Manual import and weekly export pack", "Ручной импорт и недельный экспорт-пакет"),
-      summary: text("Fallback for receivables, metrics and handoff before full integrations.", "Запасной способ для дебиторки, метрик и передачи материалов до полных интеграций."),
-      permissions: ["read", "prepare", "approval"],
-      limits: text("Keep sensitive client data out of shared exports.", "Не добавлять чувствительные клиентские данные в общие экспорты.")
-    },
-    {
-      id: "linkedin",
-      name: "LinkedIn",
-      type: text("social network", "соцсеть"),
-      formType: "social",
-      group: "unused",
-      status: "later",
-      clientUse: "not-used",
-      modules: ["distribution", "content-factory"],
-      owner: text("No owner yet", "Владелец не назначен"),
-      url: "",
-      summary: text("Can become a founder-led outbound and trust channel.", "Может стать каналом дистрибуции и доверия от лица основателя."),
-      permissions: ["prepare", "approval"],
-      limits: text("No publishing until the account owner approves tone and access.", "Не публиковать, пока владелец аккаунта не согласует тон и доступ.")
-    },
-    {
-      id: "vc",
-      name: "VC.ru",
-      type: text("media", "медиа"),
-      formType: "social",
-      group: "unused",
-      status: "later",
-      clientUse: "planned",
-      modules: ["content-factory", "distribution", "proof-engine"],
-      owner: text("No owner yet", "Владелец не назначен"),
-      url: "",
-      summary: text("Useful for long-form market arguments and founder voice.", "Подходит для длинных рыночных материалов и голоса основателя."),
-      permissions: ["prepare", "approval"],
-      limits: text("No external publishing without final owner review.", "Не публиковать наружу без финального ревью собственника.")
-    },
-    {
-      id: "habr",
-      name: "Habr",
-      type: text("media", "медиа"),
-      formType: "social",
-      group: "unused",
-      status: "later",
-      clientUse: "planned",
-      modules: ["content-factory", "proof-engine"],
-      owner: text("No owner yet", "Владелец не назначен"),
-      url: "",
-      summary: text("Useful for technical trust and infrastructure credibility.", "Подходит для технического доверия и инфраструктурной экспертизы."),
-      permissions: ["prepare", "approval"],
-      limits: text("Do not publish technical claims without expert review.", "Не публиковать технические утверждения без экспертной проверки.")
-    },
-    {
-      id: "ads",
-      name: "Ads",
-      type: text("advertising", "реклама"),
-      formType: "other",
-      group: "unused",
-      status: "later",
-      clientUse: "not-used",
-      modules: ["distribution", "results-loop"],
-      owner: text("No owner yet", "Владелец не назначен"),
-      url: "",
-      summary: text("Can amplify proven demand pages later.", "Позже может усиливать уже проверенные страницы спроса."),
-      permissions: ["read", "prepare", "approval"],
-      limits: text("Do not launch spend automatically.", "Не запускать рекламный бюджет автоматически.")
-    },
-    {
-      id: "webhooks",
-      name: "Webhooks",
-      type: text("automation", "автоматизация"),
-      formType: "other",
-      group: "unused",
-      status: "later",
-      clientUse: "planned",
-      modules: ["publishing-approval", "results-loop"],
-      owner: text("No owner yet", "Владелец не назначен"),
-      url: "",
-      summary: text("Can pass approved events into other tools.", "Могут передавать согласованные события в другие инструменты."),
-      permissions: ["approval"],
-      limits: text("No outgoing sensitive events until the destination is named by the owner.", "Не отправлять чувствительные события, пока собственник не назовёт точного получателя.")
-    }
-  ];
-  return tools.map((tool) => ({ ...tool, ...(state.toolOverrides[tool.id] || {}) }));
+function renderToolsSettings() {
+  return toolsModule.renderToolsSettings();
 }
 
-function selectedTool() {
-  return toolInventory().find((tool) => tool.id === state.selectedToolId) || {
-    id: "custom",
-    name: text("New tool", "Новый инструмент"),
-    type: text("other", "другое"),
-    formType: "other",
-    group: "active",
-    status: "needs-setup",
-    clientUse: "active",
-    modules: ["offer-brain"],
-    owner: "",
-    url: "",
-    summary: text("Add the tool your team already uses or wants to connect.", "Добавьте инструмент, который команда уже использует или хочет подключить."),
-    permissions: ["read"],
-    limits: ""
-  };
-}
-
-function toolSummaryRow(tool) {
-  return `
-    <div class="tool-summary-row">
-      <div>
-        <strong>${escapeHtml(tool.name)}</strong>
-        <span>${escapeHtml(tool.type)} · ${escapeHtml(tool.owner || text("No owner yet", "Владелец не назначен"))}</span>
-        <span>${escapeHtml(clientUseLabel(tool.clientUse))}</span>
-      </div>
-      ${toolStatusBadge(tool.status)}
-    </div>
-  `;
-}
-
-function toolConnectorCard(tool) {
-  const selected = tool.id === state.selectedToolId;
-  const buttonLabel = tool.status === "connected"
-    ? text("View", "Смотреть")
-    : tool.status === "not-used"
-      ? text("Add", "Добавить")
-      : text("Configure", "Настроить");
-
-  return `
-    <article class="tool-card ${selected ? "selected" : ""}">
-      <div>
-        <div class="tool-card-title">
-          <strong>${escapeHtml(tool.name)}</strong>
-          ${toolStatusBadge(tool.status)}
-          ${clientUseBadge(tool.clientUse)}
-        </div>
-        <span>${escapeHtml(tool.summary)}</span>
-        <div class="module-chip-row">
-          ${tool.modules.map((moduleId) => `<span>${escapeHtml(moduleShortLabel(moduleId))}</span>`).join("")}
-        </div>
-      </div>
-      <button class="button secondary" data-action="select-tool" data-id="${escapeAttr(tool.id)}">${escapeHtml(buttonLabel)}</button>
-    </article>
-  `;
-}
-
-function toolConnectionForm(tool) {
-  const permissions = ["read", "prepare", "approval", "publish"];
-
-  return `
-    <article class="panel full tool-form-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">${text("Connection details", "Что нужно для подключения")}</p>
-          <h3>${escapeHtml(tool.name)}</h3>
-        </div>
-        ${toolStatusBadge(tool.status)}
-      </div>
-      <form class="form-grid tool-form" id="toolForm">
-        <div class="form-grid two-col">
-          ${toolInput(text("Tool name", "Название инструмента"), "toolName", tool.id === "custom" ? "" : tool.name, text("For example: HubSpot, WordPress, Telegram", "Например: HubSpot, WordPress, Telegram"))}
-          ${toolSelect(text("Tool type", "Тип инструмента"), "toolType", tool.formType)}
-        </div>
-        <div class="form-grid two-col">
-          ${toolInput(text("URL or endpoint", "URL или endpoint"), "toolUrl", tool.url, text("Link to the service, account, form, or endpoint", "Ссылка на сервис, аккаунт, форму или endpoint"))}
-          ${toolInput(text("Key, token, or webhook URL", "Ключ, токен или webhook URL"), "toolSecret", "", text("Only if this tool needs one", "Только если инструменту это нужно"))}
-        </div>
-        <div class="form-grid two-col">
-          ${clientUseSelect(text("Does the client use it now?", "Клиент сейчас этим пользуется?"), "toolClientUse", tool.clientUse)}
-          ${toolInput(text("Who owns access", "Кто владеет доступом"), "toolOwner", tool.owner, text("Person or role responsible for access", "Человек или роль, отвечающие за доступ"))}
-        </div>
-        <div class="permission-block">
-          <span class="meta-label">${text("What to enable with this tool", "Что включить через этот инструмент")}</span>
-          <div class="module-check-grid">
-            ${growthModules().map((module) => `
-              <label class="check"><input type="checkbox" ${tool.modules.includes(module.id) ? "checked" : ""} /> ${escapeHtml(module.shortLabel)}</label>
-            `).join("")}
-          </div>
-        </div>
-        <div class="permission-block">
-          <span class="meta-label">${text("What the system may do", "Что системе разрешено делать")}</span>
-          <div class="check-grid">
-            ${permissions.map((permission) => `
-              <label class="check"><input type="checkbox" ${tool.permissions.includes(permission) ? "checked" : ""} /> ${escapeHtml(toolPermissionLabel(permission))}</label>
-            `).join("")}
-          </div>
-        </div>
-        ${textarea(text("Limits: what must not happen", "Ограничения / что нельзя делать"), "toolLimits", tool.limits)}
-        <div class="detail-actions">
-          <button type="button" class="button primary" data-action="save-tool">${text("Save setup", "Сохранить настройку")}</button>
-          <button type="button" class="button secondary" data-action="request-tool-owner">${text("Mark access owner needed", "Нужен владелец доступа")}</button>
-        </div>
-      </form>
-    </article>
-  `;
-}
-
-function growthModulesPanel() {
-  return `
-    <article class="panel full modules-panel">
-      <div class="panel-heading compact">
-        <div>
-          <p class="eyebrow">${text("What to enable", "Что включить")}</p>
-          <h3>${text("Eight parts of the growth system", "8 частей системы роста")}</h3>
-        </div>
-      </div>
-      <div class="module-grid">
-        ${growthModules().map((module) => `
-          <article class="module-card">
-            <div class="module-card-top">
-              <strong>${escapeHtml(module.name)}</strong>
-              ${moduleStatusBadge(module.status)}
-            </div>
-            <p>${escapeHtml(module.description)}</p>
-            <div class="module-chip-row">
-              ${module.tools.map((tool) => `<span>${escapeHtml(tool)}</span>`).join("")}
-            </div>
-          </article>
-        `).join("")}
-      </div>
-    </article>
-  `;
-}
-
-function growthModules() {
-  return [
-    {
-      id: "offer-brain",
-      name: "Offer Brain",
-      shortLabel: text("Offer Brain", "Offer Brain"),
-      status: "enabled",
-      description: text(
-        "One source of product meaning: ICP, pains, proof, cases, objections, tone and forbidden claims.",
-        "Единая база смысла продукта: для кого, боли, доказательства, кейсы, возражения, тон и запретные формулировки."
-      ),
-      tools: [text("Company profile", "Компания"), text("Proof library", "Доказательства")]
-    },
-    {
-      id: "programmatic-seo",
-      name: "Programmatic SEO Pages",
-      shortLabel: text("SEO pages", "SEO-страницы"),
-      status: "client-work",
-      description: text(
-        "Pages by demand matrix: region, industry, problem, product, integrations and comparisons.",
-        "Страницы по матрице спроса: регион, отрасль, боль, продукт, интеграции и сравнения."
-      ),
-      tools: [text("Website / CMS", "Сайт / CMS"), text("Analytics", "Аналитика")]
-    },
-    {
-      id: "ai-search",
-      name: "AI Search / GPT SEO / GEO",
-      shortLabel: text("AI Search", "AI-поиск"),
-      status: "prepare",
-      description: text(
-        "Entity pages, clear product definitions, FAQ answers, schema, sitemap and proof pages.",
-        "Entity-страницы, понятные определения продуктов, FAQ-ответы, schema, sitemap и страницы доказательств."
-      ),
-      tools: [text("Website / CMS", "Сайт / CMS"), text("Analytics", "Аналитика")]
-    },
-    {
-      id: "content-factory",
-      name: "Content Factory",
-      shortLabel: text("Content Factory", "Фабрика контента"),
-      status: "enabled",
-      description: text(
-        "Turns one idea into articles, posts, email, FAQ, video scripts and sales battlecards.",
-        "Превращает одну идею в статьи, посты, письма, FAQ, сценарии видео и sales-материалы."
-      ),
-      tools: ["Telegram", "Email", "VC.ru"]
-    },
-    {
-      id: "proof-engine",
-      name: "Proof Engine",
-      shortLabel: text("Proof Engine", "Доказательства"),
-      status: "client-work",
-      description: text(
-        "Mini-cases, before/after, screenshots, process numbers, demos and benefit calculators.",
-        "Мини-кейсы, before/after, скриншоты, цифры процессов, демо-сценарии и калькуляторы выгоды."
-      ),
-      tools: [text("Tables", "Таблицы"), "CRM", text("Website / CMS", "Сайт / CMS")]
-    },
-    {
-      id: "publishing-approval",
-      name: "Publishing & Approval",
-      shortLabel: text("Publishing", "Публикации"),
-      status: "enabled",
-      description: text(
-        "Approval gates before public posts, risky claims, client names and competitor comparisons.",
-        "Контур согласований перед публичными постами, рискованными обещаниями, именами клиентов и сравнениями."
-      ),
-      tools: ["Telegram", text("Website / CMS", "Сайт / CMS"), "Email"]
-    },
-    {
-      id: "distribution",
-      name: "Distribution Channels",
-      shortLabel: text("Distribution", "Дистрибуция"),
-      status: "prepare",
-      description: text(
-        "Channel plan for Telegram, email, LinkedIn-style posts, VC.ru, Habr and paid amplification.",
-        "План каналов для Telegram, email, LinkedIn-style постов, VC.ru, Habr и платного усиления."
-      ),
-      tools: ["Telegram", "Email", "LinkedIn", "VC.ru"]
-    },
-    {
-      id: "results-loop",
-      name: "Results & Growth Loop",
-      shortLabel: text("Results loop", "Цикл результатов"),
-      status: "prepare",
-      description: text(
-        "Connects traffic, leads, calls, CRM stages and content improvements into one feedback loop.",
-        "Связывает переходы, заявки, звонки, CRM-этапы и улучшения материалов в один цикл обратной связи."
-      ),
-      tools: [text("Analytics", "Аналитика"), "CRM", text("Call tracking", "Call tracking")]
-    }
-  ];
-}
-
-function moduleShortLabel(moduleId) {
-  return growthModules().find((module) => module.id === moduleId)?.shortLabel || labelize(moduleId);
-}
-
-function moduleStatusBadge(status) {
-  const statuses = {
-    enabled: { label: text("Enabled", "Включено"), className: "connected" },
-    "client-work": { label: text("Client work now", "В работе у клиента"), className: "client-work" },
-    prepare: { label: text("Prepare next", "Подготовить"), className: "needs-setup" },
-    later: { label: text("Later", "Позже"), className: "later" }
-  };
-  const meta = statuses[status] || statuses.prepare;
-  return `<span class="tool-status ${meta.className}">${escapeHtml(meta.label)}</span>`;
-}
-
-function clientUseLabel(status) {
-  const statuses = {
-    active: text("Client uses now", "Клиент уже использует"),
-    testing: text("Client is testing", "Клиент тестирует"),
-    "not-used": text("Not used by client", "Клиент не использует"),
-    planned: text("Planned for later", "Запланировано позже")
-  };
-  return statuses[status] || statuses["not-used"];
-}
-
-function clientUseBadge(status) {
-  const className = status === "active" ? "client-active" : status === "testing" ? "client-testing" : "client-muted";
-  return `<span class="client-use ${className}">${escapeHtml(clientUseLabel(status))}</span>`;
-}
-
-function toolInput(label, id, value, placeholder = "") {
-  return `<label>${escapeHtml(label)}<input id="${escapeAttr(id)}" value="${escapeAttr(value || "")}" placeholder="${escapeAttr(placeholder)}" /></label>`;
-}
-
-function clientUseSelect(label, id, selectedValue) {
-  const options = [
-    ["active", text("Client uses now", "Клиент уже использует")],
-    ["testing", text("Client is testing", "Клиент тестирует")],
-    ["not-used", text("Not used by client", "Клиент не использует")],
-    ["planned", text("Planned for later", "Запланировано позже")]
-  ];
-
-  return `
-    <label>${escapeHtml(label)}
-      <select id="${escapeAttr(id)}">
-        ${options.map(([value, labelText]) => `<option value="${escapeAttr(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(labelText)}</option>`).join("")}
-      </select>
-    </label>
-  `;
-}
-
-function toolSelect(label, id, selectedValue) {
-  const options = [
-    ["site", text("Website / CMS", "Сайт / CMS")],
-    ["social", text("Social network", "Соцсеть")],
-    ["crm", "CRM"],
-    ["analytics", text("Analytics", "Аналитика")],
-    ["email", "Email"],
-    ["sheet", text("Spreadsheet", "Таблица")],
-    ["other", text("Other", "Другое")]
-  ];
-
-  return `
-    <label>${escapeHtml(label)}
-      <select id="${escapeAttr(id)}">
-        ${options.map(([value, labelText]) => `<option value="${escapeAttr(value)}" ${value === selectedValue ? "selected" : ""}>${escapeHtml(labelText)}</option>`).join("")}
-      </select>
-    </label>
-  `;
-}
-
-function toolPermissionLabel(permission) {
-  const labels = {
-    read: text("Read only", "Только читать"),
-    prepare: text("Prepare materials", "Готовить материалы"),
-    approval: text("Send to approval", "Отправлять на согласование"),
-    publish: text("Publish after approval", "Публиковать после согласования")
-  };
-  return labels[permission] || permission;
-}
-
-function toolStatusBadge(status) {
-  const meta = toolStatusMeta(status);
-  return `<span class="tool-status ${meta.className}">${escapeHtml(meta.label)}</span>`;
-}
-
-function toolStatusMeta(status) {
-  const statuses = {
-    connected: { label: text("Connected", "Подключено"), className: "connected" },
-    "needs-setup": { label: text("Needs setup", "Нужно настроить"), className: "needs-setup" },
-    "not-used": { label: text("Not used", "Не используем"), className: "not-used" },
-    later: { label: text("Later", "Позже"), className: "later" }
-  };
-  return statuses[status] || statuses["needs-setup"];
-}
 
 function getApprovalContext(item) {
   const calendarItem = state.calendar.find((entry) => entry.id === item.target_id || entry.id === item.calendar_item_id);
@@ -3679,6 +2559,22 @@ function materialWorkflowFacts(item) {
   return `<div class="material-workflow-facts">${facts.map((fact) => `<span>${escapeHtml(fact)}</span>`).join("")}</div>`;
 }
 
+function materialOwnerStage(item) {
+  if (item.status === "review") return text("Needs decision", "Ждёт решения");
+  if (item.status === "approved") return text("Ready to plan", "Готов к плану");
+  if (item.status === "scheduled") return text("Ready outside", "Готово наружу");
+  if (item.status === "published") return text("Already out", "Уже вышло");
+  return text("Needs work", "Нужно дописать");
+}
+
+function materialOwnerOutcome(item) {
+  if (item.status === "review") return text("approve or request changes", "согласовать или запросить правки");
+  if (item.status === "approved") return text("put into publication plan", "поставить в план публикаций");
+  if (item.status === "scheduled") return text("publish or hand off", "выпустить или передать");
+  if (item.status === "published") return text("already counted in results", "уже учтено в результатах");
+  return text("finish and send to approval", "дописать и отправить на согласование");
+}
+
 function materialPrimaryAction(item) {
   if (item.status === "approved") return { action: "schedule-content", label: text("Schedule material", "Запланировать") };
   if (item.status === "review") return { action: "go-approvals", label: text("Open approvals", "Открыть согласования") };
@@ -3700,7 +2596,7 @@ function displayWorkOwner(value) {
 function materialSecondaryAction(item) {
   if (item.status === "idea" || item.status === "brief" || item.status === "draft") return { action: "send-content-approval", label: text("Send to approval", "На согласование") };
   if (item.status === "review") return { action: "open-content-detail", label: text("Edit", "Править") };
-  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Export", "Экспорт") };
+  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Hand off", "Передать") };
   return { action: "open-content-detail", label: text("Details", "Детали") };
 }
 
@@ -3813,19 +2709,47 @@ function getSelectedApproval() {
 
 function approvalIdForTarget(targetId = "") {
   if (!targetId) return "";
-  const approval = state.approvals.find((item) => item.id === targetId || item.target_id === targetId);
+  const approval = state.approvals.find((item) => item.id === targetId || item.target_id === targetId || item.calendar_item_id === targetId);
   return approval?.id || "";
 }
 
 function bindScreenEvents() {
-  elements.screenRoot.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
+  if (!document.documentElement.dataset.noteLinkBound) {
+    document.documentElement.dataset.noteLinkBound = "true";
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest('a[href^="#/publications/note/"]');
+      if (!link) return;
+      const href = link.getAttribute("href") || "";
+      const itemId = decodeURIComponent(href.replace("#/publications/note/", ""));
+      if (!itemId) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (location.hash !== href) history.pushState(null, "", href);
+      state.route = "publications";
+      state.publicationTab = "calendar";
+      openFormModal("calendarNote", { itemId });
+    }, true);
+  }
+  [elements.screenRoot, elements.routeActions, elements.modalRoot].forEach((root) => {
+    if (!root || root.dataset.actionsBound) return;
+    root.dataset.actionsBound = "true";
+    root.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button || !root.contains(button) || button.disabled) return;
+      event.preventDefault();
+      void handleAction(button.dataset.action, button.dataset.id);
+    });
   });
-  elements.routeActions.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
-  });
-  elements.modalRoot.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, button.dataset.id));
+  [elements.screenRoot, elements.routeActions, elements.modalRoot].forEach((root) => {
+    root?.querySelectorAll("[data-action]").forEach((button) => {
+      if (button.dataset.actionBound) return;
+      button.dataset.actionBound = "true";
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void handleAction(button.dataset.action, button.dataset.id);
+      });
+    });
   });
 }
 
@@ -3855,6 +2779,10 @@ async function handleAction(action, id) {
       openDecisionModal("approve");
     },
     "set-publication-tab": () => openPublicationTab(id),
+    "set-calendar-filter": () => {
+      state.calendarFilter = ["all", "review", "scheduled", "handed_off", "published"].includes(id) ? id : "all";
+      render();
+    },
     "set-settings-tab": () => openSettingsTab(id),
     "select-tool": () => {
       state.selectedToolId = id || "crm";
@@ -3865,11 +2793,12 @@ async function handleAction(action, id) {
       openSettingsTab("tools");
     },
     "go-route": () => setRoute(id || "overview"),
-    "go-content": () => setRoute("content-pipeline"),
+    "go-content": () => id ? openContentDetail(id) : setRoute("content-pipeline"),
     "go-demand-map": () => setRoute("growth-plan"),
     "go-offer-brain": () => setRoute("offer-brain"),
     "go-analytics": () => setRoute("analytics"),
     "go-calendar": () => openPublicationTab("calendar"),
+    "go-calendar-handoff": () => openPublicationCalendar("handed_off"),
     "complete-task": () => completeTask(id),
     "go-settings": () => setRoute("settings"),
     "go-manual-export": () => openPublicationTab("pack"),
@@ -3877,10 +2806,15 @@ async function handleAction(action, id) {
     "create-setup-tasks": createSetupTasks,
     "generate-demand": requestDemandMap,
     "add-demand": () => openFormModal("demand"),
+    "add-demand-topic": () => openFormModal("demand"),
     "new-content": () => openFormModal("content"),
     "generate-brief": prepareNextBrief,
     "select-approval": () => {
       state.selectedApprovalId = id;
+      render();
+    },
+    "toggle-approval-preview": () => {
+      state.expandedApprovalPreviewId = state.expandedApprovalPreviewId === id ? "" : id;
       render();
     },
     "open-approve-modal": () => openDecisionModal("approve"),
@@ -3908,10 +2842,13 @@ async function handleAction(action, id) {
     "export-calendar": exportCalendarCsv,
     "mark-calendar-published": () => updateCalendarStatus(id, "published"),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
+    "confirm-handed-off": confirmHandedOffCalendarItems,
     "edit-calendar-note": () => openFormModal("calendarNote", { itemId: id }),
     "assemble-pack": assemblePack,
     "download-pack": downloadPack,
     "copy-pack": copyPackTexts,
+    "copy-pack-item": () => copyPackItem(id),
+    "mark-pack-handoff": () => markPackAssetHandedOff(id),
     "open-calendar": () => openPublicationTab("calendar"),
     "preview-pack-item": () => {
       state.selectedPackItem = id || state.selectedPackItem;
@@ -3920,7 +2857,6 @@ async function handleAction(action, id) {
     "create-task": () => openFormModal("task"),
     "enable-autopilot": () => showToast(text("Autopilot settings are saved locally for this prototype.", "Настройки автопилота пока сохраняются локально в прототипе.")),
     "save-autopilot": saveAutopilotSettings,
-    "save-channels": saveChannelSettings,
     "save-tool": saveToolSetup,
     "request-tool-owner": requestToolOwner,
     "import-metrics": () => openFormModal("metrics"),
@@ -3942,6 +2878,62 @@ async function copyPackTexts() {
   } catch {
     showToast(text("Could not copy package texts in this browser.", "Не удалось скопировать тексты пакета в этом браузере."));
   }
+}
+
+async function copyPackItem(id) {
+  const asset = packageAssets().find((item) => item.id === id) || packageAssets().find((item) => item.id === state.selectedPackItem);
+  if (!asset) return;
+  try {
+    await navigator.clipboard.writeText(asset.preview);
+    showToast(text("Selected text copied.", "Выбранный текст скопирован."));
+  } catch {
+    downloadTextFile(`${slugify(asset.label)}.txt`, asset.preview);
+    showToast(text("Clipboard is blocked; selected text downloaded as TXT.", "Буфер обмена недоступен; выбранный текст скачан как TXT."));
+  }
+}
+
+async function markPackAssetHandedOff(id) {
+  const asset = packageAssets().find((item) => item.id === id) || packageAssets().find((item) => item.id === state.selectedPackItem);
+  if (!asset) return;
+  const channel = packAssetChannel(asset.id);
+  const existing = state.calendar.find((item) => item.metadata?.pack_asset_id === asset.id || item.title === asset.label);
+  const item = existing || {
+    id: `local-calendar-${Date.now()}`,
+    title: asset.label,
+    channel,
+    scheduled_for: defaultScheduleDate(),
+    created_at: new Date().toISOString(),
+    metadata: {}
+  };
+  item.status = "handed_off";
+  item.updated_at = new Date().toISOString();
+  item.metadata = {
+    ...(item.metadata || {}),
+    pack_asset_id: asset.id,
+    handoff_note: text(
+      `Manual handoff recorded for ${asset.label}. Confirm live status after publication.`,
+      `Ручная передача зафиксирована: ${asset.label}. После выхода подтвердите публикацию.`
+    )
+  };
+  upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
+  state.calendar = mergeLocalItems(state.calendar, [item]);
+  state.metrics.calendar_items = state.calendar.length;
+  state.metrics.published_materials = shippedCalendarCount(state.calendar);
+  addActivity("Publishing QA", `Marked pack asset handed off: ${asset.label}`);
+  showToast(text("Handoff recorded in the release plan.", "Передача зафиксирована в плане выпуска."));
+  openPublicationTab("calendar");
+}
+
+function packAssetChannel(id) {
+  const channels = {
+    seo: "website",
+    telegram: "telegram",
+    vc: "vc",
+    email: "email",
+    "lead-magnet": "website",
+    calendar: "manual_export"
+  };
+  return channels[id] || "manual_export";
 }
 
 async function createContentFromDemand(id) {
@@ -4131,16 +3123,12 @@ function saveAutopilotSettings() {
   state.autopilotSettings = Object.fromEntries(
     [...document.querySelectorAll("[data-autopilot-key]")].map((input) => [input.dataset.autopilotKey, input.checked])
   );
-  saveLocalJson("aiGrowthOsAutopilotSettings", state.autopilotSettings);
-  showToast(text("Autopilot rules saved.", "Правила автопилота сохранены."));
-}
-
-function saveChannelSettings() {
   state.channelSettings = Object.fromEntries(
     [...document.querySelectorAll("[data-channel-key]")].map((input) => [input.dataset.channelKey, input.checked])
   );
+  saveLocalJson("aiGrowthOsAutopilotSettings", state.autopilotSettings);
   saveLocalJson("aiGrowthOsChannelSettings", state.channelSettings);
-  showToast(text("Channel rules saved.", "Правила каналов сохранены."));
+  showToast(text("Rules saved.", "Правила сохранены."));
 }
 
 function downloadPack() {
@@ -4179,6 +3167,27 @@ async function updateCalendarStatus(id, status) {
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   addActivity("Publishing QA", `Updated publication status: ${item.title} -> ${labelize(status)}`);
   showToast(text("Publication status updated.", "Статус публикации обновлён."));
+  openPublicationTab("calendar");
+}
+
+async function confirmHandedOffCalendarItems() {
+  const items = state.calendar.filter((item) => item.status === "handed_off");
+  if (!items.length) return;
+  for (const item of items) {
+    item.status = "published";
+    item.updated_at = new Date().toISOString();
+    await persistCalendarState(item);
+    const linkedContent = state.content.find((entry) => entry.id === item.content_item_id);
+    if (linkedContent) {
+      linkedContent.status = "published";
+      linkedContent.updated_at = new Date().toISOString();
+      await persistContentState(linkedContent);
+    }
+  }
+  state.metrics.published_materials = shippedCalendarCount(state.calendar);
+  state.calendarFilter = "published";
+  addActivity("Publishing QA", `Confirmed manual handoff: ${items.length}`);
+  showToast(text("Publication confirmed.", "Выпуск подтверждён."));
   openPublicationTab("calendar");
 }
 
@@ -4379,6 +3388,10 @@ function openFormModal(type, payload = {}) {
 function closeModal() {
   state.decisionModal = null;
   state.formModal = null;
+  if (calendarNoteIdFromHash()) {
+    location.hash = "/publications";
+    return;
+  }
   render();
 }
 
@@ -4492,7 +3505,7 @@ async function submitScheduleForm() {
     status,
     metadata: {
       handoff_note: status === "scheduled"
-        ? text("Check the channel, format and final publication manually. After it goes live, mark it as published.", "Проверьте канал, формат и финальную публикацию вручную. После выхода отметьте статус как published.")
+        ? text("Check the channel, format and final publication manually. After it goes live, mark it as published.", "Проверьте канал, формат и финальную публикацию вручную. После выхода отметьте материал как опубликованный.")
         : ""
     },
     created_at: new Date().toISOString()
@@ -4526,10 +3539,17 @@ async function submitScheduleForm() {
 
 async function submitCalendarNoteForm() {
   const id = document.querySelector("#calendarNoteId")?.value || "";
-  const item = state.calendar.find((entry) => entry.id === id);
+  let item = state.calendar.find((entry) => entry.id === id);
   if (!item) {
-    showToast(text("Calendar item was not found.", "Пункт календаря не найден."));
-    return;
+    item = {
+      id: id || `local-calendar-${Date.now()}`,
+      title: text("Release plan item", "Пункт плана"),
+      channel: "manual",
+      scheduled_for: defaultScheduleDate(),
+      status: "scheduled",
+      metadata: {},
+      created_at: new Date().toISOString()
+    };
   }
 
   item.metadata = {
@@ -4637,22 +3657,7 @@ async function submitTaskForm() {
 }
 
 function saveToolSetup() {
-  const selected = selectedTool();
-  const override = {
-    name: document.querySelector("#toolName")?.value.trim() || selected.name,
-    formType: document.querySelector("#toolType")?.value || selected.formType,
-    type: document.querySelector("#toolType")?.value || selected.type,
-    url: document.querySelector("#toolUrl")?.value.trim() || "",
-    owner: document.querySelector("#toolOwner")?.value.trim() || "",
-    clientUse: document.querySelector("#toolClientUse")?.value || selected.clientUse,
-    status: selected.status === "connected" ? "connected" : "needs-setup",
-    limits: document.querySelector("#toolLimits")?.value.trim() || ""
-  };
-  state.toolOverrides[selected.id] = override;
-  saveLocalJson("aiGrowthOsToolOverrides", state.toolOverrides);
-  addActivity("Growth Orchestrator", `Saved tool setup: ${override.name}`);
-  showToast(text("Tool setup saved locally.", "Настройка инструмента сохранена локально."));
-  render();
+  toolsModule.saveToolSetup();
 }
 
 async function saveContentItem(item) {
@@ -4730,24 +3735,7 @@ function removeLocalItem(key, collection, id) {
 }
 
 async function requestToolOwner() {
-  const selected = selectedTool();
-  state.toolOverrides[selected.id] = {
-    ...(state.toolOverrides[selected.id] || {}),
-    owner: text("Access responsible needed", "Нужен ответственный за доступ"),
-    status: "needs-setup",
-    accessNeeded: true
-  };
-  saveLocalJson("aiGrowthOsToolOverrides", state.toolOverrides);
-  await addLocalTask({
-    title: text(`Assign access responsible for ${selected.name}`, `Назначить ответственного за доступ: ${selected.name}`),
-    owner: "Owner",
-    status: "blocked",
-    note: text("Connection cannot move forward until a responsible person is named.", "Подключение не двинется дальше, пока не назначен ответственный."),
-    source: "tools"
-  });
-  addActivity("Growth Orchestrator", `Marked access responsible needed: ${selected.name}`);
-  showToast(text("Access task created.", "Задача по доступу создана."));
-  render();
+  await toolsModule.requestToolOwner();
 }
 
 async function generateImprovementTasks() {
@@ -4946,6 +3934,11 @@ async function decideApproval(item, action, note = "") {
     showToast(text("Select a material first.", "Сначала выберите материал."));
     return;
   }
+  if ((item.status || "pending") !== "pending") {
+    showToast(text("Decision is already saved.", "Решение уже сохранено."));
+    closeModal();
+    return;
+  }
 
   const nextStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "changes_requested";
 
@@ -4956,6 +3949,7 @@ async function decideApproval(item, action, note = "") {
     await applyDecisionToSource(item, nextStatus);
     persistLocalApproval(item);
     appendAudit(item, nextStatus, note);
+    state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
     render();
     return;
@@ -4971,6 +3965,7 @@ async function decideApproval(item, action, note = "") {
     item.decided_at = new Date().toISOString();
     await applyDecisionToSource(item, nextStatus);
     appendAudit(item, nextStatus, note);
+    state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
     await loadData();
   } catch {
@@ -5063,6 +4058,55 @@ function escapeHtml(value) {
 function escapeAttr(value) {
   return escapeHtml(value).replaceAll("`", "&#096;");
 }
+
+const toolsModule = createToolsModule({
+  state,
+  text,
+  escapeHtml,
+  escapeAttr,
+  compactMetric,
+  textarea,
+  saveLocalJson,
+  addLocalTask,
+  addActivity,
+  showToast,
+  render
+});
+
+const publicationsModule = createPublicationsModule({
+  state,
+  publicationTabs,
+  currentPublicationTab,
+  escapeHtml,
+  escapeAttr,
+  text,
+  tr,
+  compactMetric,
+  getApprovalContext,
+  displayChannel,
+  labelize,
+  getSelectedApproval,
+  statusChip,
+  renderAssetPreview,
+  actionButton,
+  formatDate,
+  currentLangValue: () => currentLang,
+  field,
+  packageAssets
+});
+
+const companyGrowthModule = createCompanyGrowthModule({
+  state,
+  text,
+  tr,
+  escapeHtml,
+  escapeAttr,
+  field,
+  textarea,
+  textValue,
+  labelize,
+  demandNextAction
+});
 
 elements.navList.addEventListener("click", (event) => {
   const link = event.target.closest("[data-route]");

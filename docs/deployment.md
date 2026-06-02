@@ -7,6 +7,32 @@ cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d --build
 ```
 
+## Dashboard Vercel
+
+Use the smoke-gated deploy command from the repository root:
+
+```bash
+npm run dashboard:deploy
+```
+
+This runs the owner-flow smoke suite before production deploy:
+
+- Today cockpit
+- Growth Plan
+- Company setup
+- Publications manual handoff
+- Results handoff signal
+- release confirmation
+- RU/ENG switch
+
+For a local check without deploy:
+
+```bash
+npm run dashboard:smoke
+```
+
+The GitHub Actions workflow `.github/workflows/dashboard-smoke.yml` runs the same smoke suite on pull requests and pushes to `main`.
+
 ## VPS
 
 1. Create a Linux VPS.
