@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-83";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-83";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-83";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-84";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-84";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-84";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -1529,11 +1529,13 @@ function demandBusinessReason(item) {
 }
 
 function renderContentPipeline() {
-  const queues = materialOwnerQueues();
-  const nextItem = queues.flatMap((queue) => queue.items)[0] || null;
+  const focusItems = materialFocusItems();
+  const nextItem = focusItems[0] || null;
+  const queues = materialOwnerQueues(nextItem?.id || "");
   const waiting = state.content.filter((item) => item.status === "review").length;
   const ready = state.content.filter((item) => ["approved", "scheduled"].includes(item.status)).length;
   const needsWork = state.content.filter((item) => ["idea", "brief", "draft"].includes(item.status)).length;
+  const nextAction = nextItem ? materialPrimaryAction(nextItem) : { action: "go-demand-map", label: text("Open strategy", "Открыть стратегию") };
 
   return `
     <section class="material-command">
@@ -1541,6 +1543,7 @@ function renderContentPipeline() {
         <p class="eyebrow">${text("Next material", "Следующий материал")}</p>
         <h3>${escapeHtml(nextItem ? materialQueueTitle(nextItem) : text("No material is waiting", "Материалов в очереди нет"))}</h3>
         <p>${escapeHtml(nextItem ? materialQueueNote(nextItem) : text("Create a material from strategy when there is a real demand topic.", "Создайте материал из стратегии, когда есть реальная тема спроса."))}</p>
+        <button class="button primary" data-action="${escapeAttr(nextAction.action)}" data-id="${escapeAttr(nextItem?.id || "")}">${escapeHtml(nextAction.label)}</button>
       </div>
       <div class="material-summary compact">
         ${compactMaterialMetric(text("Needs decision", "Ждёт решения"), waiting)}
@@ -1568,24 +1571,25 @@ function materialFocusItems() {
   return [...state.content].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
 }
 
-function materialOwnerQueues() {
+function materialOwnerQueues(excludeId = "") {
+  const items = materialFocusItems();
   return [
     {
       title: text("Needs decision", "Ждёт решения"),
       note: text("Approve or return before release.", "Согласовать или вернуть перед выпуском."),
-      items: materialFocusItems().filter((item) => item.status === "review"),
+      items: items.filter((item) => item.status === "review" && item.id !== excludeId),
       empty: text("No decisions waiting.", "Нет материалов на решении.")
     },
     {
       title: text("Ready outside", "Готово наружу"),
       note: text("Put into release plan or hand off.", "Поставить в план выпуска или передать."),
-      items: materialFocusItems().filter((item) => ["approved", "scheduled"].includes(item.status)),
+      items: items.filter((item) => ["approved", "scheduled"].includes(item.status) && item.id !== excludeId),
       empty: text("Nothing ready for release yet.", "Пока ничего не готово к выпуску.")
     },
     {
       title: text("Needs work", "Нужно дописать"),
       note: text("Finish text before approval.", "Дописать текст перед согласованием."),
-      items: materialFocusItems().filter((item) => ["idea", "brief", "draft"].includes(item.status)),
+      items: items.filter((item) => ["idea", "brief", "draft"].includes(item.status) && item.id !== excludeId),
       empty: text("No drafts waiting.", "Нет черновиков в ожидании.")
     }
   ];
@@ -1610,7 +1614,6 @@ function materialQueueColumn(queue) {
 
 function materialQueueCard(item) {
   const primary = materialPrimaryAction(item);
-  const secondary = materialSecondaryAction(item);
   return `
     <article class="material-queue-card">
       <div>
@@ -1619,8 +1622,7 @@ function materialQueueCard(item) {
         <p>${escapeHtml(materialOwnerOutcome(item))}</p>
       </div>
       <div class="card-actions">
-        <button class="button primary table-button" data-action="${escapeAttr(primary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(primary.label)}</button>
-        <button class="button secondary table-button" data-action="${escapeAttr(secondary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(secondary.label)}</button>
+        <button class="button secondary table-button" data-action="${escapeAttr(primary.action)}" data-id="${escapeAttr(item.id || "")}">${escapeHtml(primary.label)}</button>
       </div>
     </article>
   `;

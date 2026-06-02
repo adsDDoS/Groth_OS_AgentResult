@@ -302,6 +302,11 @@ h3 {
   grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
 }
 
+.material-command .button {
+  width: fit-content;
+  margin-top: 18px;
+}
+
 .hermes-brief .eyebrow {
   color: var(--on-dark-soft);
 }
@@ -898,13 +903,13 @@ select:focus {
 
 .material-queue-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .material-queue-column {
   display: grid;
-  align-content: start;
+  grid-template-columns: minmax(220px, 0.28fr) minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   padding: 12px;
@@ -917,7 +922,7 @@ select:focus {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  min-height: 68px;
+  min-height: 0;
 }
 
 .material-queue-head strong,
@@ -960,7 +965,9 @@ select:focus {
 
 .material-queue-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+  align-items: center;
   padding: 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
@@ -1432,8 +1439,7 @@ select:focus {
 
 @media (max-width: 1220px) {
   .workflow-strip,
-  .material-summary,
-  .material-queue-grid {
+  .material-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -1587,6 +1593,8 @@ select:focus {
   .plan-brief,
   .material-command,
   .material-queue-grid,
+  .material-queue-column,
+  .material-queue-card,
   .guide-mini,
   .guide-steps {
     grid-template-columns: 1fr;

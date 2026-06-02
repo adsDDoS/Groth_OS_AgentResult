@@ -70,6 +70,9 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
 
 - Open `#/content-pipeline`.
 - Expected:
+  - one main material is visible with one primary action;
+  - remaining materials are shown as a single queue list;
+  - each queue row has one action, not competing primary/secondary buttons;
   - decision materials open the approval queue;
   - draft materials can be sent to approval;
   - text export is labelled as `Скачать текст`, not `Передать`;

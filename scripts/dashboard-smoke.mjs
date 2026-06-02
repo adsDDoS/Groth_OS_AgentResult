@@ -98,6 +98,12 @@ async function run() {
     await page.locator('[data-lang="ru"]').click();
     assert(await page.locator("#sectionTitle").innerText() === "Компания", "RU switch failed on Company");
 
+    await page.goto(`${baseUrl}/?v=smoke#/content-pipeline`);
+    await page.waitForSelector(".material-command");
+    assert((await page.locator(".material-command .button").count()) === 1, "Materials should have one main CTA");
+    assert((await page.locator(".material-queue-card .button").count()) === (await page.locator(".material-queue-card").count()), "Each material queue row should have one action");
+    assert((await page.locator(".material-queue-grid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length)) === 1, "Materials queue should be a single-column list");
+
     await page.goto(`${baseUrl}/?v=smoke#/settings`);
     await page.waitForSelector(".settings-tabs-panel");
     assert((await page.locator("#routeActions .button").count()) === 0, "Settings top actions should be empty");
