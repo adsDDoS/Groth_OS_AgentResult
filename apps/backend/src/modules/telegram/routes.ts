@@ -7,6 +7,7 @@ import { decideApproval } from "../approvals/service.js";
 type Row = Record<string, unknown>;
 type TelegramButton = {
   action: string;
+  callbackData: string | null;
   label: string;
   targetId: unknown;
   targetType: "approval" | "publishing_calendar_item";
@@ -22,6 +23,14 @@ const telegramActionSchema = z.object({
   targetId: z.string().uuid(),
   note: z.string().optional()
 });
+const telegramWebhookSchema = z.object({
+  callback_query: z.object({
+    id: z.string().optional(),
+    data: z.string().optional()
+  }).passthrough().optional()
+}).passthrough();
+
+type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -59,31 +68,61 @@ function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
 }
 
 function approvalButtons(approval: Row): TelegramButton[] {
+  const targetId = typeof approval.id === "string" ? approval.id : null;
   return [
     {
       action: "approval.approve",
+      callbackData: targetId ? `approval.approve:${targetId}` : null,
       label: "Согласовать",
-      targetId: approval.id ?? null,
+      targetId,
       targetType: "approval"
     },
     {
       action: "approval.request_changes",
+      callbackData: targetId ? `approval.request_changes:${targetId}` : null,
       label: "Нужны правки",
-      targetId: approval.id ?? null,
+      targetId,
       targetType: "approval"
     }
   ];
 }
 
 function handoffButtons(item: Row): TelegramButton[] {
+  const targetId = typeof item.id === "string" ? item.id : null;
   return [
     {
       action: "publishing.confirm_live",
+      callbackData: targetId ? `publishing.confirm_live:${targetId}` : null,
       label: "Подтвердить выход",
-      targetId: item.id ?? null,
+      targetId,
       targetType: "publishing_calendar_item"
     }
   ];
+}
+
+function parseTelegramCallbackData(data: string): TelegramActionInput | null {
+  try {
+    const jsonAction = telegramActionSchema.safeParse(JSON.parse(data));
+    if (jsonAction.success) return jsonAction.data;
+  } catch {
+    // Telegram callback data is normally a compact string, JSON is only supported for local tests.
+  }
+
+  const separator = data.indexOf(":");
+  if (separator === -1) return null;
+
+  const action = data.slice(0, separator);
+  const targetId = data.slice(separator + 1);
+  const parsed = telegramActionSchema.safeParse({ action, targetId });
+
+  return parsed.success ? parsed.data : null;
+}
+
+function parseTelegramWebhookAction(payload: unknown): TelegramActionInput | null {
+  const parsed = telegramWebhookSchema.safeParse(payload);
+  const callbackData = parsed.success ? parsed.data.callback_query?.data : null;
+
+  return callbackData ? parseTelegramCallbackData(callbackData) : null;
 }
 
 function renderOwnerBriefMessage(input: {
@@ -193,6 +232,45 @@ async function loadOwnerBriefData(tenantId: string) {
   };
 }
 
+async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
+  let result: Row | null = null;
+
+  if (input.action === "approval.approve") {
+    result = await decideApproval({
+      id: input.targetId,
+      tenantId: context.tenantId,
+      status: "approved",
+      decidedBy: context.userId,
+      decisionNote: input.note
+    });
+  }
+
+  if (input.action === "approval.request_changes") {
+    result = await decideApproval({
+      id: input.targetId,
+      tenantId: context.tenantId,
+      status: "changes_requested",
+      decidedBy: context.userId,
+      decisionNote: input.note || "Нужны правки из Telegram-контура"
+    });
+  }
+
+  if (input.action === "publishing.confirm_live") {
+    const updated = await query(
+      "update publishing_calendar_items set status = $3, updated_at = now() where id = $1 and tenant_id = $2 returning *",
+      [input.targetId, context.tenantId, "published"]
+    );
+    result = updated.rows[0] ?? null;
+  }
+
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  return {
+    action: input.action,
+    result,
+    ownerBrief: buildOwnerBrief(briefData)
+  };
+}
+
 export async function telegramRoutes(app: FastifyInstance) {
   app.get("/telegram/owner-brief", async (request) => {
     const briefData = await loadOwnerBriefData(request.tenantId);
@@ -204,43 +282,13 @@ export async function telegramRoutes(app: FastifyInstance) {
 
   app.post("/telegram/actions", async (request) => {
     const body = telegramActionSchema.parse(request.body ?? {});
-    let result: Row | null = null;
+    const actionResult = await executeTelegramAction(body, {
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
 
-    if (body.action === "approval.approve") {
-      result = await decideApproval({
-        id: body.targetId,
-        tenantId: request.tenantId,
-        status: "approved",
-        decidedBy: request.userId,
-        decisionNote: body.note
-      });
-    }
-
-    if (body.action === "approval.request_changes") {
-      result = await decideApproval({
-        id: body.targetId,
-        tenantId: request.tenantId,
-        status: "changes_requested",
-        decidedBy: request.userId,
-        decisionNote: body.note || "Нужны правки из Telegram-контура"
-      });
-    }
-
-    if (body.action === "publishing.confirm_live") {
-      const updated = await query(
-        "update publishing_calendar_items set status = $3, updated_at = now() where id = $1 and tenant_id = $2 returning *",
-        [body.targetId, request.tenantId, "published"]
-      );
-      result = updated.rows[0] ?? null;
-    }
-
-    const briefData = await loadOwnerBriefData(request.tenantId);
     return {
-      data: {
-        action: body.action,
-        result,
-        ownerBrief: buildOwnerBrief(briefData)
-      }
+      data: actionResult
     };
   });
 
@@ -250,12 +298,28 @@ export async function telegramRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: "invalid webhook secret" });
     }
 
+    const telegramAction = parseTelegramWebhookAction(request.body ?? {});
+    const actionResult = telegramAction
+      ? await executeTelegramAction(telegramAction, {
+        tenantId: request.tenantId,
+        userId: request.userId
+      })
+      : null;
+
     await query(
       `insert into integrations (tenant_id, provider, status, config)
-       values ($1, 'telegram_webhook_event', 'received', $2)`,
-      [request.tenantId, request.body ?? {}]
+       values ($1, 'telegram_webhook_event', 'received', $2)
+       returning *`,
+      [request.tenantId, {
+        payload: request.body ?? {},
+        action: telegramAction,
+        actionResult
+      }]
     );
 
-    return { ok: true };
+    return {
+      ok: true,
+      data: actionResult
+    };
   });
 }

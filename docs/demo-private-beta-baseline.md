@@ -64,6 +64,7 @@ Current renderer:
 
 - returns `telegramMessage.text`;
 - returns action buttons for approval, changes, and publication confirmation;
+- includes compact `callbackData` for Telegram inline buttons;
 - stays `preview_only` until a real Telegram sender is connected.
 
 Current action endpoint:
@@ -73,3 +74,11 @@ POST /telegram/actions
 ```
 
 It executes prepared control actions against existing backend state and returns a refreshed owner brief. It does not send external Telegram messages.
+
+Webhook callback handling:
+
+```text
+POST /telegram/webhook
+```
+
+When Telegram sends a callback query with supported `action:targetId` data, the backend executes the same prepared action and returns a refreshed owner brief. The event is recorded for audit; external Telegram sending remains disconnected.

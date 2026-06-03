@@ -112,6 +112,7 @@ Publishing creates jobs only after required approval exists.
 
 - `text`: concise owner-facing message text;
 - `buttons`: action descriptors such as `approval.approve`, `approval.request_changes`, and `publishing.confirm_live`;
+- `callbackData`: compact callback payload for Telegram inline buttons;
 - `delivery: "preview_only"` until a real Telegram sender is connected.
 
 `POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
@@ -131,3 +132,5 @@ Supported actions:
 - `approval.approve`
 - `approval.request_changes`
 - `publishing.confirm_live`
+
+`POST /telegram/webhook` accepts Telegram webhook events. When the event contains `callback_query.data` in the supported `action:targetId` format, the backend executes the same prepared action as `POST /telegram/actions` and returns a refreshed `ownerBrief`. It records the event in integrations and does not send messages to Telegram.
