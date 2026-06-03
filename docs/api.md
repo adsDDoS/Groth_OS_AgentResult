@@ -102,4 +102,7 @@ Publishing creates jobs only after required approval exists.
 
 ## Telegram
 
+- `GET /telegram/owner-brief`
 - `POST /telegram/webhook`
+
+`GET /telegram/owner-brief` returns the current owner-control state for Hermes and the future Telegram control surface. It does not send messages or publish anything. The response includes pending decisions, manually handed-off materials waiting for confirmation, confirmed outputs, result counters, and the next owner action.

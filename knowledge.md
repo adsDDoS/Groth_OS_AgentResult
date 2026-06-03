@@ -180,6 +180,27 @@ Settings tabs:
 
 The main interface should not drift back into backend-admin language.
 
+## Current Baseline
+
+Dashboard is now the demo/private-beta baseline, not an open-ended UI exploration track.
+
+Current baseline:
+
+- production dashboard: `https://dashboard-orpin-mu-26.vercel.app`
+- asset version: `agentresult-working-os-87`
+- latest CI gate: `Dashboard smoke #14` passed on commit `1e6a7ee`
+- baseline doc: `docs/demo-private-beta-baseline.md`
+
+The dashboard is stable enough to use as a sales/demo and private-beta control surface. Continue fixing clear bugs, broken flows, overflow, confusing copy, or approval-first regressions, but avoid further polishing without a concrete product risk.
+
+Automated dashboard smoke now covers the owner loop plus responsive gates:
+
+- routes: Today / Strategy / Company / Materials / Publications / Results / Settings;
+- viewports: 390 / 768 / 1440;
+- RU/ENG switch visibility;
+- route title presence;
+- horizontal overflow.
+
 ## Ideal Owner Flow
 
 The product should be understandable through this chain:
@@ -408,6 +429,14 @@ Target Hermes behavior:
 - keeps dashboard as source of truth and setup/control surface
 
 Do not use Hermes as an excuse to make the dashboard sloppy. The dashboard still needs to be coherent, because it is the demo surface, setup layer, and trust anchor.
+
+First backend contract for Hermes / Telegram control:
+
+```text
+GET /telegram/owner-brief
+```
+
+This endpoint prepares the owner-control state for Hermes and the future Telegram control surface. It does not send Telegram messages, publish materials, or bypass approval. It returns decisions, manual handoffs waiting for confirmation, confirmed outputs, result counters, and the next owner action.
 
 ## Product Decision Rules
 
