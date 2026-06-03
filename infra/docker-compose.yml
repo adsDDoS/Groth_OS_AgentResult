@@ -33,7 +33,13 @@ services:
       context: ../agents/hermes-template
       dockerfile: Dockerfile
     env_file:
-      - ../agents/hermes-template/config/.env.example
+      - ../.env
+    environment:
+      AI_GROWTH_OS_BACKEND_URL: http://backend:3000
+      AI_GROWTH_OS_AGENT_API_KEY: ${AI_GROWTH_OS_AGENT_API_KEY:-}
+      HERMES_TELEGRAM_BOT_TOKEN: ${HERMES_TELEGRAM_BOT_TOKEN:-}
+      HERMES_TELEGRAM_OWNER_CHAT_ID: ${HERMES_TELEGRAM_OWNER_CHAT_ID:-}
+      HERMES_TELEGRAM_MODE: ${HERMES_TELEGRAM_MODE:-owner_control}
     profiles:
       - agents
     volumes:

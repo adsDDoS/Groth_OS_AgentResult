@@ -1,0 +1,167 @@
+# Hermes Telegram Bot
+
+This document defines how to connect Hermes Agent to a Telegram bot for AgentResult OS.
+
+## Decision
+
+Hermes may own the Telegram conversation with the owner.
+
+AgentResult backend must still own:
+
+- approvals;
+- publication status;
+- handoff confirmation;
+- task state;
+- audit events;
+- result records.
+
+In this mode:
+
+```text
+Owner in Telegram -> Hermes Agent -> AgentResult backend action/result APIs -> stored state
+```
+
+Hermes answers and reasons. Backend records decisions and business state.
+
+## Bot Ownership Rule
+
+Do not use the same Telegram bot token in two webhook receivers at the same time.
+
+Choose one mode:
+
+- `Hermes-owned bot`: Hermes receives Telegram messages and calls backend APIs.
+- `Backend-owned bot`: backend receives Telegram callbacks and sends owner briefs.
+
+For the requested setup, use `Hermes-owned bot`.
+
+That means:
+
+- set `HERMES_TELEGRAM_BOT_TOKEN`;
+- keep backend `TELEGRAM_BOT_TOKEN` empty unless you intentionally run a separate backend bot;
+- keep backend `POST /telegram/actions` available for Hermes to call;
+- keep backend `POST /telegram/owner-brief/send` available only for backend-owned or dry-run delivery.
+
+## Environment
+
+Root `.env`:
+
+```bash
+HERMES_BASE_URL=http://hermes:8080
+HERMES_API_KEY=
+
+HERMES_TELEGRAM_BOT_TOKEN=replace-with-bot-token
+HERMES_TELEGRAM_OWNER_CHAT_ID=replace-with-owner-chat-id
+HERMES_TELEGRAM_MODE=owner_control
+
+AI_GROWTH_OS_AGENT_API_KEY=replace-with-backend-agent-key
+
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_APPROVAL_CHAT_ID=
+```
+
+Hermes service receives:
+
+- `AI_GROWTH_OS_BACKEND_URL=http://backend:3000`;
+- `AI_GROWTH_OS_AGENT_API_KEY`;
+- `HERMES_TELEGRAM_BOT_TOKEN`;
+- `HERMES_TELEGRAM_OWNER_CHAT_ID`;
+- `HERMES_TELEGRAM_MODE=owner_control`.
+
+## Runtime Shape
+
+Current repository state:
+
+- `infra/docker-compose.yml` has a `hermes` service under the `agents` profile.
+- `agents/hermes-template` is a Hermes-compatible workspace template.
+- `agents/hermes-template/entrypoint.sh` is still a placeholder until the real Hermes runtime command is installed.
+
+Target runtime:
+
+```text
+docker compose -f infra/docker-compose.yml --profile agents up -d --build
+```
+
+Then Hermes should start its Telegram gateway using the configured bot token and the AgentResult workspace.
+
+## Agent Rules
+
+Hermes may:
+
+- talk to the owner in Telegram;
+- show the current decision queue;
+- summarize tasks and results;
+- prepare materials;
+- propose approval, handoff, release, or result actions;
+- call backend APIs for recorded actions.
+
+Hermes must not:
+
+- publish directly;
+- send emails directly;
+- approve content by itself;
+- confirm publication by itself;
+- mark money-sensitive actions complete outside backend;
+- store Telegram, CRM, CMS, bank, or email credentials in memory.
+
+## Backend APIs Hermes Should Use
+
+Read:
+
+```text
+GET /telegram/owner-brief
+GET /tasks
+GET /tasks/:id
+GET /tasks/:id/events
+```
+
+Actions:
+
+```text
+POST /telegram/actions
+POST /hermes/tasks/:id/dispatch
+POST /hermes/tasks/:id/result
+```
+
+Supported owner action body:
+
+```json
+{
+  "action": "approval.approve",
+  "targetId": "uuid",
+  "note": "optional owner note"
+}
+```
+
+Supported action ids:
+
+- `approval.approve`
+- `approval.request_changes`
+- `publishing.confirm_live`
+
+## First Smoke
+
+1. Start backend.
+2. Start Hermes with Telegram gateway enabled.
+3. Send `/start` to the bot.
+4. Ask: `Что требует моего решения?`
+5. Hermes should call `GET /telegram/owner-brief`.
+6. Hermes should answer with:
+   - decisions count;
+   - handed-off materials waiting for confirmation;
+   - published count;
+   - leads;
+   - next owner action.
+7. Press or send an approval command.
+8. Hermes should call `POST /telegram/actions`.
+9. Backend should record the action.
+10. Recheck `GET /telegram/owner-brief`.
+
+## Production Notes
+
+- Run Hermes and backend on a private Docker network.
+- Give Hermes an API key with only required backend scopes.
+- Do not expose Hermes internal API publicly.
+- Keep the Telegram bot token only in the Hermes service.
+- Use backend audit events to review every recorded decision.
+- Keep owner-facing copy concise: decisions, tasks, control, release, result.

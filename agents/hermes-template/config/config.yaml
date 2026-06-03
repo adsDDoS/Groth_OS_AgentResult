@@ -11,6 +11,12 @@ backend:
   base_url: ${AI_GROWTH_OS_BACKEND_URL}
   api_key: ${AI_GROWTH_OS_AGENT_API_KEY}
 
+telegram:
+  mode: ${HERMES_TELEGRAM_MODE}
+  bot_token_env: HERMES_TELEGRAM_BOT_TOKEN
+  owner_chat_id: ${HERMES_TELEGRAM_OWNER_CHAT_ID}
+  control_surface: owner_decisions
+
 policies:
   - GROWTH_POLICY.md
   - CONTENT_POLICY.md

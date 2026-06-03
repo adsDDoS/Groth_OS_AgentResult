@@ -135,6 +135,8 @@ Backend owns business state, approvals, publishing status, audit, Telegram callb
 
 Hermes must not directly publish, send emails, update live site content, approve risky claims, mark handoffs as published, or move money-sensitive workflow state outside explicit backend approval rules.
 
+Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend webhook at the same time.
+
 Canonical implementation note:
 
 - detailed spec: `docs/hermes-agent-integration.md`

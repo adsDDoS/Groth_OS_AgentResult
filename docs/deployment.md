@@ -46,6 +46,7 @@ The GitHub Actions workflow `.github/workflows/dashboard-smoke.yml` runs the sam
    - `OPENROUTER_API_KEY`
    - `CADDY_DOMAIN`
    - optional Telegram and SMTP values
+   - optional Hermes Telegram values from `docs/hermes-telegram-bot.md`
 6. Point DNS to the VPS.
 7. Start services:
 

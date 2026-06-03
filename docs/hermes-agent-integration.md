@@ -77,6 +77,8 @@ AgentResult OS already has the correct control foundation:
 - `POST /telegram/webhook`;
 - `HERMES_BASE_URL`;
 - `HERMES_API_KEY`;
+- `HERMES_TELEGRAM_BOT_TOKEN`;
+- `HERMES_TELEGRAM_OWNER_CHAT_ID`;
 - `TELEGRAM_BOT_TOKEN`;
 - `TELEGRAM_WEBHOOK_SECRET`;
 - `TELEGRAM_APPROVAL_CHAT_ID`.
@@ -118,7 +120,7 @@ Recommended initial path:
 4. Add a result callback/writeback endpoint in AgentResult backend.
 5. Keep Telegram owner decisions in AgentResult backend, not inside Hermes state.
 
-Do not start by letting Hermes gateway own the production Telegram bot. AgentResult already has approval-first Telegram callback handling. Hermes can send or request owner briefs through backend endpoints.
+For an owner-facing conversational bot, Hermes may own the Telegram bot gateway. In that mode, AgentResult backend must not use the same bot token as its own webhook receiver. Hermes owns the conversation; backend owns recorded business actions. See `docs/hermes-telegram-bot.md`.
 
 ## Programmatic Protocol Choice
 
@@ -381,8 +383,11 @@ Current Phase 1 behavior:
 
 ### Phase 4: Telegram
 
-- Let Hermes trigger `POST /telegram/owner-brief/send` on schedule.
-- Keep Telegram callbacks in AgentResult backend.
+- Connect Hermes to the Telegram bot gateway. In progress.
+- Keep owner-facing conversation in Hermes.
+- Keep business actions in AgentResult backend.
+- Do not point the same Telegram bot token at both Hermes and backend webhooks.
+- Use `POST /telegram/actions` for recorded owner decisions.
 - Keep owner decision state in Postgres.
 
 ### Phase 5: Production Hardening
@@ -399,7 +404,7 @@ Current Phase 1 behavior:
 Do not build:
 
 - a second dashboard inside Hermes;
-- a second Telegram bot that bypasses AgentResult backend;
+- a Telegram bot that changes business state outside AgentResult backend;
 - direct Hermes writes to publishing state;
 - direct Hermes writes to CRM/email/CMS;
 - prompt-only business state without backend persistence.
