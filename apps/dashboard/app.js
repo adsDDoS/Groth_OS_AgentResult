@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-85";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-85";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-85";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-86";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-86";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-86";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -964,7 +964,7 @@ function renderModal() {
   const action = state.decisionModal.action;
   const requiresNote = action === "reject" || action === "request-changes";
   const modalTitle = action === "approve" ? text("Approve", "Согласовать") : action === "reject" ? text("Reject", "Отклонить") : text("Request changes", "Нужны правки");
-  const submitLabel = action === "approve" ? text("Confirm", "Подтвердить") : modalTitle;
+  const submitLabel = modalTitle;
 
   elements.modalRoot.innerHTML = `
     <div class="modal-backdrop" role="presentation" data-action="close-modal"></div>
