@@ -1534,15 +1534,16 @@ select:focus {
 
   .topbar-controls {
     width: 100%;
-    align-items: stretch;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .language-switch {
+    flex: 0 0 auto;
   }
 
   .help-chip,
-  .language-switch {
-    flex: 1;
-  }
-
-  .language-switch,
   .topbar-actions .button.secondary {
     display: none;
   }

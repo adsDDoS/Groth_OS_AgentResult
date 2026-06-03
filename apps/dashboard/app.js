@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-86";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-86";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-86";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-87";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-87";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-87";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
