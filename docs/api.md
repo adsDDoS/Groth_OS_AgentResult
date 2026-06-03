@@ -100,6 +100,42 @@ Publishing creates jobs only after required approval exists.
 - `POST /tasks/:id/pause`
 - `POST /tasks/:id/handoff`
 
+## Hermes
+
+- `POST /hermes/tasks/:id/dispatch`
+- `POST /hermes/tasks/:id/result`
+
+`POST /hermes/tasks/:id/dispatch` prepares a backend-owned task envelope for Hermes and records a `task_runs` row with status `dispatch_prepared`. It does not publish, send, or make owner decisions.
+
+`POST /hermes/tasks/:id/result` accepts a structured Hermes result envelope, validates it, writes the result to the task, and records a `hermes_result_received` task event. Proposed actions remain proposed; backend approval rules decide what becomes an approval, release, handoff, or result later.
+
+Result body:
+
+```json
+{
+  "runId": "optional-task-run-uuid",
+  "status": "completed",
+  "summary": "Prepared draft and risk flags.",
+  "artifacts": [
+    {
+      "type": "draft",
+      "targetType": "content_item",
+      "targetId": "content-item-uuid",
+      "payload": {}
+    }
+  ],
+  "proposedActions": [
+    {
+      "type": "approval_request",
+      "scope": "social_post",
+      "summary": "Owner approval required before release.",
+      "payload": {}
+    }
+  ],
+  "riskFlags": ["public claim"]
+}
+```
+
 ## Telegram
 
 - `GET /telegram/owner-brief`

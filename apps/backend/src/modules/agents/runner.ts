@@ -15,7 +15,7 @@ export async function createAgentTask(input: {
   const result = await query(
     `insert into tasks
       (id, tenant_id, agent_role, task_type, target_type, target_id, status, payload, created_by)
-     values ($1, $2, $3, $4, $5, $6, 'queued', $7, $8)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      returning *`,
     [
       id,
@@ -24,6 +24,7 @@ export async function createAgentTask(input: {
       input.taskType,
       input.targetType ?? null,
       input.targetId ?? null,
+      "queued",
       input.payload,
       input.createdBy ?? null
     ]
@@ -31,8 +32,9 @@ export async function createAgentTask(input: {
 
   await query(
     `insert into task_events (id, tenant_id, task_id, event_type, payload)
-     values ($1, $2, $3, 'task_queued', $4)`,
-    [randomUUID(), input.tenantId, id, { provider: config.modelProvider, hermesBaseUrl: config.hermesBaseUrl }]
+     values ($1, $2, $3, $4, $5)
+     returning *`,
+    [randomUUID(), input.tenantId, id, "task_queued", { provider: config.modelProvider, hermesBaseUrl: config.hermesBaseUrl }]
   );
 
   return result.rows[0];
@@ -44,8 +46,9 @@ export async function handoffToHermes(taskId: string, tenantId: string) {
 
   await query(
     `insert into task_events (id, tenant_id, task_id, event_type, payload)
-     values ($1, $2, $3, 'hermes_handoff_requested', $4)`,
-    [randomUUID(), tenantId, taskId, { hermesBaseUrl: config.hermesBaseUrl }]
+     values ($1, $2, $3, $4, $5)
+     returning *`,
+    [randomUUID(), tenantId, taskId, "hermes_handoff_requested", { hermesBaseUrl: config.hermesBaseUrl }]
   );
 
   return task.rows[0];

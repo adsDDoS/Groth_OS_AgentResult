@@ -350,10 +350,16 @@ Hermes data should live in a persistent volume, separate from Postgres. Backups 
 
 ### Phase 1: Contract
 
-- Add `POST /hermes/tasks/:id/dispatch`.
-- Add `POST /hermes/tasks/:id/result`.
-- Store Hermes run id in `task_events`.
-- Validate result envelopes with zod.
+- Add `POST /hermes/tasks/:id/dispatch`. Done.
+- Add `POST /hermes/tasks/:id/result`. Done.
+- Store Hermes run id in `task_events`. Done.
+- Validate result envelopes with zod. Done.
+
+Current Phase 1 behavior:
+
+- `dispatch` prepares the Hermes task envelope and stores a `task_runs` row with `dispatch_prepared`;
+- `result` accepts structured Hermes output, updates the task result, and records `hermes_result_received`;
+- proposed actions remain proposed until backend approval rules turn them into actual approvals, handoffs, releases, or result records.
 
 ### Phase 2: Worker
 
