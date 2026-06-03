@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
+import { decideApproval } from "../approvals/service.js";
 
 type Row = Record<string, unknown>;
 type TelegramButton = {
@@ -9,13 +11,20 @@ type TelegramButton = {
   targetId: unknown;
   targetType: "approval" | "publishing_calendar_item";
 };
+type OwnerBriefInput = {
+  approvals: Row[];
+  calendar: Row[];
+  latestSummary: Row;
+};
+
+const telegramActionSchema = z.object({
+  action: z.enum(["approval.approve", "approval.request_changes", "publishing.confirm_live"]),
+  targetId: z.string().uuid(),
+  note: z.string().optional()
+});
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
-}
-
-function countByStatus(rows: Row[], status: string) {
-  return rows.filter((row) => row.status === status).length;
 }
 
 function truncateText(value: string, maxLength = 120) {
@@ -120,62 +129,117 @@ function renderOwnerBriefMessage(input: {
   };
 }
 
+function buildOwnerBrief(input: OwnerBriefInput) {
+  const { approvals, calendar, latestSummary } = input;
+  const pendingApprovals = approvals.filter((row) => row.status === "pending");
+  const handedOffItems = calendar.filter((row) => row.status === "handed_off");
+  const publishedItems = calendar.filter((row) => row.status === "published");
+
+  return {
+    surface: "telegram_control",
+    message: "Короткая сводка для решения собственника",
+    counts: {
+      decisions: pendingApprovals.length,
+      handedOff: handedOffItems.length,
+      published: publishedItems.length,
+      leads: Number(latestSummary.leads ?? 0),
+      money: Number(latestSummary.recovered_payments ?? 0)
+    },
+    decisions: pendingApprovals.slice(0, 5).map((row) => ({
+      id: row.id,
+      title: textValue(row.summary, "Материал ждёт решения"),
+      scope: row.scope ?? null,
+      riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : []
+    })),
+    handoffs: handedOffItems.slice(0, 5).map((row) => ({
+      id: row.id,
+      title: textValue(row.title, "Переданный материал"),
+      channel: row.channel ?? "manual",
+      scheduledFor: row.scheduled_for ?? null
+    })),
+    results: {
+      published: publishedItems.length,
+      manualHandoffWaiting: handedOffItems.length,
+      leads: Number(latestSummary.leads ?? 0),
+      recoveredPayments: Number(latestSummary.recovered_payments ?? 0)
+    },
+    telegramMessage: renderOwnerBriefMessage({
+      handedOffItems,
+      latestSummary,
+      pendingApprovals,
+      publishedItems
+    }),
+    nextAction: ownerBriefNextAction(pendingApprovals, handedOffItems),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function loadOwnerBriefData(tenantId: string) {
+  const [approvalsResult, calendarResult, latestImport] = await Promise.all([
+    query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
+    query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]),
+    query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [tenantId, 1]).catch(() => ({
+      rows: []
+    }))
+  ]);
+  const latestSummary = latestImport.rows[0]?.payload && typeof latestImport.rows[0].payload === "object"
+    ? (latestImport.rows[0].payload as Row)
+    : {};
+
+  return {
+    approvals: approvalsResult.rows as Row[],
+    calendar: calendarResult.rows as Row[],
+    latestSummary
+  };
+}
+
 export async function telegramRoutes(app: FastifyInstance) {
   app.get("/telegram/owner-brief", async (request) => {
-    const [approvalsResult, calendarResult, latestImport] = await Promise.all([
-      query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [request.tenantId]),
-      query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [request.tenantId]),
-      query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [request.tenantId, 1]).catch(() => ({
-        rows: []
-      }))
-    ]);
-
-    const approvals = approvalsResult.rows as Row[];
-    const calendar = calendarResult.rows as Row[];
-    const pendingApprovals = approvals.filter((row) => row.status === "pending");
-    const handedOffItems = calendar.filter((row) => row.status === "handed_off");
-    const publishedItems = calendar.filter((row) => row.status === "published");
-    const latestSummary = latestImport.rows[0]?.payload && typeof latestImport.rows[0].payload === "object"
-      ? (latestImport.rows[0].payload as Row)
-      : {};
+    const briefData = await loadOwnerBriefData(request.tenantId);
 
     return {
+      data: buildOwnerBrief(briefData)
+    };
+  });
+
+  app.post("/telegram/actions", async (request) => {
+    const body = telegramActionSchema.parse(request.body ?? {});
+    let result: Row | null = null;
+
+    if (body.action === "approval.approve") {
+      result = await decideApproval({
+        id: body.targetId,
+        tenantId: request.tenantId,
+        status: "approved",
+        decidedBy: request.userId,
+        decisionNote: body.note
+      });
+    }
+
+    if (body.action === "approval.request_changes") {
+      result = await decideApproval({
+        id: body.targetId,
+        tenantId: request.tenantId,
+        status: "changes_requested",
+        decidedBy: request.userId,
+        decisionNote: body.note || "Нужны правки из Telegram-контура"
+      });
+    }
+
+    if (body.action === "publishing.confirm_live") {
+      const updated = await query(
+        "update publishing_calendar_items set status = $3, updated_at = now() where id = $1 and tenant_id = $2 returning *",
+        [body.targetId, request.tenantId, "published"]
+      );
+      result = updated.rows[0] ?? null;
+    }
+
+    const briefData = await loadOwnerBriefData(request.tenantId);
+    return {
       data: {
-        surface: "telegram_control",
-        message: "Короткая сводка для решения собственника",
-        counts: {
-          decisions: pendingApprovals.length,
-          handedOff: handedOffItems.length,
-          published: publishedItems.length,
-          leads: Number(latestSummary.leads ?? 0),
-          money: Number(latestSummary.recovered_payments ?? 0)
-        },
-        decisions: pendingApprovals.slice(0, 5).map((row) => ({
-          id: row.id,
-          title: textValue(row.summary, "Материал ждёт решения"),
-          scope: row.scope ?? null,
-          riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : []
-        })),
-        handoffs: handedOffItems.slice(0, 5).map((row) => ({
-          id: row.id,
-          title: textValue(row.title, "Переданный материал"),
-          channel: row.channel ?? "manual",
-          scheduledFor: row.scheduled_for ?? null
-        })),
-        results: {
-          published: countByStatus(calendar, "published"),
-          manualHandoffWaiting: handedOffItems.length,
-          leads: Number(latestSummary.leads ?? 0),
-          recoveredPayments: Number(latestSummary.recovered_payments ?? 0)
-        },
-        telegramMessage: renderOwnerBriefMessage({
-          handedOffItems,
-          latestSummary,
-          pendingApprovals,
-          publishedItems
-        }),
-        nextAction: ownerBriefNextAction(pendingApprovals, handedOffItems),
-        updatedAt: new Date().toISOString()
+        action: body.action,
+        result,
+        ownerBrief: buildOwnerBrief(briefData)
       }
     };
   });

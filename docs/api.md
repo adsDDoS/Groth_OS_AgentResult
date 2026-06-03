@@ -103,6 +103,7 @@ Publishing creates jobs only after required approval exists.
 ## Telegram
 
 - `GET /telegram/owner-brief`
+- `POST /telegram/actions`
 - `POST /telegram/webhook`
 
 `GET /telegram/owner-brief` returns the current owner-control state for Hermes and the future Telegram control surface. It does not send messages or publish anything. The response includes pending decisions, manually handed-off materials waiting for confirmation, confirmed outputs, result counters, the next owner action, and `telegramMessage` preview data.
@@ -112,3 +113,21 @@ Publishing creates jobs only after required approval exists.
 - `text`: concise owner-facing message text;
 - `buttons`: action descriptors such as `approval.approve`, `approval.request_changes`, and `publishing.confirm_live`;
 - `delivery: "preview_only"` until a real Telegram sender is connected.
+
+`POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
+
+Supported action body:
+
+```json
+{
+  "action": "approval.approve",
+  "targetId": "approval-or-calendar-uuid",
+  "note": "optional owner note"
+}
+```
+
+Supported actions:
+
+- `approval.approve`
+- `approval.request_changes`
+- `publishing.confirm_live`

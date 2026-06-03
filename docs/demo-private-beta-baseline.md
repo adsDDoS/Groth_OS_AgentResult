@@ -65,3 +65,11 @@ Current renderer:
 - returns `telegramMessage.text`;
 - returns action buttons for approval, changes, and publication confirmation;
 - stays `preview_only` until a real Telegram sender is connected.
+
+Current action endpoint:
+
+```text
+POST /telegram/actions
+```
+
+It executes prepared control actions against existing backend state and returns a refreshed owner brief. It does not send external Telegram messages.
