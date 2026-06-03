@@ -29,8 +29,12 @@ const telegramWebhookSchema = z.object({
     data: z.string().optional()
   }).passthrough().optional()
 }).passthrough();
+const telegramSendOwnerBriefSchema = z.object({
+  dryRun: z.boolean().optional()
+});
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
+type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -168,6 +172,20 @@ function renderOwnerBriefMessage(input: {
   };
 }
 
+function telegramInlineKeyboard(buttons: TelegramButton[]) {
+  const activeButtons = buttons.filter((button) => typeof button.callbackData === "string" && button.callbackData);
+  if (!activeButtons.length) return undefined;
+
+  return {
+    inline_keyboard: [
+      activeButtons.map((button) => ({
+        text: button.label,
+        callback_data: button.callbackData
+      }))
+    ]
+  };
+}
+
 function buildOwnerBrief(input: OwnerBriefInput) {
   const { approvals, calendar, latestSummary } = input;
   const pendingApprovals = approvals.filter((row) => row.status === "pending");
@@ -271,12 +289,84 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   };
 }
 
+async function sendOwnerBriefToTelegram(brief: OwnerBrief, input: { dryRun?: boolean }) {
+  const message = brief.telegramMessage;
+  const replyMarkup = telegramInlineKeyboard(message.buttons);
+  const payload = {
+    chat_id: config.telegramApprovalChatId,
+    text: message.text,
+    reply_markup: replyMarkup
+  };
+
+  if (input.dryRun) {
+    return {
+      delivery: "dry_run",
+      payload
+    };
+  }
+
+  if (!config.telegramBotToken || !config.telegramApprovalChatId) {
+    const error = new Error("Telegram delivery is not configured");
+    Object.assign(error, { statusCode: 409, code: "TELEGRAM_DELIVERY_NOT_CONFIGURED" });
+    throw error;
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const responseBody = await response.json().catch(() => null) as Row | null;
+
+  if (!response.ok) {
+    const error = new Error("Telegram delivery failed");
+    Object.assign(error, {
+      statusCode: 502,
+      code: "TELEGRAM_DELIVERY_FAILED",
+      details: responseBody
+    });
+    throw error;
+  }
+
+  return {
+    delivery: "sent",
+    telegram: responseBody
+  };
+}
+
 export async function telegramRoutes(app: FastifyInstance) {
   app.get("/telegram/owner-brief", async (request) => {
     const briefData = await loadOwnerBriefData(request.tenantId);
 
     return {
       data: buildOwnerBrief(briefData)
+    };
+  });
+
+  app.post("/telegram/owner-brief/send", async (request) => {
+    const body = telegramSendOwnerBriefSchema.parse(request.body ?? {});
+    const briefData = await loadOwnerBriefData(request.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    const delivery = await sendOwnerBriefToTelegram(ownerBrief, { dryRun: body.dryRun });
+
+    await query(
+      `insert into integrations (tenant_id, provider, status, config)
+       values ($1, 'telegram_owner_brief_delivery', $2, $3)
+       returning *`,
+      [request.tenantId, delivery.delivery, {
+        dryRun: Boolean(body.dryRun),
+        ownerBrief,
+        delivery
+      }]
+    );
+
+    return {
+      data: {
+        ownerBrief,
+        delivery
+      }
     };
   });
 

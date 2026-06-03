@@ -65,7 +65,15 @@ Current renderer:
 - returns `telegramMessage.text`;
 - returns action buttons for approval, changes, and publication confirmation;
 - includes compact `callbackData` for Telegram inline buttons;
-- stays `preview_only` until a real Telegram sender is connected.
+- supports dry-run delivery checks before a real Telegram sender is connected.
+
+Owner brief delivery:
+
+```text
+POST /telegram/owner-brief/send
+```
+
+It sends the current owner brief to the configured owner chat when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_APPROVAL_CHAT_ID` are set. It sends only the control summary and inline buttons; it does not publish, send emails, or make decisions automatically.
 
 Current action endpoint:
 

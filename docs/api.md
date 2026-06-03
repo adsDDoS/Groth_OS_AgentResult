@@ -103,6 +103,7 @@ Publishing creates jobs only after required approval exists.
 ## Telegram
 
 - `GET /telegram/owner-brief`
+- `POST /telegram/owner-brief/send`
 - `POST /telegram/actions`
 - `POST /telegram/webhook`
 
@@ -116,6 +117,21 @@ Publishing creates jobs only after required approval exists.
 - `delivery: "preview_only"` until a real Telegram sender is connected.
 
 `POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
+
+`POST /telegram/owner-brief/send` sends the current owner brief to the configured Telegram owner chat with inline control buttons. It only sends the decision summary and prepared control actions. It does not publish materials, send emails, or perform owner decisions by itself.
+
+Required environment variables for live delivery:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_APPROVAL_CHAT_ID`
+
+Dry-run body:
+
+```json
+{
+  "dryRun": true
+}
+```
 
 Supported action body:
 
