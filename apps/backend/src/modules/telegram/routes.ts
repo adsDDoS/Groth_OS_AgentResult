@@ -3,6 +3,12 @@ import { config } from "../../config.js";
 import { query } from "../../db/client.js";
 
 type Row = Record<string, unknown>;
+type TelegramButton = {
+  action: string;
+  label: string;
+  targetId: unknown;
+  targetType: "approval" | "publishing_calendar_item";
+};
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -10,6 +16,10 @@ function textValue(value: unknown, fallback = "") {
 
 function countByStatus(rows: Row[], status: string) {
   return rows.filter((row) => row.status === status).length;
+}
+
+function truncateText(value: string, maxLength = 120) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}…` : value;
 }
 
 function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
@@ -36,6 +46,77 @@ function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
     label: "Проверить результат",
     title: "Ждём заявки, ответа или другого бизнес-сигнала",
     targetId: null
+  };
+}
+
+function approvalButtons(approval: Row): TelegramButton[] {
+  return [
+    {
+      action: "approval.approve",
+      label: "Согласовать",
+      targetId: approval.id ?? null,
+      targetType: "approval"
+    },
+    {
+      action: "approval.request_changes",
+      label: "Нужны правки",
+      targetId: approval.id ?? null,
+      targetType: "approval"
+    }
+  ];
+}
+
+function handoffButtons(item: Row): TelegramButton[] {
+  return [
+    {
+      action: "publishing.confirm_live",
+      label: "Подтвердить выход",
+      targetId: item.id ?? null,
+      targetType: "publishing_calendar_item"
+    }
+  ];
+}
+
+function renderOwnerBriefMessage(input: {
+  handedOffItems: Row[];
+  latestSummary: Row;
+  pendingApprovals: Row[];
+  publishedItems: Row[];
+}) {
+  const { handedOffItems, latestSummary, pendingApprovals, publishedItems } = input;
+  const primaryDecision = pendingApprovals[0] ?? null;
+  const primaryHandoff = handedOffItems[0] ?? null;
+  const leads = Number(latestSummary.leads ?? 0);
+  const money = Number(latestSummary.recovered_payments ?? 0);
+
+  const lines = [
+    "AgentResult OS",
+    "",
+    `Решения: ${pendingApprovals.length}`,
+    `Передано вручную: ${handedOffItems.length}`,
+    `Вышло: ${publishedItems.length}`,
+    `Заявки: ${leads}`,
+    `Деньги: ${money}`,
+    ""
+  ];
+
+  if (primaryDecision) {
+    lines.push(`Следующее решение: ${truncateText(textValue(primaryDecision.summary, "Материал ждёт решения"))}`);
+  } else if (primaryHandoff) {
+    lines.push(`Подтвердить выход: ${truncateText(textValue(primaryHandoff.title, "Переданный материал"))}`);
+  } else {
+    lines.push("Следующий шаг: проверить результат и новые сигналы.");
+  }
+
+  const buttons = [
+    ...(primaryDecision ? approvalButtons(primaryDecision) : []),
+    ...(primaryHandoff ? handoffButtons(primaryHandoff) : [])
+  ];
+
+  return {
+    text: lines.join("\n"),
+    buttons,
+    delivery: "preview_only"
   };
 }
 
@@ -87,6 +168,12 @@ export async function telegramRoutes(app: FastifyInstance) {
           leads: Number(latestSummary.leads ?? 0),
           recoveredPayments: Number(latestSummary.recovered_payments ?? 0)
         },
+        telegramMessage: renderOwnerBriefMessage({
+          handedOffItems,
+          latestSummary,
+          pendingApprovals,
+          publishedItems
+        }),
         nextAction: ownerBriefNextAction(pendingApprovals, handedOffItems),
         updatedAt: new Date().toISOString()
       }

@@ -59,3 +59,9 @@ GET /telegram/owner-brief
 ```
 
 This endpoint prepares the owner-control state for Hermes and Telegram without sending external messages.
+
+Current renderer:
+
+- returns `telegramMessage.text`;
+- returns action buttons for approval, changes, and publication confirmation;
+- stays `preview_only` until a real Telegram sender is connected.
