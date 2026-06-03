@@ -137,6 +137,8 @@ Hermes must not directly publish, send emails, update live site content, approve
 
 Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend webhook at the same time.
 
+Hermes Telegram access should use the native Hermes allowlist variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep the secret under `HERMES_TELEGRAM_BOT_TOKEN` and map it to `TELEGRAM_BOT_TOKEN` only inside the Hermes service. `TELEGRAM_ALLOWED_USERS` expects numeric Telegram user IDs, not usernames.
+
 Canonical implementation note:
 
 - detailed spec: `docs/hermes-agent-integration.md`

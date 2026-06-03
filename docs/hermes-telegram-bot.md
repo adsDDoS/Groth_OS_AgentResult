@@ -37,6 +37,8 @@ For the requested setup, use `Hermes-owned bot`.
 That means:
 
 - set `HERMES_TELEGRAM_BOT_TOKEN`;
+- set `HERMES_TELEGRAM_ALLOWED_USERS` to the owner's numeric Telegram user ID;
+- optionally set `HERMES_TELEGRAM_HOME_CHANNEL` to the same ID for direct-message delivery;
 - keep backend `TELEGRAM_BOT_TOKEN` empty unless you intentionally run a separate backend bot;
 - keep backend `POST /telegram/actions` available for Hermes to call;
 - keep backend `POST /telegram/owner-brief/send` available only for backend-owned or dry-run delivery.
@@ -46,11 +48,12 @@ That means:
 Root `.env`:
 
 ```bash
-HERMES_BASE_URL=http://hermes:8080
+HERMES_BASE_URL=http://hermes:8642
 HERMES_API_KEY=
 
 HERMES_TELEGRAM_BOT_TOKEN=replace-with-bot-token
-HERMES_TELEGRAM_OWNER_CHAT_ID=replace-with-owner-chat-id
+HERMES_TELEGRAM_ALLOWED_USERS=replace-with-owner-user-id
+HERMES_TELEGRAM_HOME_CHANNEL=replace-with-owner-user-id
 HERMES_TELEGRAM_MODE=owner_control
 
 AI_GROWTH_OS_AGENT_API_KEY=replace-with-backend-agent-key
@@ -64,17 +67,23 @@ Hermes service receives:
 
 - `AI_GROWTH_OS_BACKEND_URL=http://backend:3000`;
 - `AI_GROWTH_OS_AGENT_API_KEY`;
-- `HERMES_TELEGRAM_BOT_TOKEN`;
-- `HERMES_TELEGRAM_OWNER_CHAT_ID`;
+- `TELEGRAM_BOT_TOKEN`, mapped from `HERMES_TELEGRAM_BOT_TOKEN`;
+- `TELEGRAM_ALLOWED_USERS`, mapped from `HERMES_TELEGRAM_ALLOWED_USERS`;
+- `TELEGRAM_HOME_CHANNEL`, mapped from `HERMES_TELEGRAM_HOME_CHANNEL`;
 - `HERMES_TELEGRAM_MODE=owner_control`.
+
+Hermes expects numeric Telegram user IDs in `TELEGRAM_ALLOWED_USERS`. A Telegram username is not enough. For a direct owner bot, `HERMES_TELEGRAM_ALLOWED_USERS` and `HERMES_TELEGRAM_HOME_CHANNEL` can usually be the same numeric ID.
 
 ## Runtime Shape
 
 Current repository state:
 
 - `infra/docker-compose.yml` has a `hermes` service under the `agents` profile.
-- `agents/hermes-template` is a Hermes-compatible workspace template.
-- `agents/hermes-template/entrypoint.sh` is still a placeholder until the real Hermes runtime command is installed.
+- the service uses the official `nousresearch/hermes-agent:latest` image;
+- the service starts `gateway run`;
+- Hermes state is stored in ignored local path `.runtime/hermes`;
+- the AgentResult skill pack is mounted into `/opt/data/skills`;
+- `SOUL.md` is mounted into `/opt/data/SOUL.md`.
 
 Target runtime:
 
@@ -83,6 +92,8 @@ docker compose -f infra/docker-compose.yml --profile agents up -d --build
 ```
 
 Then Hermes should start its Telegram gateway using the configured bot token and the AgentResult workspace.
+
+The old `agents/hermes-template/entrypoint.sh` remains only as a local template fallback and is not used by the compose service.
 
 ## Agent Rules
 

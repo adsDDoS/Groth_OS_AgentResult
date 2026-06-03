@@ -78,7 +78,8 @@ AgentResult OS already has the correct control foundation:
 - `HERMES_BASE_URL`;
 - `HERMES_API_KEY`;
 - `HERMES_TELEGRAM_BOT_TOKEN`;
-- `HERMES_TELEGRAM_OWNER_CHAT_ID`;
+- `HERMES_TELEGRAM_ALLOWED_USERS`;
+- `HERMES_TELEGRAM_HOME_CHANNEL`;
 - `TELEGRAM_BOT_TOKEN`;
 - `TELEGRAM_WEBHOOK_SECRET`;
 - `TELEGRAM_APPROVAL_CHAT_ID`.
@@ -121,6 +122,8 @@ Recommended initial path:
 5. Keep Telegram owner decisions in AgentResult backend, not inside Hermes state.
 
 For an owner-facing conversational bot, Hermes may own the Telegram bot gateway. In that mode, AgentResult backend must not use the same bot token as its own webhook receiver. Hermes owns the conversation; backend owns recorded business actions. See `docs/hermes-telegram-bot.md`.
+
+Use Hermes' native Telegram variables inside the Hermes service: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep them namespaced as `HERMES_TELEGRAM_BOT_TOKEN`, `HERMES_TELEGRAM_ALLOWED_USERS`, and `HERMES_TELEGRAM_HOME_CHANNEL`, then map them in `infra/docker-compose.yml`.
 
 ## Programmatic Protocol Choice
 

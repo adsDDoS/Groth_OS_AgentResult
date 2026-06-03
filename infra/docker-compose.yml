@@ -29,21 +29,30 @@ services:
     command: sh -c "node apps/backend/dist/db/migrate.js && node apps/backend/dist/main.js"
 
   hermes:
-    build:
-      context: ../agents/hermes-template
-      dockerfile: Dockerfile
+    image: nousresearch/hermes-agent:latest
+    container_name: agentresult-hermes
+    restart: unless-stopped
     env_file:
       - ../.env
     environment:
       AI_GROWTH_OS_BACKEND_URL: http://backend:3000
       AI_GROWTH_OS_AGENT_API_KEY: ${AI_GROWTH_OS_AGENT_API_KEY:-}
-      HERMES_TELEGRAM_BOT_TOKEN: ${HERMES_TELEGRAM_BOT_TOKEN:-}
-      HERMES_TELEGRAM_OWNER_CHAT_ID: ${HERMES_TELEGRAM_OWNER_CHAT_ID:-}
+      TELEGRAM_BOT_TOKEN: ${HERMES_TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_USERS: ${HERMES_TELEGRAM_ALLOWED_USERS:-}
+      TELEGRAM_HOME_CHANNEL: ${HERMES_TELEGRAM_HOME_CHANNEL:-}
       HERMES_TELEGRAM_MODE: ${HERMES_TELEGRAM_MODE:-owner_control}
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_KEY: ${HERMES_API_KEY:-}
+    command: ["gateway", "run"]
+    ports:
+      - "127.0.0.1:8642:8642"
     profiles:
       - agents
     volumes:
-      - ../agents/hermes-template/workspace:/workspace
+      - ../.runtime/hermes:/opt/data
+      - ../agents/hermes-template/skills:/opt/data/skills:ro
+      - ../agents/hermes-template/workspace/SOUL.md:/opt/data/SOUL.md:ro
 
   caddy:
     image: caddy:2-alpine

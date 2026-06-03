@@ -13,8 +13,9 @@ backend:
 
 telegram:
   mode: ${HERMES_TELEGRAM_MODE}
-  bot_token_env: HERMES_TELEGRAM_BOT_TOKEN
-  owner_chat_id: ${HERMES_TELEGRAM_OWNER_CHAT_ID}
+  bot_token_env: TELEGRAM_BOT_TOKEN
+  allowed_users_env: TELEGRAM_ALLOWED_USERS
+  home_channel_env: TELEGRAM_HOME_CHANNEL
   control_surface: owner_decisions
 
 policies:
