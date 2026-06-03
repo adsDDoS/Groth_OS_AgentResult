@@ -60,6 +60,44 @@ async function metricValue(page, label) {
   return page.locator(".metric-panel", { hasText: label }).locator("strong").first().innerText();
 }
 
+async function assertResponsiveShell(page) {
+  const routes = ["overview", "growth-plan", "offer-brain", "content-pipeline", "publications", "analytics", "settings"];
+  const viewports = [
+    { name: "mobile", width: 390, height: 844 },
+    { name: "tablet", width: 768, height: 1024 },
+    { name: "desktop", width: 1440, height: 1000 }
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of routes) {
+      await page.goto(`${baseUrl}/?v=smoke-responsive#/${route}`);
+      await page.waitForSelector("#screenRoot");
+
+      const state = await page.evaluate(() => {
+        const languageSwitch = document.querySelector(".language-switch")?.getBoundingClientRect();
+        return {
+          bodyWidth: document.body.scrollWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          hasLanguageSwitch: Boolean(languageSwitch && languageSwitch.width > 0 && languageSwitch.height > 0),
+          title: document.querySelector("#sectionTitle")?.textContent?.trim() || "",
+          viewportWidth: window.innerWidth
+        };
+      });
+
+      assert(state.title, `Responsive ${viewport.name}/${route}: route title is empty`);
+      assert(state.hasLanguageSwitch, `Responsive ${viewport.name}/${route}: language switch is hidden`);
+      assert(
+        state.documentWidth <= state.viewportWidth + 2 && state.bodyWidth <= state.viewportWidth + 2,
+        `Responsive ${viewport.name}/${route}: horizontal overflow ${Math.max(state.documentWidth, state.bodyWidth)} > ${state.viewportWidth}`
+      );
+    }
+  }
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+}
+
 async function run() {
   await waitForDashboard();
   const browser = await chromium.launch();
@@ -135,6 +173,8 @@ async function run() {
     await page.goto(`${baseUrl}/?v=smoke#/analytics`);
     await page.waitForSelector(".metric-panel");
     assert((await metricValue(page, "Передано вручную").catch(() => metricValue(page, "Manual handoff"))) === "0", "Manual handoff count should return to 0 after confirmation");
+
+    await assertResponsiveShell(page);
 
     console.log("Dashboard smoke passed");
   } finally {

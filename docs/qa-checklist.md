@@ -127,6 +127,16 @@ Hermes prepares -> owner approves -> material is released or handed off -> resul
 - Local mode with backend on `127.0.0.1:3000`.
 - LocalStorage state after manual handoff and demo reset.
 
+## Automated Smoke Coverage
+
+`npm run dashboard:smoke` covers the owner loop plus responsive release gates:
+
+- routes: `Сегодня`, `Стратегия`, `Компания`, `Материалы`, `Публикации`, `Результаты`, `Настройки`;
+- viewports: 390, 768, 1440;
+- RU/ENG switch remains visible;
+- page title is present;
+- horizontal overflow fails the smoke.
+
 ## Recommended QA Role
 
 Bring in senior QA after the Company screen is stable. The first QA pass should produce:
