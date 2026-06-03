@@ -127,6 +127,19 @@ The safest automation is not "AI does everything." The safest automation is a cl
 Hermes prepares -> owner approves -> system publishes or hands off -> result is tracked
 ```
 
+## Hermes Integration Principle
+
+Hermes Agent should be treated as the agent runtime and owner-notification worker, not as the system of record.
+
+Backend owns business state, approvals, publishing status, audit, Telegram callbacks, credentials, and result signals. Hermes may research, draft, summarize, schedule reminders, create skills, and propose actions through backend contracts.
+
+Hermes must not directly publish, send emails, update live site content, approve risky claims, mark handoffs as published, or move money-sensitive workflow state outside explicit backend approval rules.
+
+Canonical implementation note:
+
+- detailed spec: `docs/hermes-agent-integration.md`
+- preferred loop: backend task -> Hermes run -> structured result -> backend validation -> owner decision -> release/handoff/result
+
 ## Dashboard Role
 
 The dashboard is not the main daily workplace forever. Long-term, Hermes should push decisions and summaries to the owner in Telegram.

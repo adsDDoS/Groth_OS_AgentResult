@@ -51,3 +51,5 @@ The template keeps infrastructure conventional:
 - API-first task handoff.
 
 This makes it straightforward to run beside AgentResult infrastructure while remaining a standalone product.
+
+For the detailed Hermes runtime plan, see `docs/hermes-agent-integration.md`.
