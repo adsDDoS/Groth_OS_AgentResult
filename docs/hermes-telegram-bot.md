@@ -154,6 +154,8 @@ Backend can also execute and deliver the same command through `POST /telegram/co
 
 When Hermes prepares a new material in Telegram and the owner approves the draft, Hermes should call `POST /telegram/materials` with the title and text. Backend then creates the material, opens an approval, and returns the next owner commands. Hermes must not offer direct channel publication for a material that has not been recorded in backend.
 
+Direct Telegram channel publication is not enabled in the current Hermes polling contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, Hermes must not use terminal/env probing, Telegram send tools, or channel APIs. It should say that direct channel publishing is not connected in this contour, then keep the release inside the AgentResult loop: save, approve, hand off manually, and confirm result.
+
 Supported owner action body:
 
 ```json
