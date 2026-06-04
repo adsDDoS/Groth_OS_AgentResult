@@ -143,6 +143,7 @@ Result body:
 - `POST /telegram/actions`
 - `POST /telegram/commands`
 - `POST /telegram/commands/send`
+- `POST /telegram/materials`
 - `POST /telegram/webhook`
 
 `GET /telegram/owner-brief` returns the current owner-control state for Hermes and the future Telegram control surface. It does not send messages or publish anything. The response includes pending decisions, manually handed-off materials waiting for confirmation, confirmed outputs, result counters, the next owner action, and `telegramMessage` preview data.
@@ -203,6 +204,20 @@ Supported body:
   "targetId": "optional-approval-uuid",
   "note": "optional owner note",
   "dryRun": true
+}
+```
+
+`POST /telegram/materials` saves a newly prepared Telegram material from Hermes into backend state. It creates a content item, stores the text, opens an approval request, and returns owner-facing next commands. It does not publish the material or send it to a channel.
+
+Supported body:
+
+```json
+{
+  "title": "Почему прораб не заменит систему",
+  "bodyMd": "Prepared post text...",
+  "channel": "telegram",
+  "contentType": "telegram_post",
+  "note": "optional source note"
 }
 ```
 

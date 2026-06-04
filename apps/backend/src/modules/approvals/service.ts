@@ -22,7 +22,7 @@ export async function createApprovalRequest(input: {
   const result = await query(
     `insert into approvals
       (id, tenant_id, scope, target_type, target_id, status, requested_by, risk_flags, summary)
-     values ($1, $2, $3, $4, $5, 'pending', $6, $7, $8)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      returning *`,
     [
       randomUUID(),
@@ -30,6 +30,7 @@ export async function createApprovalRequest(input: {
       input.scope,
       input.targetType,
       input.targetId,
+      "pending",
       input.requestedBy ?? null,
       input.riskFlags ?? [],
       input.summary ?? null

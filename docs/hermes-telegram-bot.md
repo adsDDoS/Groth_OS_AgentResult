@@ -152,6 +152,8 @@ When the command response includes `buttons`, Hermes should render them as Teleg
 
 Backend can also execute and deliver the same command through `POST /telegram/commands/send`. This is for intentionally backend-owned Telegram delivery or dry-runs. Do not run backend webhook ownership and Hermes polling against the same bot token unless the gateway responsibility has been deliberately switched.
 
+When Hermes prepares a new material in Telegram and the owner approves the draft, Hermes should call `POST /telegram/materials` with the title and text. Backend then creates the material, opens an approval, and returns the next owner commands. Hermes must not offer direct channel publication for a material that has not been recorded in backend.
+
 Supported owner action body:
 
 ```json

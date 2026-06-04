@@ -2,7 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
-import { decideApproval } from "../approvals/service.js";
+import { createApprovalRequest, decideApproval } from "../approvals/service.js";
+import { insertJson } from "../common/repository.js";
 
 type Row = Record<string, unknown>;
 type TelegramButton = {
@@ -50,11 +51,19 @@ const telegramCommandSchema = z.object({
 const telegramSendCommandSchema = telegramCommandSchema.extend({
   dryRun: z.boolean().optional()
 });
+const telegramMaterialSchema = z.object({
+  title: z.string().min(3),
+  bodyMd: z.string().min(20),
+  channel: z.string().min(2).default("telegram"),
+  contentType: z.string().min(2).default("telegram_post"),
+  note: z.string().optional()
+});
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
 type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
 type TelegramCommandResult = Awaited<ReturnType<typeof executeTelegramCommand>>;
+type TelegramMaterialInput = z.infer<typeof telegramMaterialSchema>;
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -421,6 +430,17 @@ function renderCommandBrief(brief: OwnerBrief) {
   return lines.join("\n");
 }
 
+function renderMaterialCreatedMessage(input: { approval: Row; contentItem: Row }) {
+  return [
+    "Материал сохранён.",
+    "",
+    `Решение: ${textValue(input.approval.summary, "Согласовать материал")}`,
+    `Канал: ${textValue(input.contentItem.channel, "telegram")}`,
+    "",
+    "Доступно: /post, /osapprove, /changes"
+  ].join("\n");
+}
+
 function commandButton(command: string, label: string, targetId?: string | null): TelegramCommandButton {
   return {
     command,
@@ -461,6 +481,48 @@ function onboardingCommandButtons(): TelegramCommandButton[] {
     commandButton("/brief", "Сводка"),
     commandButton("/post", "Показать пост")
   ];
+}
+
+async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
+  const contentItem = await insertJson("content_items", {
+    title: input.title,
+    content_type: input.contentType,
+    channel: input.channel,
+    status: "review",
+    body_md: input.bodyMd,
+    metadata: {
+      source: "telegram_hermes",
+      note: input.note ?? null
+    }
+  }, context.tenantId);
+
+  await insertJson("content_versions", {
+    content_item_id: contentItem.id,
+    version: 1,
+    body_md: input.bodyMd,
+    change_note: "Черновик из Telegram-контура",
+    created_by: context.userId ?? null
+  }, context.tenantId);
+
+  const approval = await createApprovalRequest({
+    tenantId: context.tenantId,
+    scope: "social_post",
+    targetType: "content_item",
+    targetId: String(contentItem.id),
+    requestedBy: context.userId,
+    riskFlags: ["public claim", "channel publishing"],
+    summary: `Согласовать Telegram-пост: ${input.title}`
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  return {
+    text: renderMaterialCreatedMessage({ approval, contentItem }),
+    buttons: briefCommandButtons(ownerBrief),
+    contentItem,
+    approval,
+    ownerBrief
+  };
 }
 
 async function executeTelegramCommand(input: TelegramCommandInput, context: { tenantId: string; userId?: string }) {
@@ -696,6 +758,18 @@ export async function telegramRoutes(app: FastifyInstance) {
   app.post("/telegram/commands", async (request) => {
     const body = telegramCommandSchema.parse(request.body ?? {});
     const result = await executeTelegramCommand(body, {
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+
+    return {
+      data: result
+    };
+  });
+
+  app.post("/telegram/materials", async (request) => {
+    const body = telegramMaterialSchema.parse(request.body ?? {});
+    const result = await createTelegramMaterial(body, {
       tenantId: request.tenantId,
       userId: request.userId
     });

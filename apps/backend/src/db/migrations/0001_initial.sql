@@ -290,6 +290,7 @@ create table if not exists content_items (
   status text not null default 'idea',
   owner_id uuid,
   target_url text,
+  body_md text,
   metadata jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
