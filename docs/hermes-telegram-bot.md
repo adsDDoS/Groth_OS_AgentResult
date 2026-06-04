@@ -148,6 +148,8 @@ Hermes should call `POST /telegram/commands` for these commands and send only th
 
 When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.
 
+Backend can also execute and deliver the same command through `POST /telegram/commands/send`. This is for intentionally backend-owned Telegram delivery or dry-runs. Do not run backend webhook ownership and Hermes polling against the same bot token unless the gateway responsibility has been deliberately switched.
+
 Supported owner action body:
 
 ```json

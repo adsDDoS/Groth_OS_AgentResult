@@ -17,6 +17,10 @@ type TelegramCommandButton = {
   label: string;
   targetId?: string | null;
 };
+type ParsedTelegramCommandCallback = {
+  command: string;
+  targetId?: string;
+};
 type OwnerBriefInput = {
   approvals: Row[];
   calendar: Row[];
@@ -43,10 +47,14 @@ const telegramCommandSchema = z.object({
   targetId: z.string().uuid().optional(),
   note: z.string().optional()
 });
+const telegramSendCommandSchema = telegramCommandSchema.extend({
+  dryRun: z.boolean().optional()
+});
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
 type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
+type TelegramCommandResult = Awaited<ReturnType<typeof executeTelegramCommand>>;
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -141,6 +149,28 @@ function parseTelegramWebhookAction(payload: unknown): TelegramActionInput | nul
   return callbackData ? parseTelegramCallbackData(callbackData) : null;
 }
 
+function parseTelegramCommandCallbackData(data: string): ParsedTelegramCommandCallback | null {
+  if (!data.startsWith("cmd:")) return null;
+
+  const [, command = "", targetId] = data.split(":");
+  const parsed = telegramCommandSchema.safeParse({
+    command,
+    ...(targetId ? { targetId } : {})
+  });
+
+  return parsed.success ? {
+    command: parsed.data.command,
+    ...(parsed.data.targetId ? { targetId: parsed.data.targetId } : {})
+  } : null;
+}
+
+function parseTelegramWebhookCommand(payload: unknown): ParsedTelegramCommandCallback | null {
+  const parsed = telegramWebhookSchema.safeParse(payload);
+  const callbackData = parsed.success ? parsed.data.callback_query?.data : null;
+
+  return callbackData ? parseTelegramCommandCallbackData(callbackData) : null;
+}
+
 function renderOwnerBriefMessage(input: {
   handedOffItems: Row[];
   latestSummary: Row;
@@ -194,6 +224,22 @@ function telegramInlineKeyboard(buttons: TelegramButton[]) {
         text: button.label,
         callback_data: button.callbackData
       }))
+    ]
+  };
+}
+
+function telegramCommandKeyboard(buttons: TelegramCommandButton[] | undefined) {
+  const activeButtons = (buttons ?? []).filter((button) => button.command && button.label);
+  if (!activeButtons.length) return undefined;
+
+  return {
+    inline_keyboard: [
+      activeButtons.map((button) => {
+        return {
+          text: button.label,
+          callback_data: `cmd:${button.command}${button.targetId ? `:${button.targetId}` : ""}`
+        };
+      })
     ]
   };
 }
@@ -556,6 +602,51 @@ async function sendOwnerBriefToTelegram(brief: OwnerBrief, input: { dryRun?: boo
   };
 }
 
+async function sendTelegramCommandResult(result: TelegramCommandResult, input: { dryRun?: boolean }) {
+  const payload = {
+    chat_id: config.telegramApprovalChatId,
+    text: result.text,
+    reply_markup: telegramCommandKeyboard(result.buttons)
+  };
+
+  if (input.dryRun) {
+    return {
+      delivery: "dry_run",
+      payload
+    };
+  }
+
+  if (!config.telegramBotToken || !config.telegramApprovalChatId) {
+    const error = new Error("Telegram delivery is not configured");
+    Object.assign(error, { statusCode: 409, code: "TELEGRAM_DELIVERY_NOT_CONFIGURED" });
+    throw error;
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const responseBody = await response.json().catch(() => null) as Row | null;
+
+  if (!response.ok) {
+    const error = new Error("Telegram delivery failed");
+    Object.assign(error, {
+      statusCode: 502,
+      code: "TELEGRAM_DELIVERY_FAILED",
+      details: responseBody
+    });
+    throw error;
+  }
+
+  return {
+    delivery: "sent",
+    telegram: responseBody
+  };
+}
+
 export async function telegramRoutes(app: FastifyInstance) {
   app.get("/telegram/owner-brief", async (request) => {
     const briefData = await loadOwnerBriefData(request.tenantId);
@@ -614,6 +705,34 @@ export async function telegramRoutes(app: FastifyInstance) {
     };
   });
 
+  app.post("/telegram/commands/send", async (request) => {
+    const body = telegramSendCommandSchema.parse(request.body ?? {});
+    const result = await executeTelegramCommand(body, {
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    const delivery = await sendTelegramCommandResult(result, { dryRun: body.dryRun });
+
+    await query(
+      `insert into integrations (tenant_id, provider, status, config)
+       values ($1, 'telegram_command_delivery', $2, $3)
+       returning *`,
+      [request.tenantId, delivery.delivery, {
+        dryRun: Boolean(body.dryRun),
+        command: body.command,
+        result,
+        delivery
+      }]
+    );
+
+    return {
+      data: {
+        result,
+        delivery
+      }
+    };
+  });
+
   app.post("/telegram/webhook", async (request, reply) => {
     const secret = request.headers["x-telegram-bot-api-secret-token"];
     if (config.telegramWebhookSecret && secret !== config.telegramWebhookSecret) {
@@ -621,8 +740,15 @@ export async function telegramRoutes(app: FastifyInstance) {
     }
 
     const telegramAction = parseTelegramWebhookAction(request.body ?? {});
+    const telegramCommand = telegramAction ? null : parseTelegramWebhookCommand(request.body ?? {});
     const actionResult = telegramAction
       ? await executeTelegramAction(telegramAction, {
+        tenantId: request.tenantId,
+        userId: request.userId
+      })
+      : null;
+    const commandResult = telegramCommand
+      ? await executeTelegramCommand(telegramCommand, {
         tenantId: request.tenantId,
         userId: request.userId
       })
@@ -635,13 +761,15 @@ export async function telegramRoutes(app: FastifyInstance) {
       [request.tenantId, {
         payload: request.body ?? {},
         action: telegramAction,
-        actionResult
+        actionResult,
+        command: telegramCommand,
+        commandResult
       }]
     );
 
     return {
       ok: true,
-      data: actionResult
+      data: actionResult ?? commandResult
     };
   });
 }
