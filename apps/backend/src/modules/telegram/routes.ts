@@ -33,9 +33,15 @@ const telegramWebhookSchema = z.object({
 const telegramSendOwnerBriefSchema = z.object({
   dryRun: z.boolean().optional()
 });
+const telegramCommandSchema = z.object({
+  command: z.string().min(1),
+  targetId: z.string().uuid().optional(),
+  note: z.string().optional()
+});
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
+type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -306,6 +312,148 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   };
 }
 
+function renderOnboardingMessage() {
+  return [
+    "AgentResult OS — настройка",
+    "",
+    "1. Контекст бизнеса: что продаём, кому, какая цель.",
+    "2. Правила согласования: что можно готовить, что требует решения.",
+    "3. Каналы: сайт, Telegram, email, ручная передача.",
+    "4. Доступы: кто отвечает за выпуск и подтверждение результата.",
+    "5. Первый цикл: материал -> решение -> выпуск -> сигнал.",
+    "",
+    "Начнём с контекста бизнеса: что продаём и какой результат нужен в ближайшие 2 недели?"
+  ].join("\n");
+}
+
+function renderDecisionContent(brief: OwnerBrief) {
+  const decision = brief.decisions[0];
+  const contentText = textValue(decision?.contentText, "");
+
+  if (contentText) return contentText;
+
+  if (decision) {
+    return [
+      "Текст материала ещё не передан в backend.",
+      "",
+      `Решение: ${decision.title}`,
+      "Следующий шаг: добавить текст материала или вернуть на подготовку."
+    ].join("\n");
+  }
+
+  return "Сейчас нет материала, который ждёт решения.";
+}
+
+function renderCommandBrief(brief: OwnerBrief) {
+  const decision = brief.decisions[0];
+  const lines = [
+    "AgentResult OS — сводка",
+    "",
+    `Решения: ${brief.counts.decisions}`,
+    `Передано вручную: ${brief.counts.handedOff}`,
+    `Вышло: ${brief.counts.published}`,
+    `Заявки: ${brief.counts.leads}`,
+    `Деньги: ${brief.counts.money}`,
+    ""
+  ];
+
+  if (decision) {
+    lines.push("Требует решения:");
+    lines.push(decision.title);
+    if (decision.riskFlags.length) lines.push(`Риски: ${decision.riskFlags.join(", ")}`);
+    lines.push("");
+    lines.push("Команды: /post, /approve, /changes");
+  } else {
+    lines.push("Сейчас нет решений в очереди.");
+  }
+
+  return lines.join("\n");
+}
+
+async function executeTelegramCommand(input: TelegramCommandInput, context: { tenantId: string; userId?: string }) {
+  const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+  const primaryDecisionId = typeof ownerBrief.decisions[0]?.id === "string" ? ownerBrief.decisions[0].id : null;
+  const targetId = input.targetId ?? primaryDecisionId;
+
+  if (["brief", "status", "решения", "сводка"].includes(command)) {
+    return {
+      command,
+      text: renderCommandBrief(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  if (["post", "material", "draft", "текст", "пост", "материал"].includes(command)) {
+    return {
+      command,
+      text: renderDecisionContent(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  if (["onboarding", "start_setup", "setup", "настройка"].includes(command)) {
+    return {
+      command,
+      text: renderOnboardingMessage(),
+      ownerBrief
+    };
+  }
+
+  if (["approve", "ok", "согласовать", "ок"].includes(command)) {
+    if (!targetId) {
+      return {
+        command,
+        text: "Сейчас нет решения, которое можно согласовать.",
+        ownerBrief
+      };
+    }
+
+    const actionResult = await executeTelegramAction({
+      action: "approval.approve",
+      targetId,
+      note: input.note
+    }, context);
+
+    return {
+      command,
+      text: "Решение зафиксировано: согласовано.",
+      ownerBrief: actionResult.ownerBrief,
+      actionResult
+    };
+  }
+
+  if (["changes", "request_changes", "правки", "нужны правки"].includes(command)) {
+    if (!targetId) {
+      return {
+        command,
+        text: "Сейчас нет решения, по которому можно запросить правки.",
+        ownerBrief
+      };
+    }
+
+    const actionResult = await executeTelegramAction({
+      action: "approval.request_changes",
+      targetId,
+      note: input.note || "Нужны правки из Telegram-контура"
+    }, context);
+
+    return {
+      command,
+      text: "Решение зафиксировано: нужны правки.",
+      ownerBrief: actionResult.ownerBrief,
+      actionResult
+    };
+  }
+
+  return {
+    command,
+    text: "Команда не распознана. Доступно: /brief, /post, /approve, /changes, /onboarding.",
+    ownerBrief
+  };
+}
+
 async function sendOwnerBriefToTelegram(brief: OwnerBrief, input: { dryRun?: boolean }) {
   const message = brief.telegramMessage;
   const replyMarkup = telegramInlineKeyboard(message.buttons);
@@ -396,6 +544,18 @@ export async function telegramRoutes(app: FastifyInstance) {
 
     return {
       data: actionResult
+    };
+  });
+
+  app.post("/telegram/commands", async (request) => {
+    const body = telegramCommandSchema.parse(request.body ?? {});
+    const result = await executeTelegramCommand(body, {
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+
+    return {
+      data: result
     };
   });
 

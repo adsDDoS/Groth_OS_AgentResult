@@ -130,10 +130,21 @@ GET /tasks/:id/events
 Actions:
 
 ```text
+POST /telegram/commands
 POST /telegram/actions
 POST /hermes/tasks/:id/dispatch
 POST /hermes/tasks/:id/result
 ```
+
+Preferred Telegram commands:
+
+- `/brief`: show current owner-control state.
+- `/post`: show the material waiting for approval.
+- `/approve`: record approval through backend.
+- `/changes`: request changes through backend.
+- `/onboarding`: start setup flow through Telegram.
+
+Hermes should call `POST /telegram/commands` for these commands and send only the returned `text` to the owner.
 
 Supported owner action body:
 

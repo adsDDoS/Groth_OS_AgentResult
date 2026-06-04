@@ -141,6 +141,7 @@ Result body:
 - `GET /telegram/owner-brief`
 - `POST /telegram/owner-brief/send`
 - `POST /telegram/actions`
+- `POST /telegram/commands`
 - `POST /telegram/webhook`
 
 `GET /telegram/owner-brief` returns the current owner-control state for Hermes and the future Telegram control surface. It does not send messages or publish anything. The response includes pending decisions, manually handed-off materials waiting for confirmation, confirmed outputs, result counters, the next owner action, and `telegramMessage` preview data.
@@ -153,6 +154,26 @@ Result body:
 - `delivery: "preview_only"` until a real Telegram sender is connected.
 
 `POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
+
+`POST /telegram/commands` executes a predictable owner-facing command and returns ready-to-send text for Hermes Telegram. It is the preferred path for slash commands and short owner commands where model interpretation should be minimized.
+
+Supported command body:
+
+```json
+{
+  "command": "/brief",
+  "targetId": "optional-approval-uuid",
+  "note": "optional owner note"
+}
+```
+
+Supported commands:
+
+- `/brief`: current decisions, handoffs, outputs, leads, money, next action;
+- `/post`: text of the material waiting for approval;
+- `/approve`: records approval for the current or specified decision;
+- `/changes`: records that changes are needed;
+- `/onboarding`: starts step-by-step setup in Telegram.
 
 `POST /telegram/owner-brief/send` sends the current owner brief to the configured Telegram owner chat with inline control buttons. It only sends the decision summary and prepared control actions. It does not publish materials, send emails, or perform owner decisions by itself.
 

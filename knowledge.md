@@ -143,6 +143,16 @@ Hermes Telegram must not expose terminal commands, tool logs, raw skill names, s
 
 Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.
 
+Preferred Telegram command contract:
+
+- `/brief`: show decisions, handoffs, releases, leads, money, next action.
+- `/post`: show the material text waiting for approval.
+- `/approve`: record approval through backend.
+- `/changes`: request changes through backend.
+- `/onboarding`: start setup flow through Telegram.
+
+Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
+
 Canonical implementation note:
 
 - detailed spec: `docs/hermes-agent-integration.md`
