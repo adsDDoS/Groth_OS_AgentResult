@@ -413,7 +413,7 @@ function renderCommandBrief(brief: OwnerBrief) {
     lines.push(decision.title);
     if (decision.riskFlags.length) lines.push(`Риски: ${decision.riskFlags.join(", ")}`);
     lines.push("");
-    lines.push("Команды: /post, /approve, /changes");
+    lines.push("Доступно: /post, /osapprove, /changes");
   } else {
     lines.push("Сейчас нет решений в очереди.");
   }
@@ -437,7 +437,7 @@ function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   ];
 
   if (targetId) {
-    buttons.splice(1, 0, commandButton("/approve", "Согласовать", targetId));
+    buttons.splice(1, 0, commandButton("/osapprove", "Согласовать", targetId));
     buttons.splice(2, 0, commandButton("/changes", "Нужны правки", targetId));
   }
 
@@ -450,7 +450,7 @@ function postCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
 
   if (targetId) {
     buttons.unshift(commandButton("/changes", "Нужны правки", targetId));
-    buttons.unshift(commandButton("/approve", "Согласовать", targetId));
+    buttons.unshift(commandButton("/osapprove", "Согласовать", targetId));
   }
 
   return buttons;
@@ -497,7 +497,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     };
   }
 
-  if (["approve", "ok", "согласовать", "ок"].includes(command)) {
+  if (["approve", "osapprove", "ok", "согласовать", "ок"].includes(command)) {
     if (!targetId) {
       return {
         command,
@@ -549,7 +549,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
 
   return {
     command,
-    text: "Команда не распознана. Доступно: /brief, /post, /approve, /changes, /onboarding.",
+    text: "Команда не распознана. Доступно: /brief, /post, /osapprove, /changes, /onboarding.",
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };

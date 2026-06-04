@@ -149,13 +149,13 @@ Preferred Telegram command contract:
 
 - `/brief`: show decisions, handoffs, releases, leads, money, next action.
 - `/post`: show the material text waiting for approval.
-- `/approve`: record approval through backend.
+- `/osapprove`: record approval through backend in Hermes polling mode.
 - `/changes`: request changes through backend.
 - `/onboarding`: start setup flow through Telegram.
 
 Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
 
-Hermes Telegram slash commands must also be registered in Hermes `quick_commands`; prompt instructions alone do not make `/brief` or `/post` available in the Telegram gateway. Current VPS runtime maps `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` to a small helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use `/osapprove` as the safe approval command because `/approve` can be reserved by Hermes for tool approval flows.
+Hermes Telegram slash commands must also be registered in Hermes `quick_commands`; prompt instructions alone do not make `/brief` or `/post` available in the Telegram gateway. Current VPS runtime maps `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` to a small helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` as the safe approval command because `/approve` can be reserved by Hermes for tool approval flows. Backend may still accept `/approve` internally for non-Hermes callers, but owner-facing Telegram copy should prefer `/osapprove`.
 
 When `POST /telegram/commands` returns `buttons`, use those backend-provided buttons for Telegram inline controls or command shortcuts. Do not invent button labels or action payloads in Hermes.
 

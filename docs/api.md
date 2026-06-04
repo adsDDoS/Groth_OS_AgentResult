@@ -179,7 +179,7 @@ Supported commands:
 
 - `/brief`: current decisions, handoffs, outputs, leads, money, next action;
 - `/post`: text of the material waiting for approval;
-- `/approve`: records approval for the current or specified decision;
+- `/osapprove`: records approval for the current or specified decision in Hermes polling mode;
 - `/changes`: records that changes are needed;
 - `/onboarding`: starts step-by-step setup in Telegram.
 
@@ -187,7 +187,7 @@ Command button shape:
 
 ```json
 {
-  "command": "/approve",
+  "command": "/osapprove",
   "label": "Согласовать",
   "targetId": "optional-approval-uuid"
 }
