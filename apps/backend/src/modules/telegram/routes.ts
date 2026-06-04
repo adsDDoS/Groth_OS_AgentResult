@@ -15,6 +15,7 @@ type TelegramButton = {
 type OwnerBriefInput = {
   approvals: Row[];
   calendar: Row[];
+  contentItems: Row[];
   latestSummary: Row;
 };
 
@@ -187,10 +188,11 @@ function telegramInlineKeyboard(buttons: TelegramButton[]) {
 }
 
 function buildOwnerBrief(input: OwnerBriefInput) {
-  const { approvals, calendar, latestSummary } = input;
+  const { approvals, calendar, contentItems, latestSummary } = input;
   const pendingApprovals = approvals.filter((row) => row.status === "pending");
   const handedOffItems = calendar.filter((row) => row.status === "handed_off");
   const publishedItems = calendar.filter((row) => row.status === "published");
+  const contentById = new Map(contentItems.map((row) => [row.id, row]));
 
   return {
     surface: "telegram_control",
@@ -202,12 +204,25 @@ function buildOwnerBrief(input: OwnerBriefInput) {
       leads: Number(latestSummary.leads ?? 0),
       money: Number(latestSummary.recovered_payments ?? 0)
     },
-    decisions: pendingApprovals.slice(0, 5).map((row) => ({
-      id: row.id,
-      title: textValue(row.summary, "Материал ждёт решения"),
-      scope: row.scope ?? null,
-      riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : []
-    })),
+    decisions: pendingApprovals.slice(0, 5).map((row) => {
+      const contentItem = typeof row.target_id === "string" ? contentById.get(row.target_id) : null;
+      const contentText = textValue(contentItem?.body_md, "");
+
+      return {
+        id: row.id,
+        title: textValue(row.summary, "Материал ждёт решения"),
+        scope: row.scope ?? null,
+        riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : [],
+        targetType: row.target_type ?? null,
+        targetId: row.target_id ?? null,
+        contentItemId: contentItem?.id ?? null,
+        contentTitle: contentItem ? textValue(contentItem.title, "Материал") : null,
+        contentType: contentItem?.content_type ?? null,
+        channel: contentItem?.channel ?? null,
+        contentPreview: contentText ? truncateText(contentText, 700) : null,
+        contentText: contentText || null
+      };
+    }),
     handoffs: handedOffItems.slice(0, 5).map((row) => ({
       id: row.id,
       title: textValue(row.title, "Переданный материал"),
@@ -232,9 +247,10 @@ function buildOwnerBrief(input: OwnerBriefInput) {
 }
 
 async function loadOwnerBriefData(tenantId: string) {
-  const [approvalsResult, calendarResult, latestImport] = await Promise.all([
+  const [approvalsResult, calendarResult, contentItemsResult, latestImport] = await Promise.all([
     query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]),
+    query("select * from content_items where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [tenantId, 1]).catch(() => ({
       rows: []
     }))
@@ -246,6 +262,7 @@ async function loadOwnerBriefData(tenantId: string) {
   return {
     approvals: approvalsResult.rows as Row[],
     calendar: calendarResult.rows as Row[],
+    contentItems: contentItemsResult.rows as Row[],
     latestSummary
   };
 }

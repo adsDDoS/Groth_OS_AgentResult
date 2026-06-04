@@ -139,6 +139,10 @@ Hermes may be connected directly to a Telegram bot as the owner-facing conversat
 
 Hermes Telegram access should use the native Hermes allowlist variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep the secret under `HERMES_TELEGRAM_BOT_TOKEN` and map it to `TELEGRAM_BOT_TOKEN` only inside the Hermes service. `TELEGRAM_ALLOWED_USERS` expects numeric Telegram user IDs, not usernames.
 
+Hermes Telegram must not expose terminal commands, tool logs, raw skill names, stack traces, approval internals, or backend probing to the owner. The owner-facing chat should show only business output: decisions, tasks, material text, release status, result, and concise failure states. If a tool/terminal approval is technically required by Hermes, treat it as an implementation detail to remove from the customer experience.
+
+Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.
+
 Canonical implementation note:
 
 - detailed spec: `docs/hermes-agent-integration.md`

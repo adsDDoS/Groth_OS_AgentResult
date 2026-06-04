@@ -114,6 +114,7 @@ Hermes must not:
 - confirm publication by itself;
 - mark money-sensitive actions complete outside backend;
 - store Telegram, CRM, CMS, bank, or email credentials in memory.
+- expose terminal commands, tool logs, raw skill names, stack traces, or backend probing in the owner chat.
 
 ## Backend APIs Hermes Should Use
 
@@ -163,6 +164,7 @@ Supported action ids:
    - published count;
    - leads;
    - next owner action.
+   - material text when the owner asks to see the item waiting for approval.
 7. Press or send an approval command.
 8. Hermes should call `POST /telegram/actions`.
 9. Backend should record the action.
@@ -176,3 +178,4 @@ Supported action ids:
 - Keep the Telegram bot token only in the Hermes service.
 - Use backend audit events to review every recorded decision.
 - Keep owner-facing copy concise: decisions, tasks, control, release, result.
+- Add `/onboarding` as the future setup path in Telegram: business context, approval rules, channels, access, first release, result tracking.
