@@ -153,6 +153,8 @@ Preferred Telegram command contract:
 
 Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
 
+When `POST /telegram/commands` returns `buttons`, use those backend-provided buttons for Telegram inline controls or command shortcuts. Do not invent button labels or action payloads in Hermes.
+
 Canonical implementation note:
 
 - detailed spec: `docs/hermes-agent-integration.md`

@@ -12,6 +12,11 @@ type TelegramButton = {
   targetId: unknown;
   targetType: "approval" | "publishing_calendar_item";
 };
+type TelegramCommandButton = {
+  command: string;
+  label: string;
+  targetId?: string | null;
+};
 type OwnerBriefInput = {
   approvals: Row[];
   calendar: Row[];
@@ -370,6 +375,48 @@ function renderCommandBrief(brief: OwnerBrief) {
   return lines.join("\n");
 }
 
+function commandButton(command: string, label: string, targetId?: string | null): TelegramCommandButton {
+  return {
+    command,
+    label,
+    ...(targetId ? { targetId } : {})
+  };
+}
+
+function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
+  const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+  const buttons = [
+    commandButton("/post", "Показать пост", targetId),
+    commandButton("/onboarding", "Настройка")
+  ];
+
+  if (targetId) {
+    buttons.splice(1, 0, commandButton("/approve", "Согласовать", targetId));
+    buttons.splice(2, 0, commandButton("/changes", "Нужны правки", targetId));
+  }
+
+  return buttons;
+}
+
+function postCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
+  const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+  const buttons = [commandButton("/brief", "Сводка")];
+
+  if (targetId) {
+    buttons.unshift(commandButton("/changes", "Нужны правки", targetId));
+    buttons.unshift(commandButton("/approve", "Согласовать", targetId));
+  }
+
+  return buttons;
+}
+
+function onboardingCommandButtons(): TelegramCommandButton[] {
+  return [
+    commandButton("/brief", "Сводка"),
+    commandButton("/post", "Показать пост")
+  ];
+}
+
 async function executeTelegramCommand(input: TelegramCommandInput, context: { tenantId: string; userId?: string }) {
   const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
   const briefData = await loadOwnerBriefData(context.tenantId);
@@ -381,6 +428,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     return {
       command,
       text: renderCommandBrief(ownerBrief),
+      buttons: briefCommandButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -389,6 +437,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     return {
       command,
       text: renderDecisionContent(ownerBrief),
+      buttons: postCommandButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -397,6 +446,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     return {
       command,
       text: renderOnboardingMessage(),
+      buttons: onboardingCommandButtons(),
       ownerBrief
     };
   }
@@ -406,6 +456,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
       return {
         command,
         text: "Сейчас нет решения, которое можно согласовать.",
+        buttons: briefCommandButtons(ownerBrief),
         ownerBrief
       };
     }
@@ -419,6 +470,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     return {
       command,
       text: "Решение зафиксировано: согласовано.",
+      buttons: briefCommandButtons(actionResult.ownerBrief),
       ownerBrief: actionResult.ownerBrief,
       actionResult
     };
@@ -429,6 +481,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
       return {
         command,
         text: "Сейчас нет решения, по которому можно запросить правки.",
+        buttons: briefCommandButtons(ownerBrief),
         ownerBrief
       };
     }
@@ -442,6 +495,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
     return {
       command,
       text: "Решение зафиксировано: нужны правки.",
+      buttons: briefCommandButtons(actionResult.ownerBrief),
       ownerBrief: actionResult.ownerBrief,
       actionResult
     };
@@ -450,6 +504,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
   return {
     command,
     text: "Команда не распознана. Доступно: /brief, /post, /approve, /changes, /onboarding.",
+    buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
 }

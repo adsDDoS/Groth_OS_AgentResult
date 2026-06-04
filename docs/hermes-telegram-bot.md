@@ -146,6 +146,8 @@ Preferred Telegram commands:
 
 Hermes should call `POST /telegram/commands` for these commands and send only the returned `text` to the owner.
 
+When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.
+
 Supported owner action body:
 
 ```json

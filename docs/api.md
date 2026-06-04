@@ -157,6 +157,13 @@ Result body:
 
 `POST /telegram/commands` executes a predictable owner-facing command and returns ready-to-send text for Hermes Telegram. It is the preferred path for slash commands and short owner commands where model interpretation should be minimized.
 
+Command response includes:
+
+- `text`: ready owner-facing text;
+- `buttons`: optional command buttons for Telegram UI;
+- `ownerBrief`: refreshed owner-control state;
+- `actionResult`: only when the command records a backend action.
+
 Supported command body:
 
 ```json
@@ -174,6 +181,16 @@ Supported commands:
 - `/approve`: records approval for the current or specified decision;
 - `/changes`: records that changes are needed;
 - `/onboarding`: starts step-by-step setup in Telegram.
+
+Command button shape:
+
+```json
+{
+  "command": "/approve",
+  "label": "Согласовать",
+  "targetId": "optional-approval-uuid"
+}
+```
 
 `POST /telegram/owner-brief/send` sends the current owner brief to the configured Telegram owner chat with inline control buttons. It only sends the decision summary and prepared control actions. It does not publish materials, send emails, or perform owner decisions by itself.
 
