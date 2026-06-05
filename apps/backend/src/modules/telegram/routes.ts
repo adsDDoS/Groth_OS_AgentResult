@@ -89,6 +89,11 @@ const onboardingStateSchema = z.object({
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
+type OwnerPriority =
+  | { type: "confirm_publication"; handoff: Row; decision?: undefined; preparingTask?: undefined }
+  | { type: "approval"; decision: Row; handoff?: undefined; preparingTask?: undefined }
+  | { type: "preparing"; preparingTask: Row; decision?: undefined; handoff?: undefined }
+  | { type: "new_topic"; decision?: undefined; handoff?: undefined; preparingTask?: undefined };
 type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
 type TelegramCommandResult = Awaited<ReturnType<typeof executeTelegramCommand>>;
 type TelegramIntentInput = z.infer<typeof telegramIntentSchema>;
@@ -184,39 +189,52 @@ function telegramMetricLines(input: {
   ].filter((line): line is string => Boolean(line));
 }
 
-function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[], hermesDraftTasks: Row[] = []) {
-  if (pendingApprovals.length) {
-    return {
-      type: "approval",
-      label: "Открыть решение",
-      title: ownerFacingText(pendingApprovals[0].summary, "Есть материал на согласование"),
-      targetId: pendingApprovals[0].id ?? null
-    };
-  }
+function ownerPriority(input: { decisions: Row[]; handoffs: Row[]; preparing: Row[] }): OwnerPriority {
+  if (input.handoffs.length) return { type: "confirm_publication", handoff: input.handoffs[0] };
+  if (input.decisions.length) return { type: "approval", decision: input.decisions[0] };
+  if (input.preparing.length) return { type: "preparing", preparingTask: input.preparing[0] };
+  return { type: "new_topic" };
+}
 
-  if (handedOffItems.length) {
+function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[], hermesDraftTasks: Row[] = []) {
+  const priority = ownerPriority({
+    decisions: pendingApprovals,
+    handoffs: handedOffItems,
+    preparing: hermesDraftTasks
+  });
+
+  if (priority.type === "confirm_publication") {
     return {
       type: "confirm_publication",
       label: "Подтвердить выход",
-      title: ownerFacingText(handedOffItems[0].title, "Переданный материал ждёт подтверждения"),
-      targetId: handedOffItems[0].id ?? null
+      title: ownerFacingText(priority.handoff.title, "Переданный материал ждёт подтверждения"),
+      targetId: priority.handoff.id ?? null
     };
   }
 
-  if (hermesDraftTasks.length) {
-    const payload = hermesDraftTasks[0].payload && typeof hermesDraftTasks[0].payload === "object" ? hermesDraftTasks[0].payload as Row : {};
+  if (priority.type === "approval") {
+    return {
+      type: "approval",
+      label: "Открыть решение",
+      title: ownerFacingText(priority.decision.summary, "Есть материал на согласование"),
+      targetId: priority.decision.id ?? null
+    };
+  }
+
+  if (priority.type === "preparing") {
+    const payload = priority.preparingTask.payload && typeof priority.preparingTask.payload === "object" ? priority.preparingTask.payload as Row : {};
     return {
       type: "preparing",
       label: "Дождаться черновика",
       title: `AgentResult готовит черновик: ${ownerFacingText(payload.title, "материал")}`,
-      targetId: hermesDraftTasks[0].id ?? null
+      targetId: priority.preparingTask.id ?? null
     };
   }
 
   return {
-    type: "watch_results",
-    label: "Проверить результат",
-    title: "Ждём заявки, ответа или другого бизнес-сигнала",
+    type: "new_topic",
+    label: "Поставить тему в работу",
+    title: "Поставить следующую тему или задачу в подготовку",
     targetId: null
   };
 }
@@ -309,9 +327,12 @@ function renderOwnerBriefMessage(input: {
   publishedItems: Row[];
 }) {
   const { handedOffItems, hermesDraftTasks, latestSummary, pendingApprovals, publishedItems } = input;
-  const primaryDecision = pendingApprovals[0] ?? null;
-  const primaryHandoff = handedOffItems[0] ?? null;
-  const primaryHermesTask = hermesDraftTasks[0] ?? null;
+  const priority = ownerPriority({
+    decisions: pendingApprovals,
+    handoffs: handedOffItems,
+    preparing: hermesDraftTasks
+  });
+  const primaryHermesTask = priority.type === "preparing" ? priority.preparingTask : null;
   const leads = Number(latestSummary.leads ?? 0);
   const money = Number(latestSummary.recovered_payments ?? 0);
 
@@ -333,20 +354,22 @@ function renderOwnerBriefMessage(input: {
     lines.push(`AgentResult готовит черновик: ${truncateText(ownerFacingText(payload.title, "первый материал"))}`);
   }
 
-  if (primaryDecision) {
-    lines.push(`Следующее решение: ${truncateText(ownerFacingText(primaryDecision.summary, "Материал ждёт решения"))}`);
-  } else if (primaryHandoff) {
-    lines.push(`Подтвердить выход: ${truncateText(ownerFacingText(primaryHandoff.title, "Переданный материал"))}`);
-  } else if (primaryHermesTask) {
+  if (priority.type === "confirm_publication") {
+    lines.push("Приоритет: подтвердить выход.");
+    lines.push(`Материал: ${truncateText(ownerFacingText(priority.handoff.title, "Переданный материал"))}`);
+  } else if (priority.type === "approval") {
+    lines.push("Приоритет: принять решение.");
+    lines.push(`Материал: ${truncateText(ownerFacingText(priority.decision.summary, "Материал ждёт решения"))}`);
+  } else if (priority.type === "preparing") {
     lines.push("Следующий шаг: дождаться черновика и принять решение.");
   } else {
-    lines.push("Следующий шаг: проверить результат и новые сигналы.");
+    lines.push("Следующий шаг: поставить следующую тему в работу.");
   }
 
-  const buttons = [
-    ...(primaryDecision ? approvalButtons(primaryDecision) : []),
-    ...(primaryHandoff ? handoffButtons(primaryHandoff) : [])
-  ];
+  const buttons =
+    priority.type === "confirm_publication" ? handoffButtons(priority.handoff) :
+    priority.type === "approval" ? approvalButtons(priority.decision) :
+    [];
 
   return {
     text: lines.join("\n"),
@@ -889,9 +912,12 @@ function renderDecisionContent(brief: OwnerBrief) {
 }
 
 function renderCommandBrief(brief: OwnerBrief) {
-  const decision = brief.decisions[0];
-  const handoff = brief.handoffs[0];
-  const preparingTask = brief.preparing[0];
+  const priority = ownerPriority({
+    decisions: brief.decisions,
+    handoffs: brief.handoffs,
+    preparing: brief.preparing
+  });
+  const preparingTask = priority.type === "preparing" ? priority.preparingTask : null;
   const lines = [
     "AgentResult Growth Control",
     "",
@@ -910,23 +936,23 @@ function renderCommandBrief(brief: OwnerBrief) {
     lines.push("");
   }
 
-  if (decision) {
-    lines.push("Требует решения:");
-    lines.push(decision.title);
-    const risks = riskLine(decision.riskFlags);
+  if (priority.type === "confirm_publication") {
+    lines.push("Приоритет: подтвердить выход.");
+    lines.push(textValue(priority.handoff.title, "Переданный материал"));
+    lines.push("");
+    lines.push("Когда материал вышел, напишите: вышло.");
+  } else if (priority.type === "approval") {
+    lines.push("Приоритет: принять решение.");
+    lines.push(textValue(priority.decision.title, "Материал ждёт решения"));
+    const risks = riskLine(Array.isArray(priority.decision.riskFlags) ? priority.decision.riskFlags : []);
     if (risks) lines.push(risks);
     lines.push("");
-    lines.push("Можно посмотреть материал, согласовать или запросить правки.");
-  } else if (handoff) {
-    lines.push("Ждёт подтверждения выхода:");
-    lines.push(textValue(handoff.title, "Переданный материал"));
-    lines.push("");
-    lines.push("Когда материал выйдет, напишите: вышло.");
+    lines.push("Можно посмотреть материал, согласовать или вернуть на правки.");
   } else if (preparingTask) {
     lines.push("Следующий шаг: дождаться черновика и принять решение.");
   } else {
     lines.push("Сейчас нет решений в очереди.");
-    lines.push("Следующий шаг: проверить результат и подготовить следующий материал.");
+    lines.push("Следующий шаг: поставить следующую тему в работу.");
   }
 
   return lines.join("\n");
@@ -989,6 +1015,12 @@ function renderDirectPublishingBoundary() {
 }
 
 function renderResultMessage(brief: OwnerBrief) {
+  const priority = ownerPriority({
+    decisions: brief.decisions,
+    handoffs: brief.handoffs,
+    preparing: brief.preparing
+  });
+
   return [
     "AgentResult Growth Control — результат",
     "",
@@ -999,9 +1031,13 @@ function renderResultMessage(brief: OwnerBrief) {
       money: brief.counts.money
     }),
     "",
-    brief.counts.decisions
+    priority.type === "confirm_publication"
+      ? "Следующий шаг: подтвердить выход переданного материала."
+      : priority.type === "approval"
       ? "Следующий шаг: закрыть решение в очереди."
-      : "Следующий шаг: проверить новые сигналы после выпуска."
+      : priority.type === "preparing"
+      ? "Следующий шаг: дождаться черновика и принять решение."
+      : "Следующий шаг: поставить следующую тему в работу."
   ].join("\n");
 }
 
@@ -1018,6 +1054,11 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
 }
 
 function renderDailyWorkMessage(brief: OwnerBrief) {
+  const priority = ownerPriority({
+    decisions: brief.decisions,
+    handoffs: brief.handoffs,
+    preparing: brief.preparing
+  });
   const lines = [
     "Ежедневный контур:",
     "",
@@ -1028,20 +1069,25 @@ function renderDailyWorkMessage(brief: OwnerBrief) {
     ""
   ];
 
-  if (brief.counts.decisions > 0) {
-    lines.push(`Сейчас важно: закрыть ${brief.counts.decisions} решение.`);
-  } else if (brief.counts.handedOff > 0) {
+  if (priority.type === "confirm_publication") {
     lines.push(`Сейчас важно: подтвердить выход ${brief.counts.handedOff} переданного материала.`);
-  } else if (brief.counts.preparing > 0) {
-    lines.push(`Сейчас AgentResult готовит черновик: ${textValue(brief.preparing[0]?.title, "материал")}.`);
+  } else if (priority.type === "approval") {
+    lines.push(`Сейчас важно: закрыть ${brief.counts.decisions} решение.`);
+  } else if (priority.type === "preparing") {
+    lines.push(`Сейчас AgentResult готовит черновик: ${textValue(priority.preparingTask.title, "материал")}.`);
   } else {
-    lines.push("Сейчас важно: проверить результат и подготовить следующий материал.");
+    lines.push("Сейчас важно: поставить следующую тему в работу.");
   }
 
   return lines.join("\n");
 }
 
 function renderResetMessage(brief: OwnerBrief) {
+  const priority = ownerPriority({
+    decisions: brief.decisions,
+    handoffs: brief.handoffs,
+    preparing: brief.preparing
+  });
   const lines = [
     "Контур обновлён.",
     "",
@@ -1049,12 +1095,12 @@ function renderResetMessage(brief: OwnerBrief) {
     ""
   ];
 
-  if (brief.counts.decisions > 0) {
-    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
-  } else if (brief.counts.handedOff > 0) {
+  if (priority.type === "confirm_publication") {
     lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
-  } else if (brief.counts.preparing > 0) {
-    lines.push(`AgentResult готовит черновик: ${textValue(brief.preparing[0]?.title, "материал")}.`);
+  } else if (priority.type === "approval") {
+    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
+  } else if (priority.type === "preparing") {
+    lines.push(`AgentResult готовит черновик: ${textValue(priority.preparingTask.title, "материал")}.`);
   } else {
     lines.push("Сейчас нет решений в очереди.");
   }
@@ -1063,6 +1109,11 @@ function renderResetMessage(brief: OwnerBrief) {
 }
 
 function renderDemoResetMessage(brief: OwnerBrief) {
+  const priority = ownerPriority({
+    decisions: brief.decisions,
+    handoffs: brief.handoffs,
+    preparing: brief.preparing
+  });
   const lines = [
     "Демо-состояние сброшено.",
     "",
@@ -1070,31 +1121,42 @@ function renderDemoResetMessage(brief: OwnerBrief) {
     ""
   ];
 
-  if (brief.counts.decisions > 0) {
+  if (priority.type === "confirm_publication") {
+    lines.push("Следующий шаг: подтвердить выход переданного материала.");
+  } else if (priority.type === "approval") {
     lines.push("Следующий шаг: посмотреть материал и принять решение.");
+  } else if (priority.type === "preparing") {
+    lines.push("Следующий шаг: дождаться черновика и принять решение.");
   } else {
-    lines.push("Следующий шаг: проверить текущее состояние.");
+    lines.push("Следующий шаг: поставить следующую тему в работу.");
   }
 
   return lines.join("\n");
 }
 
 function renderUnknownIntentMessage(brief?: OwnerBrief) {
+  const priority = brief
+    ? ownerPriority({
+        decisions: brief.decisions,
+        handoffs: brief.handoffs,
+        preparing: brief.preparing
+      })
+    : null;
   const lines = [
     "Не зафиксировал действие.",
     "",
     "Можно написать обычным языком: что сегодня, показать материал, согласовать, нужны правки, передал в выпуск, вышло, что по результату."
   ];
 
-  if (brief?.counts.decisions) {
-    lines.push("");
-    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
-  } else if (brief?.counts.handedOff) {
+  if (brief && priority?.type === "confirm_publication") {
     lines.push("");
     lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
-  } else if (brief?.counts.preparing) {
+  } else if (brief && priority?.type === "approval") {
     lines.push("");
-    lines.push(`AgentResult готовит черновик: ${textValue(brief.preparing[0]?.title, "материал")}.`);
+    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
+  } else if (brief && priority?.type === "preparing") {
+    lines.push("");
+    lines.push(`AgentResult готовит черновик: ${textValue(priority.preparingTask.title, "материал")}.`);
   }
 
   return lines.join("\n");
@@ -1206,16 +1268,13 @@ function findApprovedContentForHandoff(input: BriefData) {
 
 function handoffButtonsForBrief(brief: OwnerBrief): TelegramCommandButton[] {
   const itemId = typeof brief.handoffs[0]?.id === "string" ? brief.handoffs[0].id : null;
-  const buttons = [commandButton("result", "Результат")];
-
-  if (itemId) buttons.unshift(commandButton("published", "Подтвердить выход", itemId));
-
-  return buttons;
+  return itemId ? [commandButton("published", "Подтвердить выход", itemId)] : [commandButton("result", "Результат")];
 }
 
 function ownerControlButtons(brief: OwnerBrief): TelegramCommandButton[] {
-  if (brief.counts.decisions > 0) return briefCommandButtons(brief);
   if (brief.counts.handedOff > 0) return handoffButtonsForBrief(brief);
+  if (brief.counts.decisions > 0) return briefCommandButtons(brief);
+  if (brief.counts.preparing > 0) return [commandButton("preparing", "Что готовится"), commandButton("onboarding", "Настройка")];
   return [commandButton("result", "Результат"), commandButton("onboarding", "Настройка")];
 }
 
@@ -1356,7 +1415,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return {
       command,
       text: renderCommandBrief(ownerBrief),
-      buttons: briefCommandButtons(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -1365,7 +1424,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return {
       command,
       text: renderPreparationStatusMessage(ownerBrief),
-      buttons: briefCommandButtons(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
       ownerBrief
     };
   }
