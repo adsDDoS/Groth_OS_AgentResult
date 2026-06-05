@@ -217,6 +217,7 @@ Current Telegram onboarding flow:
 - creates a Hermes `content_writer` task for the first material;
 - starts a backend background job for Hermes dispatch;
 - immediately tells the owner that the task is in work;
+- shows active draft preparation in `/brief` / "что дальше" as `Hermes готовит черновик`;
 - receives a `draft` artifact through backend when Hermes finishes;
 - saves the Hermes draft as a content item in `review`;
 - opens an approval for that material;

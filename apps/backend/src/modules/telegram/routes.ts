@@ -30,6 +30,7 @@ type OwnerBriefInput = {
   calendar: Row[];
   contentItems: Row[];
   latestSummary: Row;
+  tasks: Row[];
 };
 type TelegramExecutionContext = {
   app?: FastifyInstance;
@@ -177,7 +178,7 @@ function telegramMetricLines(input: {
   ].filter((line): line is string => Boolean(line));
 }
 
-function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
+function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[], hermesDraftTasks: Row[] = []) {
   if (pendingApprovals.length) {
     return {
       type: "approval",
@@ -193,6 +194,16 @@ function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
       label: "Подтвердить выход",
       title: textValue(handedOffItems[0].title, "Переданный материал ждёт подтверждения"),
       targetId: handedOffItems[0].id ?? null
+    };
+  }
+
+  if (hermesDraftTasks.length) {
+    const payload = hermesDraftTasks[0].payload && typeof hermesDraftTasks[0].payload === "object" ? hermesDraftTasks[0].payload as Row : {};
+    return {
+      type: "hermes_preparing",
+      label: "Дождаться черновика",
+      title: `Hermes готовит черновик: ${textValue(payload.title, "материал")}`,
+      targetId: hermesDraftTasks[0].id ?? null
     };
   }
 
@@ -286,13 +297,15 @@ function parseTelegramWebhookCommand(payload: unknown): ParsedTelegramCommandCal
 
 function renderOwnerBriefMessage(input: {
   handedOffItems: Row[];
+  hermesDraftTasks: Row[];
   latestSummary: Row;
   pendingApprovals: Row[];
   publishedItems: Row[];
 }) {
-  const { handedOffItems, latestSummary, pendingApprovals, publishedItems } = input;
+  const { handedOffItems, hermesDraftTasks, latestSummary, pendingApprovals, publishedItems } = input;
   const primaryDecision = pendingApprovals[0] ?? null;
   const primaryHandoff = handedOffItems[0] ?? null;
+  const primaryHermesTask = hermesDraftTasks[0] ?? null;
   const leads = Number(latestSummary.leads ?? 0);
   const money = Number(latestSummary.recovered_payments ?? 0);
 
@@ -309,10 +322,17 @@ function renderOwnerBriefMessage(input: {
     ""
   ];
 
+  if (primaryHermesTask) {
+    const payload = primaryHermesTask.payload && typeof primaryHermesTask.payload === "object" ? primaryHermesTask.payload as Row : {};
+    lines.push(`Hermes готовит черновик: ${truncateText(textValue(payload.title, "первый материал"))}`);
+  }
+
   if (primaryDecision) {
     lines.push(`Следующее решение: ${truncateText(textValue(primaryDecision.summary, "Материал ждёт решения"))}`);
   } else if (primaryHandoff) {
     lines.push(`Подтвердить выход: ${truncateText(textValue(primaryHandoff.title, "Переданный материал"))}`);
+  } else if (primaryHermesTask) {
+    lines.push("Следующий шаг: дождаться черновика и принять решение.");
   } else {
     lines.push("Следующий шаг: проверить результат и новые сигналы.");
   }
@@ -360,10 +380,17 @@ function telegramCommandKeyboard(buttons: TelegramCommandButton[] | undefined) {
 }
 
 function buildOwnerBrief(input: OwnerBriefInput) {
-  const { approvals, calendar, contentItems, latestSummary } = input;
+  const { approvals, calendar, contentItems, latestSummary, tasks } = input;
   const pendingApprovals = approvals.filter((row) => row.status === "pending");
   const handedOffItems = calendar.filter((row) => row.status === "handed_off");
   const publishedItems = calendar.filter((row) => row.status === "published");
+  const hermesDraftTasks = tasks.filter((row) => {
+    const payload = row.payload && typeof row.payload === "object" ? row.payload as Row : {};
+    const status = textValue(row.status, "");
+    return payload.expectedArtifact === "draft" &&
+      payload.source === "telegram_onboarding" &&
+      ["queued", "dispatched", "dispatch_prepared", "running"].includes(status);
+  });
   const contentById = new Map(contentItems.map((row) => [row.id, row]));
 
   return {
@@ -372,6 +399,7 @@ function buildOwnerBrief(input: OwnerBriefInput) {
     counts: {
       decisions: pendingApprovals.length,
       handedOff: handedOffItems.length,
+      hermesPreparing: hermesDraftTasks.length,
       published: publishedItems.length,
       leads: Number(latestSummary.leads ?? 0),
       money: Number(latestSummary.recovered_payments ?? 0)
@@ -401,6 +429,16 @@ function buildOwnerBrief(input: OwnerBriefInput) {
       channel: row.channel ?? "manual",
       scheduledFor: row.scheduled_for ?? null
     })),
+    hermesPreparing: hermesDraftTasks.slice(0, 5).map((row) => {
+      const payload = row.payload && typeof row.payload === "object" ? row.payload as Row : {};
+      return {
+        id: row.id,
+        status: row.status,
+        title: textValue(payload.title, "Материал Hermes"),
+        taskType: row.task_type ?? null,
+        updatedAt: row.updated_at ?? null
+      };
+    }),
     results: {
       published: publishedItems.length,
       manualHandoffWaiting: handedOffItems.length,
@@ -409,23 +447,25 @@ function buildOwnerBrief(input: OwnerBriefInput) {
     },
     telegramMessage: renderOwnerBriefMessage({
       handedOffItems,
+      hermesDraftTasks,
       latestSummary,
       pendingApprovals,
       publishedItems
     }),
-    nextAction: ownerBriefNextAction(pendingApprovals, handedOffItems),
+    nextAction: ownerBriefNextAction(pendingApprovals, handedOffItems, hermesDraftTasks),
     updatedAt: new Date().toISOString()
   };
 }
 
 async function loadOwnerBriefData(tenantId: string) {
-  const [approvalsResult, calendarResult, contentItemsResult, latestImport] = await Promise.all([
+  const [approvalsResult, calendarResult, contentItemsResult, latestImport, tasksResult] = await Promise.all([
     query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]),
     query("select * from content_items where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [tenantId, 1]).catch(() => ({
       rows: []
-    }))
+    })),
+    query("select * from tasks where tenant_id = $1 order by updated_at desc limit 200", [tenantId])
   ]);
   const latestSummary = latestImport.rows[0]?.payload && typeof latestImport.rows[0].payload === "object"
     ? (latestImport.rows[0].payload as Row)
@@ -435,7 +475,8 @@ async function loadOwnerBriefData(tenantId: string) {
     approvals: approvalsResult.rows as Row[],
     calendar: calendarResult.rows as Row[],
     contentItems: contentItemsResult.rows as Row[],
-    latestSummary
+    latestSummary,
+    tasks: tasksResult.rows as Row[]
   };
 }
 
@@ -841,6 +882,7 @@ function renderDecisionContent(brief: OwnerBrief) {
 function renderCommandBrief(brief: OwnerBrief) {
   const decision = brief.decisions[0];
   const handoff = brief.handoffs[0];
+  const hermesTask = brief.hermesPreparing[0];
   const lines = [
     "AgentResult Growth Control",
     "",
@@ -854,6 +896,11 @@ function renderCommandBrief(brief: OwnerBrief) {
     ""
   ];
 
+  if (hermesTask) {
+    lines.push(`Hermes готовит черновик: ${textValue(hermesTask.title, "материал")}`);
+    lines.push("");
+  }
+
   if (decision) {
     lines.push("Требует решения:");
     lines.push(decision.title);
@@ -866,6 +913,8 @@ function renderCommandBrief(brief: OwnerBrief) {
     lines.push(textValue(handoff.title, "Переданный материал"));
     lines.push("");
     lines.push("Когда материал выйдет, напишите: вышло.");
+  } else if (hermesTask) {
+    lines.push("Следующий шаг: дождаться черновика и принять решение.");
   } else {
     lines.push("Сейчас нет решений в очереди.");
     lines.push("Следующий шаг: проверить результат и подготовить следующий материал.");
@@ -937,6 +986,8 @@ function renderDailyWorkMessage(brief: OwnerBrief) {
     lines.push(`Сейчас важно: закрыть ${brief.counts.decisions} решение.`);
   } else if (brief.counts.handedOff > 0) {
     lines.push(`Сейчас важно: подтвердить выход ${brief.counts.handedOff} переданного материала.`);
+  } else if (brief.counts.hermesPreparing > 0) {
+    lines.push(`Сейчас Hermes готовит черновик: ${textValue(brief.hermesPreparing[0]?.title, "материал")}.`);
   } else {
     lines.push("Сейчас важно: проверить результат и подготовить следующий материал.");
   }
@@ -956,6 +1007,8 @@ function renderResetMessage(brief: OwnerBrief) {
     lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
   } else if (brief.counts.handedOff > 0) {
     lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
+  } else if (brief.counts.hermesPreparing > 0) {
+    lines.push(`Hermes готовит черновик: ${textValue(brief.hermesPreparing[0]?.title, "материал")}.`);
   } else {
     lines.push("Сейчас нет решений в очереди.");
   }
@@ -993,6 +1046,9 @@ function renderUnknownIntentMessage(brief?: OwnerBrief) {
   } else if (brief?.counts.handedOff) {
     lines.push("");
     lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
+  } else if (brief?.counts.hermesPreparing) {
+    lines.push("");
+    lines.push(`Hermes готовит черновик: ${textValue(brief.hermesPreparing[0]?.title, "материал")}.`);
   }
 
   return lines.join("\n");

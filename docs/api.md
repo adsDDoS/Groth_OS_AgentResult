@@ -113,6 +113,8 @@ For diagnostics, pass `{ "dryRun": true }` to prepare and store the envelope wit
 
 Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task. The owner completes setup, backend starts a background Hermes job, immediately responds that the task is in work, then saves the returned `draft`, opens approval, and sends a separate Telegram owner-control message when the draft is ready.
 
+`GET /telegram/owner-brief`, `/brief`, and ordinary intents such as "что дальше" include active draft preparation as owner-facing status: `Hermes готовит черновик`, without exposing queue or run internals.
+
 Result body:
 
 ```json
