@@ -99,6 +99,29 @@ Then deploy only the backend container:
 scripts/deploy-backend-vps.sh
 ```
 
+For a local-storage to Postgres cutover on VPS:
+
+1. Create or update `/opt/agentresult-os/app/.env` with `AI_GROWTH_OS_STORAGE=postgres` and `DATABASE_URL`.
+2. Keep the previous runtime JSON mounted in `/opt/agentresult-os/backend-runtime`.
+3. Deploy from the env file so the old local-storage container env is not reused:
+
+```bash
+AGENTRESULT_ENV_SOURCE=file scripts/deploy-backend-vps.sh
+```
+
+The deploy script runs Postgres migrations before starting the backend when storage is not `local`.
+
+4. Import the previous local state once:
+
+```bash
+docker run --rm \
+  --network agentresult-os-net \
+  -v /opt/agentresult-os/backend-runtime:/runtime \
+  --env-file /opt/agentresult-os/app/.env \
+  agentresult-os-backend:<sha> \
+  node apps/backend/dist/db/import-local-json.js /runtime/agentresult-os.local-data.json --apply
+```
+
 Configurable variables:
 
 - `VPS_HOST`, default `root@91.103.140.101`

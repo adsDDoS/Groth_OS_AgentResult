@@ -744,6 +744,7 @@ Private pilot hardening rule:
 - Private pilot must use Postgres with `AI_GROWTH_OS_STORAGE=postgres`; backend must fail loudly if Postgres is unavailable.
 - `auto` may remain a developer convenience, but it is not a pilot mode.
 - Backend deploys should go through `scripts/deploy-backend-vps.sh`, not ad-hoc SSH command strings.
+- When cutting over from local JSON to Postgres, deploy from `.env` with `AGENTRESULT_ENV_SOURCE=file`, run migrations through the deploy script, and import the previous runtime JSON with `apps/backend/dist/db/import-local-json.js`.
 - Telegram owner-control behavior must be covered by `npm run telegram:regression` before deploy.
 
 ## Non-Negotiables

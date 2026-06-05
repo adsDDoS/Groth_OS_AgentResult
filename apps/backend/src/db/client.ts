@@ -1,6 +1,5 @@
 import pg from "pg";
 import { config } from "../config.js";
-import { memoryQuery } from "./memory.js";
 
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
@@ -9,6 +8,7 @@ export const pool = new pg.Pool({
 
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(text: string, values: unknown[] = []) {
   if (config.storageMode === "local") {
+    const { memoryQuery } = await import("./memory.js");
     return memoryQuery<T>(text, values) as Promise<pg.QueryResult<T>>;
   }
 
@@ -17,6 +17,7 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(tex
     return result;
   } catch (error) {
     if (config.storageMode === "auto" && shouldUseMemoryFallback(error)) {
+      const { memoryQuery } = await import("./memory.js");
       return memoryQuery<T>(text, values) as Promise<pg.QueryResult<T>>;
     }
     throw error;
