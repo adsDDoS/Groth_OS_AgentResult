@@ -158,7 +158,9 @@ When the command response includes `buttons`, Hermes should render them as Teleg
 
 Backend can also execute and deliver the same command through `POST /telegram/commands/send`. This is for intentionally backend-owned Telegram delivery or dry-runs. Do not run backend webhook ownership and Hermes polling against the same bot token unless the gateway responsibility has been deliberately switched.
 
-When Hermes prepares a new material in Telegram and the owner approves the draft, Hermes should call `POST /telegram/materials` with the title and text. Backend then creates the material, opens an approval, and returns the next owner commands. Hermes must not offer direct channel publication for a material that has not been recorded in backend.
+When Hermes prepares a new material in Telegram and the owner approves the draft, Hermes should call `POST /telegram/materials` with the title and text. Backend then creates the material, opens an approval, and returns natural next actions for the owner. Hermes must not offer direct channel publication for a material that has not been recorded in backend.
+
+Owner-facing Telegram answers should not list slash commands as the main UX. Slash commands remain available for Hermes quick commands and dry-runs, but normal owner copy should say what can be done in plain language: show the material, approve, request changes, mark as handed off, confirm that it went live, or check result.
 
 Direct Telegram channel publication is not enabled in the current Hermes polling contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, Hermes must not use terminal/env probing, Telegram send tools, or channel APIs. It should say that direct channel publishing is not connected in this contour, then keep the release inside the AgentResult loop: save, approve, hand off manually, and confirm result.
 

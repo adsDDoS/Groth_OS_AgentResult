@@ -182,6 +182,8 @@ Common intent examples:
 - `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
 - `что по результату` -> result summary.
 
+Owner-facing response text should use natural action language instead of listing slash commands as the main next step. Slash commands remain supported as a technical compatibility contract for Hermes quick commands and dry-runs.
+
 Command response includes:
 
 - `text`: ready owner-facing text;

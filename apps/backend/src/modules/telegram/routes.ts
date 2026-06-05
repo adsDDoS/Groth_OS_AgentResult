@@ -448,7 +448,7 @@ function renderCommandBrief(brief: OwnerBrief) {
     lines.push(decision.title);
     if (decision.riskFlags.length) lines.push(`Риски: ${decision.riskFlags.join(", ")}`);
     lines.push("");
-    lines.push("Доступно: /post, /osapprove, /changes");
+    lines.push("Можно посмотреть материал, согласовать или запросить правки.");
   } else {
     lines.push("Сейчас нет решений в очереди.");
   }
@@ -463,7 +463,7 @@ function renderMaterialCreatedMessage(input: { approval: Row; contentItem: Row }
     `Решение: ${textValue(input.approval.summary, "Согласовать материал")}`,
     `Канал: ${textValue(input.contentItem.channel, "telegram")}`,
     "",
-    "Доступно: /post, /osapprove, /changes"
+    "Следующий шаг: посмотреть материал, согласовать или запросить правки."
   ].join("\n");
 }
 
@@ -500,7 +500,7 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
     `Канал: ${textValue(input.item.channel, "manual")}`,
     "",
     "Следующий шаг: после выхода подтвердить публикацию.",
-    "Доступно: /published, /result"
+    "Когда материал выйдет, напишите: вышло."
   ].join("\n");
 }
 
@@ -802,7 +802,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
 
   return {
     command,
-    text: "Команда не распознана. Доступно: /brief, /post, /osapprove, /changes, /handoff, /published, /onboarding.",
+    text: "Не понял действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, передал в выпуск, вышло, что по результату.",
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
