@@ -36,7 +36,31 @@ function renderPublications() {
       </div>
       ${tab === "approvals" ? "" : `<div class="tab-context">${publicationTabContext(tab)}</div>`}
     </section>
+    ${publicationStateStrip()}
     ${tabRenderers[tab]()}
+  `;
+}
+
+function publicationStateStrip() {
+  const pending = state.approvals.filter((item) => item.status === "pending").length;
+  const handedOff = state.calendar.filter((item) => item.status === "handed_off").length;
+  const published = state.calendar.filter((item) => item.status === "published").length;
+  const items = [
+    [text("Waiting decision", "Ждёт решения"), pending, text("approve or return", "согласовать или вернуть")],
+    [text("Manual handoff", "Передано вручную"), handedOff, text("waiting live confirmation", "ждёт подтверждения выхода")],
+    [text("Published", "Вышло"), published, text("counted in results", "учтено в результатах")]
+  ];
+
+  return `
+    <section class="publication-state-strip" aria-label="${escapeAttr(text("Release state", "Состояние выпуска"))}">
+      ${items.map(([label, value, note]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(String(value))}</strong>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `).join("")}
+    </section>
   `;
 }
 

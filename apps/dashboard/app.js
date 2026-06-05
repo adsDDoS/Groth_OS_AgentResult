@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-87";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-87";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-87";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-88";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-88";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-88";
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("demo") === "reset") {
@@ -238,6 +238,10 @@ const RU = {
   "handed off": "передано",
   "pending": "ожидает",
   "rejected": "отклонено",
+  "done": "готово",
+  "completed": "готово",
+  "queued": "в очереди",
+  "in progress": "в работе",
   "changes requested": "нужны правки",
   "publish": "публикация",
   "social post": "пост в соцсети",
@@ -805,7 +809,7 @@ function normalizeTask(task) {
     id: task.id,
     title: cleanVisibleText(payload.title || labelize(task.task_type || "task")),
     owner: payload.owner || task.agent_role || text("System", "Система"),
-    status: rawStatus === "approved" ? "done" : rawStatus,
+    status: ["approved", "completed"].includes(rawStatus) ? "done" : rawStatus,
     note: cleanVisibleText(payload.note || payload.reason || ""),
     source: payload.source || task.task_type || "backend",
     created_at: task.created_at
@@ -1796,7 +1800,7 @@ function primaryBusinessSignal(metrics) {
   return {
     value: "0",
     title: text("No market signal yet", "Рыночного сигнала пока нет"),
-    note: text("Preparation is visible, but demand or money has not been recorded yet.", "Подготовка видна, но спрос или деньги ещё не зафиксированы.")
+    note: text("Preparation is visible, but no lead, reply or confirmed live signal has been recorded yet.", "Подготовка видна, но заявка, ответ или подтверждённый внешний сигнал ещё не зафиксированы.")
   };
 }
 
@@ -1808,7 +1812,7 @@ function resultProofStrip(metrics) {
     [text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting live confirmation", "ждёт подтверждения выхода")],
     [text("Waiting decision", "Ждёт решения"), metrics.pending_approvals, text("before release", "до выпуска")],
     [text("Leads", "Заявки"), metrics.leads, text("from forms, CRM or replies", "из форм, CRM или ответов")],
-    [text("Money", "Деньги"), metrics.recovered_payments, text("confirmed return", "подтверждённый возврат")]
+    [text("Next tasks", "Следующие задачи"), metrics.tasks_created, text("created from signals", "созданы по сигналам")]
   ];
   return `<div class="metric-grid">${proof.map(([label, value, note], index) => metricCard(label, value, note, index === 3 ? "dark" : index === 4 ? "coral" : "")).join("")}</div>`;
 }
@@ -1886,10 +1890,10 @@ function resultNextMove(metrics) {
       variant: "primary"
     };
   }
-  if (!metrics.receivables_in_progress) {
+  if (!metrics.leads) {
     return {
-      title: text("Add the first receivables list to start Collect safely", "Добавьте первую дебиторку для безопасного старта Collect"),
-      note: text("The system can prepare follow-up work, but money-related actions stay manual-first.", "Система подготовит дожим, но денежные действия остаются manual-first."),
+      title: text("Record the first demand signal after release", "Зафиксируйте первый сигнал спроса после выпуска"),
+      note: text("For Growth Control, useful results start with a reply, request, form lead or CRM signal.", "Для Growth Control полезный результат начинается с ответа, заявки, формы или CRM-сигнала."),
       action: "import-metrics",
       label: text("Add signal", "Добавить сигнал"),
       variant: "secondary"

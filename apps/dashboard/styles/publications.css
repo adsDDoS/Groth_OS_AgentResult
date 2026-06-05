@@ -1,3 +1,40 @@
+.publication-state-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publication-state-strip article {
+  min-height: 82px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.publication-state-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.publication-state-strip strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.publication-state-strip p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .approval-item strong {
   display: block;
   color: var(--ink);
@@ -749,6 +786,7 @@
 
 @media (max-width: 1220px) {
   .handoff-workspace,
+  .publication-state-strip,
   .publication-channel-matrix,
   .publication-cockpit-stats,
   .release-queue-grid,
@@ -764,6 +802,7 @@
 
 @media (max-width: 780px) {
   .handoff-workspace,
+  .publication-state-strip,
   .publication-channel-matrix,
   .approval-brief,
   .publication-cockpit-stats,
