@@ -121,7 +121,7 @@ Recommended initial path:
 4. Add a result callback/writeback endpoint in AgentResult backend.
 5. Keep Telegram owner decisions in AgentResult backend, not inside Hermes state.
 
-For an owner-facing conversational bot, Hermes may own the Telegram bot gateway. In that mode, AgentResult backend must not use the same bot token as its own webhook receiver. Hermes owns the conversation; backend owns recorded business actions. See `docs/hermes-telegram-bot.md`.
+For an owner-facing conversational bot, AgentResult OS currently uses backend owner-control polling as the Telegram gateway. Ordinary owner messages go to the backend intent router first. Hermes remains the runtime for generation, revision, scheduled work, and structured backend tasks. If Hermes is deliberately switched back to owning Telegram, AgentResult backend must not use the same bot token as its own polling/webhook receiver. See `docs/hermes-telegram-bot.md`.
 
 Use Hermes' native Telegram variables inside the Hermes service: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep them namespaced as `HERMES_TELEGRAM_BOT_TOKEN`, `HERMES_TELEGRAM_ALLOWED_USERS`, and `HERMES_TELEGRAM_HOME_CHANNEL`, then map them in `infra/docker-compose.yml`.
 
@@ -386,11 +386,11 @@ Current Phase 1 behavior:
 
 ### Phase 4: Telegram
 
-- Connect Hermes to the Telegram bot gateway. In progress.
-- Keep owner-facing conversation in Hermes.
-- Keep business actions in AgentResult backend.
-- Do not point the same Telegram bot token at both Hermes and backend webhooks.
-- Use `POST /telegram/actions` for recorded owner decisions.
+- Run backend owner-control middleware as the Telegram gateway. Done.
+- Route ordinary owner messages through backend intent router. Done.
+- Keep Hermes available for generation, revision, scheduled work, and structured backend tasks.
+- Do not point the same Telegram bot token at both Hermes and backend polling/webhook.
+- Use `POST /telegram/actions` or command/intent contracts for recorded owner decisions.
 - Keep owner decision state in Postgres.
 
 ### Phase 5: Production Hardening

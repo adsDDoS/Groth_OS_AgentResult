@@ -207,7 +207,7 @@ Supported commands:
 
 - `/brief`: current decisions, handoffs, outputs, leads, next action; money only when there is a real monetary signal;
 - `/post`: text of the material waiting for approval;
-- `/osapprove`: records approval for the current or specified decision in Hermes polling mode;
+- `/osapprove`: records approval for the current or specified decision in backend owner-control mode;
 - `/changes`: records that changes are needed;
 - `/handoff`: marks the current approved material as manually handed off for release;
 - `/published`: confirms that a handed-off material went live;

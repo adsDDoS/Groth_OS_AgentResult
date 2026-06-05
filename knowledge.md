@@ -135,9 +135,9 @@ Backend owns business state, approvals, publishing status, audit, Telegram callb
 
 Hermes must not directly publish, send emails, update live site content, approve risky claims, mark handoffs as published, or move money-sensitive workflow state outside explicit backend approval rules.
 
-Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend webhook at the same time.
+Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent only if the gateway responsibility is deliberately switched back to Hermes. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend polling/webhook at the same time.
 
-Current Telegram gateway decision: use Hermes polling as the active owner-chat mode. Keep backend Telegram live delivery/webhook disabled unless the gateway responsibility is deliberately switched. Backend command delivery endpoints may remain available for dry-run, QA, or a future backend-owned mode, but should not compete with Hermes polling in production.
+Current Telegram gateway decision: use backend owner-control polling middleware as the active owner-chat mode. Hermes remains available as agent runtime/API for generation, revision, scheduled work, and structured backend tasks, but it should not own ordinary owner messages in Telegram.
 
 Backend owner-control polling middleware exists behind `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`. It reads Telegram updates, checks `TELEGRAM_ALLOWED_USERS` / `HERMES_TELEGRAM_ALLOWED_USERS`, sends ordinary owner text to backend `POST /telegram/intent` logic directly, and sends back only owner-facing text. Keep it disabled while Hermes polling owns the same bot token. To switch to true backend-owned owner control, disable Hermes Telegram polling for that token first, then enable the backend middleware.
 
@@ -147,7 +147,7 @@ Hermes Telegram must not expose terminal commands, tool logs, raw skill names, s
 
 Hermes gateway display config should keep owner chat quiet: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress tool progress messages in Telegram.
 
-Direct Telegram channel publication is not enabled in the current Hermes polling contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, Hermes must not use terminal/env probing, Telegram send tools, or channel APIs. The correct response is concise: direct channel publishing is not connected in this contour; the material can be saved, approved, handed off for manual release, and then the result can be confirmed.
+Direct Telegram channel publication is not enabled in the current owner-control contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, the Telegram gateway must not use terminal/env probing, Telegram send tools, or channel APIs. The correct response is concise: direct channel publishing is not connected in this contour; the material can be saved, approved, handed off for manual release, and then the result can be confirmed.
 
 Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.
 
@@ -155,17 +155,17 @@ Preferred Telegram command contract:
 
 - `/brief`: show decisions, handoffs, releases, leads, next action; show money only when there is a real monetary signal or a sales/receivables context.
 - `/post`: show the material text waiting for approval.
-- `/osapprove`: record approval through backend in Hermes polling mode.
+- `/osapprove`: record approval through backend owner-control mode.
 - `/changes`: request changes through backend.
 - `/handoff`: mark the approved material as manually handed off for release.
 - `/published`: confirm that a handed-off material is live.
 - `/onboarding`: start setup flow through Telegram.
 
-Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
+Backend owner-control middleware should call `POST /telegram/commands` logic for these compatibility commands and return only the backend response text to the owner.
 
 In the content/SEO Telegram contour, do not show `Деньги: 0`. Money is a valid AgentResult OS metric for sales, receivables, and real business signals, but it should not appear as an empty placeholder in a content release loop where there is no measured monetary source.
 
-Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "передал в выпуск", "вышло", "что по результату", or "опубликуй напрямую", Hermes should call `POST /telegram/intent` with the raw owner text and return only backend `data.text`. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
+Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "передал в выпуск", "вышло", "что по результату", or "опубликуй напрямую", backend owner-control middleware should call `POST /telegram/intent` logic with the raw owner text and return only owner-facing backend text. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
 
 Owner-facing Telegram copy should not list slash commands as the primary next step. Commands may remain available internally and as compatibility shortcuts, but the visible language should be natural: "посмотреть материал", "согласовать", "нужны правки", "передал в выпуск", "вышло", "что по результату".
 

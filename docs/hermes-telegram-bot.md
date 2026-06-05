@@ -140,19 +140,19 @@ Preferred Telegram commands:
 
 - `/brief`: show current owner-control state.
 - `/post`: show the material waiting for approval.
-- `/osapprove`: record approval through backend in Hermes polling mode.
+- `/osapprove`: record approval through backend owner-control mode.
 - `/changes`: request changes through backend.
 - `/handoff`: mark the approved material as manually handed off for release.
 - `/published`: confirm that a handed-off material went live.
 - `/onboarding`: start setup flow through Telegram.
 
-Hermes should call `POST /telegram/commands` for these commands and send only the returned `text` to the owner.
+Backend owner-control middleware calls the same command contract for compatibility shortcuts and sends only returned owner-facing `text`.
 
-Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, Hermes should call `POST /telegram/intent` with the raw owner text and send only returned `data.text`. Backend owns the intent-to-action mapping.
+Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, backend owner-control middleware calls the backend intent router directly and sends only returned owner-facing text. Backend owns the intent-to-action mapping.
 
 Keep Hermes Telegram display quiet for owner-facing mode: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress terminal/tool progress messages in Telegram.
 
-For a stricter owner-control mode, run the backend polling middleware instead of Hermes Telegram polling for the same bot token:
+Current production owner-control mode runs the backend polling middleware instead of Hermes Telegram polling for the same bot token:
 
 - set `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` in backend env;
 - provide `TELEGRAM_BOT_TOKEN` or `HERMES_TELEGRAM_BOT_TOKEN`;
@@ -161,7 +161,7 @@ For a stricter owner-control mode, run the backend polling middleware instead of
 
 In this mode ordinary owner messages go directly through backend intent routing. Hermes should be called only by explicit backend workflows for generation or revision tasks.
 
-Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. On the VPS, `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` are mapped to a helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` for approval because `/approve` can be reserved by Hermes tool-approval flow.
+If the product is deliberately switched back to Hermes polling, Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. In backend owner-control mode, slash commands are compatibility shortcuts handled by backend, while visible owner copy should stay natural.
 
 When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.
 
@@ -171,7 +171,7 @@ When Hermes prepares a new material in Telegram and the owner approves the draft
 
 Owner-facing Telegram answers should not list slash commands as the main UX. Slash commands remain available for Hermes quick commands and dry-runs, but normal owner copy should say what can be done in plain language: show the material, approve, request changes, mark as handed off, confirm that it went live, or check result.
 
-Direct Telegram channel publication is not enabled in the current Hermes polling contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, Hermes must not use terminal/env probing, Telegram send tools, or channel APIs. It should say that direct channel publishing is not connected in this contour, then keep the release inside the AgentResult loop: save, approve, hand off manually, and confirm result.
+Direct Telegram channel publication is not enabled in the current owner-control contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, the Telegram gateway must not use terminal/env probing, Telegram send tools, or channel APIs. It should say that direct channel publishing is not connected in this contour, then keep the release inside the AgentResult loop: save, approve, hand off manually, and confirm result.
 
 Supported owner action body:
 
@@ -192,21 +192,20 @@ Supported action ids:
 ## First Smoke
 
 1. Start backend.
-2. Start Hermes with Telegram gateway enabled.
-3. Send `/start` to the bot.
-4. Ask: `Что требует моего решения?`
-5. Hermes should call `GET /telegram/owner-brief`.
-6. Hermes should answer with:
+2. Start Hermes without Telegram bot token for this owner-control bot.
+3. Verify Telegram API `getWebhookInfo` has no webhook URL and no pending conflict.
+4. Verify backend env has `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`, bot token, and allowed users.
+5. Ask in Telegram: `Что требует моего решения?`
+6. Backend owner-control middleware should answer with:
    - decisions count;
    - handed-off materials waiting for confirmation;
    - published count;
    - leads;
    - next owner action.
    - material text when the owner asks to see the item waiting for approval.
-7. Press or send an approval command.
-8. Hermes should call `POST /telegram/actions`.
-9. Backend should record the action.
-10. Recheck `GET /telegram/owner-brief`.
+7. Press an inline action or send `согласую`.
+8. Backend should record the action through command/action contracts.
+9. Recheck `GET /telegram/owner-brief`.
 
 ## Production Notes
 
