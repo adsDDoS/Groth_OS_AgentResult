@@ -16,8 +16,6 @@ ssh "$VPS_HOST" \
 set -euo pipefail
 
 cd "$APP_DIR"
-git pull --ff-only origin main
-SHA="$(git rev-parse --short HEAD)"
 
 if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   docker inspect "$CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' > /tmp/agentresult-backend.env
@@ -36,6 +34,9 @@ if [ "${STORAGE_MODE:-auto}" = "local" ] && [ "$ALLOW_LOCAL_STORAGE" != "1" ]; t
   rm -f /tmp/agentresult-backend.env
   exit 2
 fi
+
+git pull --ff-only origin main
+SHA="$(git rev-parse --short HEAD)"
 
 docker build -f apps/backend/Dockerfile -t "agentresult-os-backend:$SHA" .
 
