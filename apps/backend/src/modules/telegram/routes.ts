@@ -939,8 +939,111 @@ async function continueOnboarding(input: TelegramIntentInput, context: TelegramE
   };
 }
 
-function renderDecisionContent(brief: OwnerBrief) {
-  const decision = brief.decisions[0];
+function decisionDisplayTitle(decision: Row | undefined) {
+  return textValue(decision?.contentTitle || decision?.title, "Материал");
+}
+
+function normalizeDecisionLookupText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^a-zа-я0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function decisionOrdinalIndex(text: string) {
+  const normalized = ` ${normalizeDecisionLookupText(text)} `;
+  const ordinals: Array<[string[], number]> = [
+    [["1", "первый", "первое", "первому", "первую", "первого"], 0],
+    [["2", "второй", "второе", "второму", "вторую", "второго"], 1],
+    [["3", "третий", "третье", "третьему", "третью", "третьего"], 2],
+    [["4", "четвертый", "четвертое", "четвертому", "четвертую", "четвертого"], 3],
+    [["5", "пятый", "пятое", "пятому", "пятую", "пятого"], 4]
+  ];
+
+  for (const [words, index] of ordinals) {
+    if (words.some((word) => normalized.includes(` ${word} `))) return index;
+  }
+
+  return null;
+}
+
+function decisionLookupQuery(text: string) {
+  const normalized = normalizeDecisionLookupText(text);
+  const stopWords = new Set([
+    "agentresult",
+    "approve",
+    "changes",
+    "draft",
+    "material",
+    "osapprove",
+    "post",
+    "request",
+    "request_changes",
+    "агентрезалт",
+    "готовое",
+    "готовый",
+    "материал",
+    "материалы",
+    "на",
+    "нужна",
+    "нужны",
+    "одобряю",
+    "ок",
+    "открой",
+    "первое",
+    "первый",
+    "первого",
+    "первому",
+    "первую",
+    "по",
+    "покажи",
+    "посмотреть",
+    "пост",
+    "правка",
+    "правки",
+    "про",
+    "согласовать",
+    "согласую",
+    "скинь",
+    "текст",
+    "утверждаю",
+    "черновик"
+  ]);
+
+  return normalized
+    .split(" ")
+    .filter((word) => word.length > 1 && !stopWords.has(word) && !/^\d+$/.test(word))
+    .join(" ");
+}
+
+function resolveDecisionFromText(brief: OwnerBrief, text: string) {
+  if (!brief.decisions.length) return null;
+
+  const ordinalIndex = decisionOrdinalIndex(text);
+  if (ordinalIndex !== null && brief.decisions[ordinalIndex]) return brief.decisions[ordinalIndex];
+
+  const query = decisionLookupQuery(text);
+  if (!query) return brief.decisions[0];
+
+  const queryTokens = query.split(" ").filter(Boolean);
+  const scored = brief.decisions.map((decision, index) => {
+    const haystack = normalizeDecisionLookupText([
+      decisionDisplayTitle(decision),
+      textValue(decision.title, ""),
+      textValue(decision.contentPreview, "")
+    ].join(" "));
+    const exact = haystack.includes(query) ? queryTokens.length + 2 : 0;
+    const tokenScore = queryTokens.filter((token) => haystack.includes(token)).length;
+    return { decision, index, score: exact + tokenScore };
+  }).sort((a, b) => b.score - a.score || a.index - b.index);
+
+  return scored[0]?.score ? scored[0].decision : null;
+}
+
+function renderDecisionContent(brief: OwnerBrief, selectedDecision?: Row | null) {
+  const decision = selectedDecision ?? brief.decisions[0];
   const contentText = textValue(decision?.contentText, "");
 
   if (contentText) return contentText;
@@ -1292,8 +1395,12 @@ function commandButton(command: string, label: string, targetId?: string | null)
   };
 }
 
+function primaryDecisionIdFromBrief(brief: OwnerBrief) {
+  return typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+}
+
 function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
-  const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+  const targetId = primaryDecisionIdFromBrief(brief);
   const buttons = [
     commandButton("post", "Показать материал", targetId),
     commandButton("onboarding", "Настройка")
@@ -1311,8 +1418,9 @@ function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   return buttons;
 }
 
-function postCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
-  const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): TelegramCommandButton[] {
+  const decision = selectedDecision ?? brief.decisions[0];
+  const targetId = typeof decision?.id === "string" ? decision.id : null;
   const buttons = [commandButton("brief", "Сводка")];
 
   if (targetId) {
@@ -1527,7 +1635,6 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const primaryDecisionId = typeof ownerBrief.decisions[0]?.id === "string" ? ownerBrief.decisions[0].id : null;
-  const targetId = input.targetId ?? primaryDecisionId;
 
   if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
     return {
@@ -1587,11 +1694,15 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     };
   }
 
-  if (["post", "material", "draft", "текст", "пост", "материал"].includes(command)) {
+  if (["post", "material", "draft", "текст", "пост", "материал"].includes(command) ||
+    /^(post|material|draft|текст|пост|материал)\s+/.test(command)) {
+    const selectedDecision = resolveDecisionFromText(ownerBrief, command);
     return {
       command,
-      text: renderDecisionContent(ownerBrief),
-      buttons: postCommandButtons(ownerBrief),
+      text: selectedDecision || ownerBrief.decisions.length <= 1
+        ? renderDecisionContent(ownerBrief, selectedDecision)
+        : "Не нашёл материал по этой фразе. Напишите номер из списка или часть темы.",
+      buttons: postCommandButtons(ownerBrief, selectedDecision),
       ownerBrief
     };
   }
@@ -1643,8 +1754,12 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     };
   }
 
-  if (["approve", "osapprove", "ok", "согласовать", "ок"].includes(command)) {
-    if (!targetId) {
+  if (["approve", "osapprove", "ok", "согласовать", "ок"].includes(command) ||
+    /^(approve|osapprove|согласовать|согласую|одобряю|утверждаю)\s+/.test(command)) {
+    const selectedDecision = input.targetId ? null : resolveDecisionFromText(ownerBrief, command);
+    const resolvedTargetId = input.targetId ?? (typeof selectedDecision?.id === "string" ? selectedDecision.id : primaryDecisionId);
+
+    if (!resolvedTargetId) {
       return {
         command,
         text: "Сейчас нет решения, которое можно согласовать.",
@@ -1655,7 +1770,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
     const actionResult = await executeTelegramAction({
       action: "approval.approve",
-      targetId,
+      targetId: resolvedTargetId,
       note: input.note
     }, context);
 
@@ -1668,8 +1783,12 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     };
   }
 
-  if (["changes", "request_changes", "правки", "нужны правки"].includes(command)) {
-    if (!targetId) {
+  if (["changes", "request_changes", "правки", "нужны правки"].includes(command) ||
+    /^(changes|request_changes|правки|нужны правки|нужна правка)\s+/.test(command)) {
+    const selectedDecision = input.targetId ? null : resolveDecisionFromText(ownerBrief, command);
+    const resolvedTargetId = input.targetId ?? (typeof selectedDecision?.id === "string" ? selectedDecision.id : primaryDecisionId);
+
+    if (!resolvedTargetId) {
       return {
         command,
         text: "Сейчас нет решения, по которому можно запросить правки.",
@@ -1680,7 +1799,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
     const actionResult = await executeTelegramAction({
       action: "approval.request_changes",
-      targetId,
+      targetId: resolvedTargetId,
       note: input.note || "Нужны правки из Telegram-контура"
     }, context);
 
@@ -1898,17 +2017,51 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     "покажи текст",
     "скинь текст",
     "черновик"
-  ])) {
-    const commandResult = await executeTelegramCommand({ command: "/post", note: input.note }, context);
+  ]) || /^(покажи|скинь|открой|посмотреть)\s+/.test(text)) {
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    const selectedDecision = resolveDecisionFromText(ownerBrief, input.text);
+    const hasLookup = Boolean(decisionLookupQuery(input.text) || decisionOrdinalIndex(input.text) !== null);
+
+    if (!selectedDecision && hasLookup && ownerBrief.decisions.length > 1) {
+      return {
+        intent: "show_material_not_found",
+        command: null,
+        text: "Не нашёл материал по этой фразе. Напишите номер из списка или часть темы.",
+        buttons: briefCommandButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
     return {
-      ...commandResult,
       intent: "show_material",
-      command: null
+      command: null,
+      text: renderDecisionContent(ownerBrief, selectedDecision),
+      buttons: postCommandButtons(ownerBrief, selectedDecision),
+      ownerBrief
     };
   }
 
   if (includesAny(text, ["нужны правки", "нужна правка", "переделай", "исправь", "не согласую", "не ок"])) {
-    const commandResult = await executeTelegramCommand({ command: "/changes", note: input.note }, context);
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    const selectedDecision = resolveDecisionFromText(ownerBrief, input.text);
+    const hasLookup = Boolean(decisionLookupQuery(input.text) || decisionOrdinalIndex(input.text) !== null);
+    const targetId = typeof selectedDecision?.id === "string" ? selectedDecision.id : primaryDecisionIdFromBrief(ownerBrief);
+
+    if (!selectedDecision && hasLookup && ownerBrief.decisions.length > 1) {
+      return {
+        intent: "request_changes_not_found",
+        command: null,
+        text: "Не нашёл материал для правок по этой фразе. Напишите номер из списка или часть темы.",
+        buttons: briefCommandButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
+    const commandResult = targetId
+      ? await executeTelegramCommand({ command: "/changes", note: input.note, targetId }, context)
+      : await executeTelegramCommand({ command: "/changes", note: input.note }, context);
     return {
       ...commandResult,
       intent: "request_changes",
@@ -1934,8 +2087,26 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     };
   }
 
-  if (isApprovalIntent(text)) {
-    const commandResult = await executeTelegramCommand({ command: "/osapprove", note: input.note }, context);
+  if (isApprovalIntent(text) || /^(согласую|одобряю|утверждаю|согласовать)\s+/.test(text)) {
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    const selectedDecision = resolveDecisionFromText(ownerBrief, input.text);
+    const hasLookup = Boolean(decisionLookupQuery(input.text) || decisionOrdinalIndex(input.text) !== null);
+    const targetId = typeof selectedDecision?.id === "string" ? selectedDecision.id : primaryDecisionIdFromBrief(ownerBrief);
+
+    if (!selectedDecision && hasLookup && ownerBrief.decisions.length > 1) {
+      return {
+        intent: "approve_not_found",
+        command: null,
+        text: "Не нашёл материал для согласования по этой фразе. Напишите номер из списка или часть темы.",
+        buttons: briefCommandButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
+    const commandResult = targetId
+      ? await executeTelegramCommand({ command: "/osapprove", note: input.note, targetId }, context)
+      : await executeTelegramCommand({ command: "/osapprove", note: input.note }, context);
     return {
       ...commandResult,
       intent: "approve_current",

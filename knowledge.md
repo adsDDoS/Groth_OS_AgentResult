@@ -226,6 +226,17 @@ If a handed-off material and a new approval exist at the same time, keep the pri
 
 Slash commands may stay as fallback, but natural phrases must work for owner questions such as `что готово`, `покажи новое`, `что ждёт решения`, and `что вышло`. Do not let question-like phrases accidentally execute a state-changing action.
 
+When several materials wait for decision, Telegram owner-control must resolve ordinary owner phrases by queue number or topic fragment:
+
+```text
+покажи первый
+покажи про контроль выпуска
+согласую контроль выпуска
+нужны правки по второму
+```
+
+If the phrase names a material and no match is found, do not silently apply the action to the first decision. Ask for the number from the list or a clearer topic fragment.
+
 Current Telegram onboarding flow:
 
 - starts with `/onboarding` or natural setup intent;
