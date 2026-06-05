@@ -90,6 +90,30 @@ function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
+function collectMissingTenants(tables: Map<string, JsonRow[]>) {
+  const tenants = new Set((tables.get("tenants") ?? []).map((row) => row.id).filter(Boolean).map(String));
+  const referencedTenants = new Set<string>();
+
+  for (const rows of tables.values()) {
+    for (const row of rows) {
+      if (row.tenant_id) referencedTenants.add(String(row.tenant_id));
+    }
+  }
+
+  return [...referencedTenants]
+    .filter((tenantId) => !tenants.has(tenantId))
+    .sort()
+    .map((tenantId) => ({
+      id: tenantId,
+      name: `Imported tenant ${tenantId.slice(-6)}`,
+      slug: `imported-${tenantId.slice(-12)}`,
+      plan: "pilot-import",
+      settings: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+}
+
 async function getColumns(tableName: string) {
   const result = await pool.query<ColumnInfo>(
     `
@@ -163,6 +187,11 @@ async function main() {
 
   for (const [key, value] of Object.entries(parsed)) {
     if (isRowArray(value)) tables.set(key, value);
+  }
+
+  const missingTenants = collectMissingTenants(tables);
+  if (missingTenants.length) {
+    tables.set("tenants", [...(tables.get("tenants") ?? []), ...missingTenants]);
   }
 
   const orderedTables = [
