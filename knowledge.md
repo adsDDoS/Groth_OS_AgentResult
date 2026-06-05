@@ -153,11 +153,13 @@ Preferred Telegram command contract:
 - `/post`: show the material text waiting for approval.
 - `/osapprove`: record approval through backend in Hermes polling mode.
 - `/changes`: request changes through backend.
+- `/handoff`: mark the approved material as manually handed off for release.
+- `/published`: confirm that a handed-off material is live.
 - `/onboarding`: start setup flow through Telegram.
 
 Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
 
-Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "что по результату", or "опубликуй напрямую", Hermes should call `POST /telegram/intent` with the raw owner text and return only backend `data.text`. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
+Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "передал в выпуск", "вышло", "что по результату", or "опубликуй напрямую", Hermes should call `POST /telegram/intent` with the raw owner text and return only backend `data.text`. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
 
 Hermes Telegram slash commands must also be registered in Hermes `quick_commands`; prompt instructions alone do not make `/brief` or `/post` available in the Telegram gateway. Current VPS runtime maps `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` to a small helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` as the safe approval command because `/approve` can be reserved by Hermes for tool approval flows. Backend may still accept `/approve` internally for non-Hermes callers, but owner-facing Telegram copy should prefer `/osapprove`.
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
-import { insertJson } from "../common/repository.js";
+import { insertJson, patchJson } from "../common/repository.js";
 
 type Row = Record<string, unknown>;
 type TelegramButton = {
@@ -28,6 +28,7 @@ type OwnerBriefInput = {
   contentItems: Row[];
   latestSummary: Row;
 };
+type BriefData = Awaited<ReturnType<typeof loadOwnerBriefData>>;
 
 const telegramActionSchema = z.object({
   action: z.enum(["approval.approve", "approval.request_changes", "publishing.confirm_live"]),
@@ -469,6 +470,18 @@ function renderResultMessage(brief: OwnerBrief) {
   ].join("\n");
 }
 
+function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
+  return [
+    "Передано в выпуск вручную.",
+    "",
+    `Материал: ${textValue(input.item.title, "Материал")}`,
+    `Канал: ${textValue(input.item.channel, "manual")}`,
+    "",
+    "Следующий шаг: после выхода подтвердить публикацию.",
+    "Доступно: /published, /result"
+  ].join("\n");
+}
+
 function includesAny(value: string, patterns: string[]) {
   return patterns.some((pattern) => value.includes(pattern));
 }
@@ -515,6 +528,47 @@ function onboardingCommandButtons(): TelegramCommandButton[] {
   ];
 }
 
+function findApprovedContentForHandoff(input: BriefData) {
+  const pendingTargetIds = new Set(
+    input.approvals
+      .filter((row) => row.status === "pending" && row.target_type === "content_item" && typeof row.target_id === "string")
+      .map((row) => row.target_id)
+  );
+  const calendarContentIds = new Set(
+    input.calendar
+      .filter((row) => ["handed_off", "published"].includes(String(row.status)))
+      .map((row) => row.content_item_id)
+      .filter((id): id is string => typeof id === "string")
+  );
+  const approvedTargetIds = input.approvals
+    .filter((row) => row.status === "approved" && row.target_type === "content_item" && typeof row.target_id === "string")
+    .sort((a, b) => new Date(textValue(b.decided_at, textValue(b.updated_at, ""))).getTime() -
+      new Date(textValue(a.decided_at, textValue(a.updated_at, ""))).getTime())
+    .map((row) => row.target_id as string);
+  const contentById = new Map(input.contentItems.map((row) => [row.id, row]));
+
+  for (const targetId of approvedTargetIds) {
+    if (pendingTargetIds.has(targetId) || calendarContentIds.has(targetId)) continue;
+    const contentItem = contentById.get(targetId);
+    if (contentItem) return contentItem;
+  }
+
+  return input.contentItems.find((row) => {
+    const id = typeof row.id === "string" ? row.id : "";
+    const status = String(row.status ?? "");
+    return ["approved", "scheduled"].includes(status) && !pendingTargetIds.has(id) && !calendarContentIds.has(id);
+  }) ?? null;
+}
+
+function handoffButtonsForBrief(brief: OwnerBrief): TelegramCommandButton[] {
+  const itemId = typeof brief.handoffs[0]?.id === "string" ? brief.handoffs[0].id : null;
+  const buttons = [commandButton("/result", "Результат")];
+
+  if (itemId) buttons.unshift(commandButton("/published", "Подтвердить выход", itemId));
+
+  return buttons;
+}
+
 async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
   const contentItem = await insertJson("content_items", {
     title: input.title,
@@ -557,6 +611,59 @@ async function createTelegramMaterial(input: TelegramMaterialInput, context: { t
   };
 }
 
+async function createManualHandoff(context: { tenantId: string; userId?: string }) {
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const contentItem = findApprovedContentForHandoff(briefData);
+
+  if (!contentItem) {
+    const ownerBrief = buildOwnerBrief(briefData);
+    return {
+      command: "handoff",
+      text: "Сейчас нет согласованного материала для передачи в выпуск.",
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  const existing = briefData.calendar.find((row) => row.content_item_id === contentItem.id && row.status !== "published");
+  const item = existing?.id
+    ? await patchJson("publishing_calendar_items", String(existing.id), {
+      status: "handed_off",
+      title: textValue(existing.title, textValue(contentItem.title, "Материал")),
+      channel: textValue(existing.channel, textValue(contentItem.channel, "manual")),
+      metadata: {
+        ...(typeof existing.metadata === "object" && existing.metadata ? existing.metadata : {}),
+        handoff_source: "telegram_intent"
+      }
+    }, context.tenantId)
+    : await insertJson("publishing_calendar_items", {
+      content_item_id: contentItem.id,
+      channel: textValue(contentItem.channel, "manual"),
+      title: textValue(contentItem.title, "Материал"),
+      status: "handed_off",
+      scheduled_for: null,
+      timezone: "Europe/Moscow",
+      export_path: null,
+      metadata: {
+        source: "telegram_intent",
+        handed_off_by: context.userId ?? null
+      }
+    }, context.tenantId);
+
+  await patchJson("content_items", String(contentItem.id), { status: "scheduled" }, context.tenantId);
+
+  const updatedBriefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(updatedBriefData);
+
+  return {
+    command: "handoff",
+    text: renderHandoffMessage({ item, ownerBrief }),
+    buttons: handoffButtonsForBrief(ownerBrief),
+    ownerBrief,
+    item
+  };
+}
+
 async function executeTelegramCommand(input: TelegramCommandInput, context: { tenantId: string; userId?: string }) {
   const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
   const briefData = await loadOwnerBriefData(context.tenantId);
@@ -588,6 +695,36 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
       text: renderOnboardingMessage(),
       buttons: onboardingCommandButtons(),
       ownerBrief
+    };
+  }
+
+  if (["handoff", "передано", "передал", "в выпуск"].includes(command)) {
+    return createManualHandoff(context);
+  }
+
+  if (["published", "live", "вышло", "опубликовано"].includes(command)) {
+    const handoff = ownerBrief.handoffs[0];
+    if (!handoff || typeof handoff.id !== "string") {
+      return {
+        command,
+        text: "Сейчас нет переданного материала, по которому нужно подтвердить выход.",
+        buttons: briefCommandButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
+    const actionResult = await executeTelegramAction({
+      action: "publishing.confirm_live",
+      targetId: handoff.id,
+      note: input.note
+    }, context);
+
+    return {
+      command,
+      text: "Выход подтверждён. Материал учтён в результатах.",
+      buttons: briefCommandButtons(actionResult.ownerBrief),
+      ownerBrief: actionResult.ownerBrief,
+      actionResult
     };
   }
 
@@ -643,7 +780,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
 
   return {
     command,
-    text: "Команда не распознана. Доступно: /brief, /post, /osapprove, /changes, /onboarding.",
+    text: "Команда не распознана. Доступно: /brief, /post, /osapprove, /changes, /handoff, /published, /onboarding.",
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
@@ -708,6 +845,24 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
       ...commandResult,
       intent: "request_changes",
       command: "/changes"
+    };
+  }
+
+  if (includesAny(text, ["передал", "передано", "отправил в выпуск", "передал в выпуск", "пусть выложат", "передал в канал", "отправил саше", "отправил ответственному"])) {
+    const commandResult = await executeTelegramCommand({ command: "/handoff", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "manual_handoff",
+      command: "/handoff"
+    };
+  }
+
+  if (includesAny(text, ["вышло", "опубликовано", "пост вышел", "материал вышел", "подтверждаю выход"])) {
+    const commandResult = await executeTelegramCommand({ command: "/published", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "confirm_published",
+      command: "/published"
     };
   }
 

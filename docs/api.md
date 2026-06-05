@@ -177,6 +177,8 @@ Common intent examples:
 - `покажи пост`, `скинь текст` -> current material;
 - `да`, `ок`, `согласую` -> approve current decision;
 - `нужны правки`, `переделай` -> request changes;
+- `передал`, `передал в выпуск`, `пусть выложат` -> manual handoff;
+- `вышло`, `опубликовано`, `пост вышел` -> confirm published;
 - `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
 - `что по результату` -> result summary.
 
@@ -203,6 +205,8 @@ Supported commands:
 - `/post`: text of the material waiting for approval;
 - `/osapprove`: records approval for the current or specified decision in Hermes polling mode;
 - `/changes`: records that changes are needed;
+- `/handoff`: marks the current approved material as manually handed off for release;
+- `/published`: confirms that a handed-off material went live;
 - `/onboarding`: starts step-by-step setup in Telegram.
 
 Command button shape:

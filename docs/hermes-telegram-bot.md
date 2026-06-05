@@ -142,11 +142,13 @@ Preferred Telegram commands:
 - `/post`: show the material waiting for approval.
 - `/osapprove`: record approval through backend in Hermes polling mode.
 - `/changes`: request changes through backend.
+- `/handoff`: mark the approved material as manually handed off for release.
+- `/published`: confirm that a handed-off material went live.
 - `/onboarding`: start setup flow through Telegram.
 
 Hermes should call `POST /telegram/commands` for these commands and send only the returned `text` to the owner.
 
-Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `что по результату`, and `опубликуй напрямую`, Hermes should call `POST /telegram/intent` with the raw owner text and send only returned `data.text`. Backend owns the intent-to-action mapping.
+Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, Hermes should call `POST /telegram/intent` with the raw owner text and send only returned `data.text`. Backend owns the intent-to-action mapping.
 
 Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. On the VPS, `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` are mapped to a helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` for approval because `/approve` can be reserved by Hermes tool-approval flow.
 
