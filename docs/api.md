@@ -143,6 +143,7 @@ Result body:
 - `POST /telegram/actions`
 - `POST /telegram/commands`
 - `POST /telegram/commands/send`
+- `POST /telegram/intent`
 - `POST /telegram/materials`
 - `POST /telegram/webhook`
 
@@ -158,6 +159,26 @@ Result body:
 `POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
 
 `POST /telegram/commands` executes a predictable owner-facing command and returns ready-to-send text for Hermes Telegram. It is the preferred path for slash commands and short owner commands where model interpretation should be minimized.
+
+`POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
+
+Supported intent body:
+
+```json
+{
+  "text": "согласую",
+  "note": "optional owner note"
+}
+```
+
+Common intent examples:
+
+- `что дальше`, `что требует решения` -> brief;
+- `покажи пост`, `скинь текст` -> current material;
+- `да`, `ок`, `согласую` -> approve current decision;
+- `нужны правки`, `переделай` -> request changes;
+- `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
+- `что по результату` -> result summary.
 
 Command response includes:
 

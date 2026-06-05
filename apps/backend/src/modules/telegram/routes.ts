@@ -51,6 +51,10 @@ const telegramCommandSchema = z.object({
 const telegramSendCommandSchema = telegramCommandSchema.extend({
   dryRun: z.boolean().optional()
 });
+const telegramIntentSchema = z.object({
+  text: z.string().min(1),
+  note: z.string().optional()
+});
 const telegramMaterialSchema = z.object({
   title: z.string().min(3),
   bodyMd: z.string().min(20),
@@ -63,6 +67,7 @@ type TelegramActionInput = z.infer<typeof telegramActionSchema>;
 type OwnerBrief = ReturnType<typeof buildOwnerBrief>;
 type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
 type TelegramCommandResult = Awaited<ReturnType<typeof executeTelegramCommand>>;
+type TelegramIntentInput = z.infer<typeof telegramIntentSchema>;
 type TelegramMaterialInput = z.infer<typeof telegramMaterialSchema>;
 
 function textValue(value: unknown, fallback = "") {
@@ -441,6 +446,33 @@ function renderMaterialCreatedMessage(input: { approval: Row; contentItem: Row }
   ].join("\n");
 }
 
+function renderDirectPublishingBoundary() {
+  return [
+    "Прямой выпуск в Telegram-канал в этом контуре не подключён.",
+    "",
+    "Могу сохранить материал, провести согласование, передать в выпуск вручную и зафиксировать результат."
+  ].join("\n");
+}
+
+function renderResultMessage(brief: OwnerBrief) {
+  return [
+    "AgentResult OS — результат",
+    "",
+    `Вышло: ${brief.counts.published}`,
+    `Передано вручную: ${brief.counts.handedOff}`,
+    `Заявки: ${brief.counts.leads}`,
+    `Деньги: ${brief.counts.money}`,
+    "",
+    brief.counts.decisions
+      ? "Следующий шаг: закрыть решение в очереди."
+      : "Следующий шаг: проверить новые сигналы после выпуска."
+  ].join("\n");
+}
+
+function includesAny(value: string, patterns: string[]) {
+  return patterns.some((pattern) => value.includes(pattern));
+}
+
 function commandButton(command: string, label: string, targetId?: string | null): TelegramCommandButton {
   return {
     command,
@@ -617,6 +649,110 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
   };
 }
 
+async function executeTelegramIntent(input: TelegramIntentInput, context: { tenantId: string; userId?: string }) {
+  const text = input.text.trim().toLowerCase().replace(/\s+/g, " ");
+
+  if (text.startsWith("/")) {
+    const commandResult = await executeTelegramCommand({ command: text, note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "slash_command",
+      command: commandResult.command
+    };
+  }
+
+  if (includesAny(text, [
+    "опубликуй напрямую",
+    "публикуй напрямую",
+    "выложи напрямую",
+    "отправь в канал",
+    "запости в канал",
+    "добавил тебя в администраторы",
+    "добавил в администраторы",
+    "админ канала",
+    "chat_id",
+    "id канала"
+  ])) {
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    return {
+      intent: "direct_publication_boundary",
+      command: null,
+      text: renderDirectPublishingBoundary(),
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  if (includesAny(text, ["что требует", "что решить", "что дальше", "что сейчас", "что мне сделать", "сводка", "статус"])) {
+    const commandResult = await executeTelegramCommand({ command: "/brief", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "brief",
+      command: "/brief"
+    };
+  }
+
+  if (includesAny(text, ["покажи пост", "скинь пост", "покажи материал", "скинь материал", "покажи текст", "скинь текст", "черновик"])) {
+    const commandResult = await executeTelegramCommand({ command: "/post", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "show_material",
+      command: "/post"
+    };
+  }
+
+  if (includesAny(text, ["нужны правки", "нужна правка", "переделай", "исправь", "не согласую", "не ок"])) {
+    const commandResult = await executeTelegramCommand({ command: "/changes", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "request_changes",
+      command: "/changes"
+    };
+  }
+
+  if (["да", "ок", "окей", "согласую", "утверждаю", "можно", "подтверждаю", "одобряю"].includes(text) ||
+    includesAny(text, ["да, соглас", "ок, соглас", "можно выпускать", "подтверждаю выпуск"])) {
+    const commandResult = await executeTelegramCommand({ command: "/osapprove", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "approve_current",
+      command: "/osapprove"
+    };
+  }
+
+  if (includesAny(text, ["онбординг", "настройка", "настроить", "запуск"])) {
+    const commandResult = await executeTelegramCommand({ command: "/onboarding", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "onboarding",
+      command: "/onboarding"
+    };
+  }
+
+  if (includesAny(text, ["результат", "заявки", "деньги", "сигналы", "что по результату"])) {
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    return {
+      intent: "result",
+      command: null,
+      text: renderResultMessage(ownerBrief),
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+  return {
+    intent: "unknown",
+    command: null,
+    text: "Не распознал действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, что по результату.",
+    buttons: briefCommandButtons(ownerBrief),
+    ownerBrief
+  };
+}
+
 async function sendOwnerBriefToTelegram(brief: OwnerBrief, input: { dryRun?: boolean }) {
   const message = brief.telegramMessage;
   const replyMarkup = telegramInlineKeyboard(message.buttons);
@@ -758,6 +894,18 @@ export async function telegramRoutes(app: FastifyInstance) {
   app.post("/telegram/commands", async (request) => {
     const body = telegramCommandSchema.parse(request.body ?? {});
     const result = await executeTelegramCommand(body, {
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+
+    return {
+      data: result
+    };
+  });
+
+  app.post("/telegram/intent", async (request) => {
+    const body = telegramIntentSchema.parse(request.body ?? {});
+    const result = await executeTelegramIntent(body, {
       tenantId: request.tenantId,
       userId: request.userId
     });

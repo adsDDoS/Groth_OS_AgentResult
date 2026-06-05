@@ -157,6 +157,8 @@ Preferred Telegram command contract:
 
 Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
 
+Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "что по результату", or "опубликуй напрямую", Hermes should call `POST /telegram/intent` with the raw owner text and return only backend `data.text`. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
+
 Hermes Telegram slash commands must also be registered in Hermes `quick_commands`; prompt instructions alone do not make `/brief` or `/post` available in the Telegram gateway. Current VPS runtime maps `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` to a small helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` as the safe approval command because `/approve` can be reserved by Hermes for tool approval flows. Backend may still accept `/approve` internally for non-Hermes callers, but owner-facing Telegram copy should prefer `/osapprove`.
 
 When Hermes drafts a new material in Telegram, it must save the approved draft to backend through `POST /telegram/materials` before asking for release. The endpoint creates a content item, stores the text, opens an approval, and returns owner-facing text with `/post`, `/osapprove`, and `/changes`. Hermes must not offer direct publication or channel delivery for a newly drafted material that is not yet recorded in backend.
