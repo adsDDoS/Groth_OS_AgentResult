@@ -747,6 +747,15 @@ Private pilot hardening rule:
 - When cutting over from local JSON to Postgres, deploy from `.env` with `AGENTRESULT_ENV_SOURCE=file`, run migrations through the deploy script, and import the previous runtime JSON with `apps/backend/dist/db/import-local-json.js`.
 - Telegram owner-control behavior must be covered by `npm run telegram:regression` before deploy.
 
+Pilot demo rule:
+
+- Resettable client demos must use the separate demo tenant `10000000-0000-4000-8000-000000000001`.
+- Demo reset must not touch the main pilot tenant `00000000-0000-0000-0000-000000000001`.
+- Use `apps/backend/dist/db/reset-pilot-demo.js` through `npm run demo:reset-pilot` or the backend Docker image after build.
+- Dashboard demo links may set `?demo=reset&api=...&tenant=10000000-0000-4000-8000-000000000001`.
+- Demo story and commands live in `docs/pilot-demo-script.md`.
+- The 5-7 minute script uses ordinary Telegram phrases: `что готово`, `покажи первый`, `согласую`, `передал в выпуск`, `вышло`, `что по результату`.
+
 ## Non-Negotiables
 
 - Do not rewrite the dashboard from scratch.

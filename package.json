@@ -21,6 +21,7 @@
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",
     "db:import-local-json": "node apps/backend/dist/db/import-local-json.js",
+    "demo:reset-pilot": "node apps/backend/dist/db/reset-pilot-demo.js",
     "lint": "npm run lint -w apps/backend",
     "seed:demo": "bash scripts/seed-demo-company.sh"
   },

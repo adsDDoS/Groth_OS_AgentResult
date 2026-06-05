@@ -12,6 +12,10 @@ if (params.get("demo") === "reset") {
 }
 
 const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+const queryApiBase = params.get("api");
+const queryTenantId = params.get("tenant");
+if (queryApiBase) localStorage.setItem("aiGrowthOsApiBase", queryApiBase);
+if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
 const IS_PRODUCTION_DEMO = !isLocalHost && !configuredApiBase;
