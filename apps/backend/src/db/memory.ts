@@ -43,7 +43,9 @@ const ids = {
 };
 
 const localStorePath =
-  process.env.AI_GROWTH_OS_LOCAL_DATA_PATH ?? resolve(process.cwd(), "apps/backend/.runtime/agentresult.local-data.json");
+  process.env.AI_GROWTH_OS_LOCAL_DATA_PATH ??
+  process.env.AI_GROWTH_OS_LOCAL_DATA_FILE ??
+  resolve(process.cwd(), "apps/backend/.runtime/agentresult.local-data.json");
 
 const agentResultProfileDefaults = {
   positioning:

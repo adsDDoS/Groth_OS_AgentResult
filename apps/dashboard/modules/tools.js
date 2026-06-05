@@ -142,7 +142,7 @@ export function createToolsModule(ctx) {
       },
       {
         id: "hermes",
-        name: "Hermes Agent",
+        name: text("Preparation engine", "Движок подготовки"),
         type: text("owner assistant", "помощник собственника"),
         formType: "other",
         group: "active",
@@ -181,7 +181,7 @@ export function createToolsModule(ctx) {
         modules: ["content-factory", "proof-engine"],
         owner: "AgentResult",
         url: text("Through AgentResult workspace", "Через рабочий контур AgentResult"),
-        summary: text("Provides model calls through Hermes and the controlled workspace.", "Даёт вызовы моделей через Hermes и управляемый контур."),
+        summary: text("Provides model calls through the controlled AgentResult workspace.", "Даёт вызовы моделей через управляемый контур AgentResult."),
         permissions: ["prepare"],
         limits: text("No direct calls from owner screens.", "Не вызывать напрямую из экранов собственника.")
       },

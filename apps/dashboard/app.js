@@ -396,7 +396,7 @@ const demo = {
       pains:
         "Лиды теряются; менеджеры не ведут CRM; повторные касания пропускаются; собственник не видит реальную картину продаж; контент хаотичен; сайт не создаёт спрос; дебиторка висит без системы; AI кажется рискованным.",
       proof:
-        "Рабочий WebApp-прототип AgentResult, собранная архитектура backend -> Hermes -> Postgres -> Telegram/WebApp, отдельный прототип AI Growth OS и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
+        "Рабочий WebApp-прототип AgentResult, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, отдельный прототип AI Growth OS и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
       forbiddenClaims:
         "No guaranteed revenue growth, no guaranteed debt recovery, no 'replace the whole sales team', no error-free autonomy, no legal actions without approval, no automatic publishing or sending without approval.",
       tone: "Practical, direct, confident, owner-level, no hype.",
@@ -1943,7 +1943,7 @@ function settingsTabContext(tab) {
     ],
     autopilot: [
       text("Rules", "Правила"),
-      text("What Hermes may prepare, what needs approval, and where materials may go.", "Что Hermes может готовить, что требует согласования и куда можно выпускать.")
+      text("What AgentResult may prepare, what needs approval, and where materials may go.", "Что AgentResult может готовить, что требует согласования и куда можно выпускать.")
     ],
     tools: [
       text("Access", "Доступы"),
@@ -1967,7 +1967,7 @@ function settingsNextStep(tab) {
     autopilot: {
       eyebrow: text("What to do now", "Что сделать сейчас"),
       title: text("Keep release approval-first", "Оставить выпуск через согласование"),
-      note: text("Hermes may prepare work. Public release should still wait for the owner's final click.", "Hermes может готовить работу. Публичный выпуск должен ждать финального клика собственника."),
+      note: text("AgentResult may prepare work. Public release should still wait for the owner's final click.", "AgentResult может готовить работу. Публичный выпуск должен ждать финального клика собственника."),
       action: "save-autopilot",
       id: "",
       label: text("Save rules", "Сохранить правила")
@@ -2113,12 +2113,12 @@ function renderAutopilotSettings() {
       <article class="panel rules-main-panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">${text("Hermes rules", "Правила Hermes")}</p>
+            <p class="eyebrow">${text("AgentResult rules", "Правила AgentResult")}</p>
             <h3>${text("Preparation is automatic. Release is approval-first.", "Подготовка автоматическая. Выпуск через согласование.")}</h3>
           </div>
         </div>
         <div class="rules-check-block">
-          <span class="meta-label">${text("Hermes may do", "Hermes может делать")}</span>
+          <span class="meta-label">${text("AgentResult may do", "AgentResult может делать")}</span>
           <div class="check-grid single">
             ${toggles.map(([key, label, checked]) => `<label class="check"><input type="checkbox" data-autopilot-key="${escapeAttr(key)}" ${state.autopilotSettings[key] ?? checked ? "checked" : ""} /> ${escapeHtml(label)}</label>`).join("")}
           </div>

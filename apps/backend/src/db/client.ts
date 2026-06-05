@@ -16,7 +16,7 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(tex
     const result = await pool.query<T>(text, values);
     return result;
   } catch (error) {
-    if (shouldUseMemoryFallback(error)) {
+    if (config.storageMode === "auto" && shouldUseMemoryFallback(error)) {
       return memoryQuery<T>(text, values) as Promise<pg.QueryResult<T>>;
     }
     throw error;

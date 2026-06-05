@@ -724,28 +724,27 @@ Watch for:
 
 ## Next Logical Product Step
 
-The next high-value step is to reduce density below the first Today screen.
+The next high-value step is to make AgentResult OS technically stable enough for a private pilot, not only a working demo.
 
 Current issue:
 
 ```text
-Demo-flow is clear, but below it Today still has too many parallel panels:
-Требует решения / Блокирует / Сделала система / result strip.
+The product loop works, but reliability still depends on local storage, manual smoke checks, ad-hoc deploy commands, and secrets that need rotation.
 ```
 
 Recommended direction:
 
 ```text
-Keep one main owner-loop.
-Compress secondary panels into a small "details if needed" area.
-Make Today feel like a command surface, not an operations report.
+Use Postgres for private pilot, keep local storage for demo/dev only, add Telegram regression tests, deploy backend through a single safe script, remove owner-facing Hermes copy, and document secret rotation.
 ```
 
-After that, build the Telegram/Hermes owner approval simulation:
+Private pilot hardening rule:
 
-```text
-Hermes message -> owner approves -> backend updates approval -> publication status changes -> Results update.
-```
+- `AI_GROWTH_OS_STORAGE=local` is demo/dev only.
+- Private pilot must use Postgres with `AI_GROWTH_OS_STORAGE=postgres`; backend must fail loudly if Postgres is unavailable.
+- `auto` may remain a developer convenience, but it is not a pilot mode.
+- Backend deploys should go through `scripts/deploy-backend-vps.sh`, not ad-hoc SSH command strings.
+- Telegram owner-control behavior must be covered by `npm run telegram:regression` before deploy.
 
 ## Non-Negotiables
 
