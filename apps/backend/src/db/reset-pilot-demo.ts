@@ -1,6 +1,10 @@
 import { pool } from "./client.js";
 
 type Row = Record<string, unknown>;
+type ColumnInfo = {
+  column_name: string;
+  data_type: string;
+};
 
 const demoTenantId = process.env.AGENTRESULT_DEMO_TENANT_ID ?? "10000000-0000-4000-8000-000000000001";
 const demoOwnerId = process.env.AGENTRESULT_DEMO_OWNER_ID ?? "10000000-0000-4000-8000-000000000101";
@@ -42,9 +46,33 @@ function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
+async function getColumns(tableName: string) {
+  const result = await pool.query<ColumnInfo>(
+    `
+      select column_name, data_type
+      from information_schema.columns
+      where table_schema = 'public' and table_name = $1
+    `,
+    [tableName]
+  );
+  return new Map(result.rows.map((column) => [column.column_name, column]));
+}
+
+function normalizeValue(value: unknown, column?: ColumnInfo) {
+  if (value === undefined) return null;
+  if (value === null) return null;
+
+  if (column?.data_type === "json" || column?.data_type === "jsonb") {
+    return typeof value === "string" ? value : JSON.stringify(value);
+  }
+
+  return value;
+}
+
 async function insert(table: string, row: Row) {
+  const tableColumns = await getColumns(table);
   const columns = Object.keys(row);
-  const values = columns.map((column) => row[column]);
+  const values = columns.map((column) => normalizeValue(row[column], tableColumns.get(column)));
   await pool.query(
     `insert into ${quoteIdentifier(table)} (${columns.map(quoteIdentifier).join(", ")}) values (${placeholders(row)})`,
     values
