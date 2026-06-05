@@ -544,6 +544,25 @@ function renderDailyWorkMessage(brief: OwnerBrief) {
   return lines.join("\n");
 }
 
+function renderResetMessage(brief: OwnerBrief) {
+  const lines = [
+    "Контур обновлён.",
+    "",
+    "Данные AgentResult OS не сбрасывал. Продолжаем с текущего состояния.",
+    ""
+  ];
+
+  if (brief.counts.decisions > 0) {
+    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
+  } else if (brief.counts.handedOff > 0) {
+    lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
+  } else {
+    lines.push("Сейчас нет решений в очереди.");
+  }
+
+  return lines.join("\n");
+}
+
 function renderUnknownIntentMessage() {
   return "Не понял, какое действие нужно зафиксировать. Можно написать: что дальше, покажи материал, согласую, нужны правки, передал в выпуск, вышло, что по результату.";
 }
@@ -754,6 +773,15 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
   const ownerBrief = buildOwnerBrief(briefData);
   const primaryDecisionId = typeof ownerBrief.decisions[0]?.id === "string" ? ownerBrief.decisions[0].id : null;
   const targetId = input.targetId ?? primaryDecisionId;
+
+  if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
+    return {
+      command,
+      text: renderResetMessage(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
+      ownerBrief
+    };
+  }
 
   if (["brief", "status", "решения", "сводка"].includes(command)) {
     return {

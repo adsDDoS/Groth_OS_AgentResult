@@ -214,6 +214,7 @@ Supported commands:
 - `/changes`: records that changes are needed;
 - `/handoff`: marks the current approved material as manually handed off for release;
 - `/published`: confirms that a handed-off material went live;
+- `/reset`: restarts the Telegram owner-control dialogue without deleting AgentResult OS data;
 - `/onboarding`: starts step-by-step setup in Telegram.
 
 Command button shape:
