@@ -152,6 +152,15 @@ Owners should not need to remember slash commands. For ordinary phrases like `ч
 
 Keep Hermes Telegram display quiet for owner-facing mode: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress terminal/tool progress messages in Telegram.
 
+For a stricter owner-control mode, run the backend polling middleware instead of Hermes Telegram polling for the same bot token:
+
+- set `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` in backend env;
+- provide `TELEGRAM_BOT_TOKEN` or `HERMES_TELEGRAM_BOT_TOKEN`;
+- provide `TELEGRAM_ALLOWED_USERS` or `HERMES_TELEGRAM_ALLOWED_USERS`;
+- disable Hermes Telegram polling for that token first.
+
+In this mode ordinary owner messages go directly through backend intent routing. Hermes should be called only by explicit backend workflows for generation or revision tasks.
+
 Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. On the VPS, `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` are mapped to a helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` for approval because `/approve` can be reserved by Hermes tool-approval flow.
 
 When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.

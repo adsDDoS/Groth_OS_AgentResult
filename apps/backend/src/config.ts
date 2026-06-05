@@ -8,6 +8,11 @@ for (const candidate of [resolve(process.cwd(), ".env"), resolve(process.cwd(), 
   }
 }
 
+function booleanEnv(value: string | undefined, fallback = false) {
+  if (!value) return fallback;
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   host: process.env.HOST ?? "0.0.0.0",
@@ -20,7 +25,12 @@ export const config = {
   openRouterModel: process.env.OPENROUTER_MODEL ?? "anthropic/claude-3.5-sonnet",
   hermesBaseUrl: process.env.HERMES_BASE_URL ?? "http://localhost:8080",
   hermesApiKey: process.env.HERMES_API_KEY ?? "",
-  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? process.env.HERMES_TELEGRAM_BOT_TOKEN ?? "",
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",
-  telegramApprovalChatId: process.env.TELEGRAM_APPROVAL_CHAT_ID ?? ""
+  telegramApprovalChatId: process.env.TELEGRAM_APPROVAL_CHAT_ID ?? "",
+  telegramAllowedUsers: process.env.TELEGRAM_ALLOWED_USERS ?? process.env.HERMES_TELEGRAM_ALLOWED_USERS ?? "",
+  telegramOwnerControlPolling: booleanEnv(process.env.AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING),
+  telegramOwnerControlPollIntervalMs: Number(process.env.AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLL_INTERVAL_MS ?? 1500),
+  telegramOwnerControlTenantId: process.env.AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_TENANT_ID ?? "00000000-0000-0000-0000-000000000001",
+  telegramOwnerControlUserId: process.env.AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_USER_ID ?? "77777777-7777-4777-8777-777777777771"
 };

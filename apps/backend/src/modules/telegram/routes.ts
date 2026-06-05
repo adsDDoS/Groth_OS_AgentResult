@@ -70,6 +70,25 @@ type TelegramCommandInput = z.infer<typeof telegramCommandSchema>;
 type TelegramCommandResult = Awaited<ReturnType<typeof executeTelegramCommand>>;
 type TelegramIntentInput = z.infer<typeof telegramIntentSchema>;
 type TelegramMaterialInput = z.infer<typeof telegramMaterialSchema>;
+type TelegramApiResponse<T> = {
+  ok: boolean;
+  result?: T;
+  description?: string;
+};
+type TelegramUpdate = {
+  update_id: number;
+  message?: {
+    chat?: { id?: number | string };
+    from?: { id?: number | string };
+    text?: string;
+  };
+  callback_query?: {
+    id?: string;
+    data?: string;
+    from?: { id?: number | string };
+    message?: { chat?: { id?: number | string } };
+  };
+};
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -1020,6 +1039,221 @@ async function sendTelegramCommandResult(result: TelegramCommandResult, input: {
     delivery: "sent",
     telegram: responseBody
   };
+}
+
+async function telegramApiRequest<T>(method: string, payload: Row) {
+  if (!config.telegramBotToken) {
+    const error = new Error("Telegram bot token is not configured");
+    Object.assign(error, { code: "TELEGRAM_BOT_TOKEN_NOT_CONFIGURED" });
+    throw error;
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/${method}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const responseBody = await response.json().catch(() => null) as TelegramApiResponse<T> | null;
+
+  if (!response.ok || !responseBody?.ok) {
+    const error = new Error(`Telegram API ${method} failed`);
+    Object.assign(error, {
+      code: "TELEGRAM_API_FAILED",
+      details: responseBody
+    });
+    throw error;
+  }
+
+  return responseBody.result as T;
+}
+
+async function sendTelegramOwnerControlMessage(input: {
+  buttons?: TelegramCommandButton[];
+  chatId: number | string;
+  text: string;
+}) {
+  return telegramApiRequest("sendMessage", {
+    chat_id: input.chatId,
+    text: input.text,
+    reply_markup: telegramCommandKeyboard(input.buttons)
+  });
+}
+
+async function answerTelegramCallbackQuery(callbackQueryId: string | undefined, text?: string) {
+  if (!callbackQueryId) return null;
+
+  return telegramApiRequest("answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    ...(text ? { text } : {})
+  }).catch(() => null);
+}
+
+function telegramOwnerControlAllowedUsers() {
+  return new Set(
+    config.telegramAllowedUsers
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+}
+
+function telegramUpdateUserId(update: TelegramUpdate) {
+  return String(update.message?.from?.id ?? update.callback_query?.from?.id ?? "");
+}
+
+function telegramUpdateChatId(update: TelegramUpdate) {
+  return update.message?.chat?.id ?? update.callback_query?.message?.chat?.id ?? null;
+}
+
+function isTelegramOwnerAllowed(update: TelegramUpdate, allowedUsers: Set<string>) {
+  if (!allowedUsers.size) return false;
+  return allowedUsers.has(telegramUpdateUserId(update));
+}
+
+function renderTelegramActionResultMessage(actionResult: Awaited<ReturnType<typeof executeTelegramAction>>) {
+  if (actionResult.action === "approval.approve") {
+    return "Решение зафиксировано: согласовано.";
+  }
+
+  if (actionResult.action === "approval.request_changes") {
+    return "Решение зафиксировано: нужны правки.";
+  }
+
+  if (actionResult.action === "publishing.confirm_live") {
+    return renderResultMessage(actionResult.ownerBrief);
+  }
+
+  return "Решение зафиксировано.";
+}
+
+async function processTelegramOwnerControlUpdate(update: TelegramUpdate, allowedUsers: Set<string>, app: FastifyInstance) {
+  const chatId = telegramUpdateChatId(update);
+  const userId = telegramUpdateUserId(update);
+  const context = {
+    tenantId: config.telegramOwnerControlTenantId,
+    userId: config.telegramOwnerControlUserId
+  };
+
+  if (!chatId) return;
+
+  if (!isTelegramOwnerAllowed(update, allowedUsers)) {
+    app.log.warn({ updateId: update.update_id, userId }, "Rejected Telegram owner-control update from non-allowed user");
+    return;
+  }
+
+  const callbackData = update.callback_query?.data;
+  if (callbackData) {
+    await answerTelegramCallbackQuery(update.callback_query?.id);
+
+    const action = parseTelegramCallbackData(callbackData);
+    if (action) {
+      const actionResult = await executeTelegramAction(action, context);
+      await sendTelegramOwnerControlMessage({
+        chatId,
+        text: renderTelegramActionResultMessage(actionResult),
+        buttons: briefCommandButtons(actionResult.ownerBrief)
+      });
+      await query(
+        `insert into integrations (tenant_id, provider, status, config)
+         values ($1, 'telegram_owner_control_middleware', 'action', $2)
+         returning *`,
+        [context.tenantId, { updateId: update.update_id, action: action.action, userId }]
+      );
+      return;
+    }
+
+    const command = parseTelegramCommandCallbackData(callbackData);
+    if (command) {
+      const commandResult = await executeTelegramCommand(command, context);
+      await sendTelegramOwnerControlMessage({
+        chatId,
+        text: commandResult.text,
+        buttons: commandResult.buttons
+      });
+      await query(
+        `insert into integrations (tenant_id, provider, status, config)
+         values ($1, 'telegram_owner_control_middleware', 'command', $2)
+         returning *`,
+        [context.tenantId, { updateId: update.update_id, command: command.command, userId }]
+      );
+      return;
+    }
+
+    await sendTelegramOwnerControlMessage({
+      chatId,
+      text: "Не понял действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, передал в выпуск, вышло, что по результату."
+    });
+    return;
+  }
+
+  const text = update.message?.text?.trim();
+  if (!text) return;
+
+  const intentResult = await executeTelegramIntent({ text }, context);
+  await sendTelegramOwnerControlMessage({
+    chatId,
+    text: intentResult.text,
+    buttons: intentResult.buttons
+  });
+  await query(
+    `insert into integrations (tenant_id, provider, status, config)
+     values ($1, 'telegram_owner_control_middleware', 'intent', $2)
+     returning *`,
+    [context.tenantId, { updateId: update.update_id, intent: intentResult.intent, command: intentResult.command, userId }]
+  );
+}
+
+export function startTelegramOwnerControlPolling(app: FastifyInstance) {
+  if (!config.telegramOwnerControlPolling) {
+    return;
+  }
+
+  const allowedUsers = telegramOwnerControlAllowedUsers();
+  if (!config.telegramBotToken || !allowedUsers.size) {
+    app.log.warn("Telegram owner-control polling is enabled but bot token or allowed users are not configured");
+    return;
+  }
+
+  let offset = 0;
+  let stopped = false;
+  let timer: NodeJS.Timeout | null = null;
+
+  const schedule = () => {
+    if (stopped) return;
+    timer = setTimeout(poll, Math.max(500, config.telegramOwnerControlPollIntervalMs));
+  };
+
+  const poll = async () => {
+    try {
+      const updates = await telegramApiRequest<TelegramUpdate[]>("getUpdates", {
+        offset,
+        timeout: 0,
+        limit: 20,
+        allowed_updates: ["message", "callback_query"]
+      });
+
+      for (const update of updates ?? []) {
+        offset = Math.max(offset, update.update_id + 1);
+        await processTelegramOwnerControlUpdate(update, allowedUsers, app).catch((error) => {
+          app.log.error({ error, updateId: update.update_id }, "Telegram owner-control update failed");
+        });
+      }
+    } catch (error) {
+      app.log.error({ error }, "Telegram owner-control polling failed");
+    } finally {
+      schedule();
+    }
+  };
+
+  app.addHook("onClose", async () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  });
+
+  app.log.info("Telegram owner-control polling middleware is enabled");
+  schedule();
 }
 
 export async function telegramRoutes(app: FastifyInstance) {

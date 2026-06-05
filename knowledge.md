@@ -139,6 +139,8 @@ Hermes may be connected directly to a Telegram bot as the owner-facing conversat
 
 Current Telegram gateway decision: use Hermes polling as the active owner-chat mode. Keep backend Telegram live delivery/webhook disabled unless the gateway responsibility is deliberately switched. Backend command delivery endpoints may remain available for dry-run, QA, or a future backend-owned mode, but should not compete with Hermes polling in production.
 
+Backend owner-control polling middleware exists behind `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`. It reads Telegram updates, checks `TELEGRAM_ALLOWED_USERS` / `HERMES_TELEGRAM_ALLOWED_USERS`, sends ordinary owner text to backend `POST /telegram/intent` logic directly, and sends back only owner-facing text. Keep it disabled while Hermes polling owns the same bot token. To switch to true backend-owned owner control, disable Hermes Telegram polling for that token first, then enable the backend middleware.
+
 Hermes Telegram access should use the native Hermes allowlist variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep the secret under `HERMES_TELEGRAM_BOT_TOKEN` and map it to `TELEGRAM_BOT_TOKEN` only inside the Hermes service. `TELEGRAM_ALLOWED_USERS` expects numeric Telegram user IDs, not usernames.
 
 Hermes Telegram must not expose terminal commands, tool logs, raw skill names, stack traces, approval internals, or backend probing to the owner. The owner-facing chat should show only business output: decisions, tasks, material text, release status, result, and concise failure states. If a tool/terminal approval is technically required by Hermes, treat it as an implementation detail to remove from the customer experience.

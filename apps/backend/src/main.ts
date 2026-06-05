@@ -3,6 +3,7 @@ import helmet from "@fastify/helmet";
 import fastify from "fastify";
 import { config } from "./config.js";
 import { authPlugin } from "./modules/auth/plugin.js";
+import { startTelegramOwnerControlPolling } from "./modules/telegram/routes.js";
 import { registerRoutes } from "./routes.js";
 
 async function bootstrap() {
@@ -14,6 +15,7 @@ async function bootstrap() {
   await app.register(cors, { origin: true });
   await authPlugin(app);
   await registerRoutes(app);
+  startTelegramOwnerControlPolling(app);
 
   app.setErrorHandler((error, _request, reply) => {
     const normalizedError = error instanceof Error ? error : new Error("Unknown error");
