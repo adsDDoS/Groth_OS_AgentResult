@@ -213,7 +213,7 @@ function draftBodyFromArtifact(artifact: z.infer<typeof hermesArtifactSchema>) {
 function draftTitleFromArtifact(artifact: z.infer<typeof hermesArtifactSchema>, task: Row) {
   const payload = artifactPayload(artifact);
   const taskPayload = asRecord(task.payload);
-  return textValue(payload.title, textValue(taskPayload.title, textValue(taskPayload.firstMaterial, "Материал Hermes")));
+  return textValue(payload.title, textValue(taskPayload.title, textValue(taskPayload.firstMaterial, "Материал AgentResult")));
 }
 
 async function applyDraftArtifact(input: {
@@ -250,7 +250,7 @@ async function applyDraftArtifact(input: {
     content_item_id: contentItem.id,
     version: 1,
     body_md: bodyMd,
-    change_note: "Черновик Hermes",
+    change_note: "Черновик AgentResult",
     created_by: input.userId ?? null
   }, input.tenantId);
 
@@ -261,7 +261,7 @@ async function applyDraftArtifact(input: {
     targetId: String(contentItem.id),
     requestedBy: input.userId,
     riskFlags: input.riskFlags.length ? input.riskFlags : ["public claim", "channel publishing"],
-    summary: `Согласовать материал Hermes: ${title}`
+    summary: `Согласовать материал AgentResult: ${title}`
   });
 
   return {

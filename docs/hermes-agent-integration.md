@@ -369,7 +369,7 @@ Current dispatch behavior:
 - Hermes must return strict JSON matching the backend result envelope;
 - backend validates the result, updates the task, stores accepted `draft` artifacts as review content, and opens owner approval;
 - Telegram onboarding starts the same dispatch service as a background job after creating the first queued Hermes task, so the owner gets an immediate "task in work" response and a separate message when the draft is ready;
-- owner brief surfaces active draft preparation as `Hermes готовит черновик`, while backend keeps raw task/run statuses internal;
+- owner brief surfaces active draft preparation as `AgentResult готовит черновик`, while backend keeps raw task/run statuses internal;
 - `result` remains available for external workers that send structured Hermes output back later;
 - proposed actions remain proposed until backend approval rules turn them into actual approvals, handoffs, releases, or result records.
 

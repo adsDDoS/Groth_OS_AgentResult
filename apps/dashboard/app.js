@@ -2141,7 +2141,7 @@ function renderAutopilotSettings() {
           </div>
         </div>
         <div class="automation-list">
-          ${automationRow(text("Hermes prepares", "Hermes готовит"), text("Topics, briefs, drafts, weekly packs and approval reminders.", "Темы, ТЗ, черновики, недельные пакеты и напоминания о согласовании."), 78)}
+          ${automationRow(text("AgentResult prepares", "AgentResult готовит"), text("Topics, briefs, drafts, weekly packs and approval reminders.", "Темы, ТЗ, черновики, недельные пакеты и напоминания о согласовании."), 78)}
           ${automationRow(text("Owner decides", "Собственник решает"), text("Public publishing, strong claims, client names and competitor comparisons.", "Публичный выпуск, сильные обещания, имена клиентов и сравнения с конкурентами."), 100)}
           ${automationRow(text("Manual handoff stays available", "Ручная передача остаётся"), text("Until direct posting, site updates and email sends are connected safely.", "Пока прямой выпуск, обновление сайта и email не подключены безопасно."), 58)}
         </div>

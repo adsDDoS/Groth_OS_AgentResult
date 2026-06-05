@@ -47,6 +47,8 @@ The product language is:
 - CRM discipline
 - receivables
 
+Owner-facing names and messages must use `AgentResult`, not `Hermes`. Hermes is an internal runtime/integration term. In Telegram, dashboard labels, approval summaries, and owner-visible status copy, say `AgentResult готовит`, `AgentResult взял задачу`, or `черновик AgentResult`, never `Hermes готовит`.
+
 Money is a valid AgentResult metric only where there is a real monetary source: deal, invoice, receivable, payment promise, CRM event, or qualified request with value. In the content/growth contour, do not show empty money metrics such as `Деньги: 0`.
 
 Avoid product language that sounds like:
@@ -217,7 +219,7 @@ Current Telegram onboarding flow:
 - creates a Hermes `content_writer` task for the first material;
 - starts a backend background job for Hermes dispatch;
 - immediately tells the owner that the task is in work;
-- shows active draft preparation in `/brief` / "что дальше" as `Hermes готовит черновик`;
+- shows active draft preparation in `/brief` / "что дальше" as `AgentResult готовит черновик`;
 - receives a `draft` artifact through backend when Hermes finishes;
 - saves the Hermes draft as a content item in `review`;
 - opens an approval for that material;

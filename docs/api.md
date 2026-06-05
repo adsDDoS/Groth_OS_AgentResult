@@ -111,9 +111,9 @@ For diagnostics, pass `{ "dryRun": true }` to prepare and store the envelope wit
 
 `POST /hermes/tasks/:id/result` accepts the same structured Hermes result envelope from external workers, validates it, writes the result to the task, and records a `hermes_result_received` task event. When Hermes returns a `draft` artifact, backend saves it as a content item in `review`, stores the first content version, and opens an approval. Proposed non-draft actions remain proposed; backend approval rules decide what becomes a release, handoff, or result later.
 
-Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task. The owner completes setup, backend starts a background Hermes job, immediately responds that the task is in work, then saves the returned `draft`, opens approval, and sends a separate Telegram owner-control message when the draft is ready.
+Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task. The owner completes setup, backend starts a background preparation job, immediately responds that the task is in work, then saves the returned `draft`, opens approval, and sends a separate Telegram owner-control message when the draft is ready.
 
-`GET /telegram/owner-brief`, `/brief`, and ordinary intents such as "что дальше" include active draft preparation as owner-facing status: `Hermes готовит черновик`, without exposing queue or run internals.
+`GET /telegram/owner-brief`, `/brief`, and ordinary intents such as "что дальше" include active draft preparation as owner-facing status: `AgentResult готовит черновик`, without exposing queue or run internals. Commands and intents such as `/preparing`, "что готовится", and "что в работе" return the topic, channel, start time, and expected result.
 
 Result body:
 
