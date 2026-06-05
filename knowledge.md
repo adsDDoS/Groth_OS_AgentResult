@@ -143,6 +143,8 @@ Hermes Telegram access should use the native Hermes allowlist variables: `TELEGR
 
 Hermes Telegram must not expose terminal commands, tool logs, raw skill names, stack traces, approval internals, or backend probing to the owner. The owner-facing chat should show only business output: decisions, tasks, material text, release status, result, and concise failure states. If a tool/terminal approval is technically required by Hermes, treat it as an implementation detail to remove from the customer experience.
 
+Hermes gateway display config should keep owner chat quiet: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress tool progress messages in Telegram.
+
 Direct Telegram channel publication is not enabled in the current Hermes polling contour. If the owner asks to publish directly, add the bot as a channel admin, inspect Telegram API access, find channel IDs, or send to a channel, Hermes must not use terminal/env probing, Telegram send tools, or channel APIs. The correct response is concise: direct channel publishing is not connected in this contour; the material can be saved, approved, handed off for manual release, and then the result can be confirmed.
 
 Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.

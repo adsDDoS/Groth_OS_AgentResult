@@ -150,6 +150,8 @@ Hermes should call `POST /telegram/commands` for these commands and send only th
 
 Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, Hermes should call `POST /telegram/intent` with the raw owner text and send only returned `data.text`. Backend owns the intent-to-action mapping.
 
+Keep Hermes Telegram display quiet for owner-facing mode: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress terminal/tool progress messages in Telegram.
+
 Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. On the VPS, `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` are mapped to a helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` for approval because `/approve` can be reserved by Hermes tool-approval flow.
 
 When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.
