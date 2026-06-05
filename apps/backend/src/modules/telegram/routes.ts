@@ -173,6 +173,14 @@ function riskLine(riskFlags: unknown[]) {
   return risks.length ? `Риски: ${risks.join(", ")}` : "";
 }
 
+function approvalDisplayTitle(approval: Row, contentById?: Map<unknown, Row>) {
+  const contentItem = typeof approval.target_id === "string" ? contentById?.get(approval.target_id) : null;
+  return ownerFacingText(contentItem?.title, "") ||
+    ownerFacingText(approval.summary, "Материал ждёт решения")
+      .replace(/^Согласовать материал AgentResult:\s*/i, "")
+      .replace(/^Согласовать Telegram-пост\s*/i, "");
+}
+
 function telegramMetricLines(input: {
   decisions?: number;
   handedOff?: number;
@@ -333,13 +341,15 @@ function parseTelegramWebhookCommand(payload: unknown): ParsedTelegramCommandCal
 }
 
 function renderOwnerBriefMessage(input: {
+  contentItems: Row[];
   handedOffItems: Row[];
   hermesDraftTasks: Row[];
   latestSummary: Row;
   pendingApprovals: Row[];
   publishedItems: Row[];
 }) {
-  const { handedOffItems, hermesDraftTasks, pendingApprovals } = input;
+  const { contentItems, handedOffItems, hermesDraftTasks, pendingApprovals } = input;
+  const contentById = new Map(contentItems.map((row) => [row.id, row]));
   const priority = ownerPriority({
     decisions: pendingApprovals,
     handoffs: handedOffItems,
@@ -354,7 +364,7 @@ function renderOwnerBriefMessage(input: {
     "",
     ...compactStateBlock("Ждёт выхода", handedOffItems.map((row) => ownerFacingText(row.title, "Переданный материал"))),
     "",
-    ...compactStateBlock("Ждёт решения", pendingApprovals.map((row) => ownerFacingText(row.summary, "Материал ждёт решения"))),
+    ...compactStateBlock("Ждёт решения", pendingApprovals.map((row) => approvalDisplayTitle(row, contentById))),
     "",
     ...compactStateBlock("Готовится", preparingTitles)
   ];
@@ -363,7 +373,7 @@ function renderOwnerBriefMessage(input: {
     lines.push("");
     lines.push("Приоритет: подтвердить выход.");
     if (pendingApprovals.length) {
-      lines.push(`Также готов новый материал: ${truncateText(ownerFacingText(pendingApprovals[0]?.summary, "материал"))}`);
+      lines.push(`Также готов новый материал: ${truncateText(approvalDisplayTitle(pendingApprovals[0], contentById))}`);
     }
   } else if (priority.type === "approval") {
     lines.push("");
@@ -489,6 +499,7 @@ function buildOwnerBrief(input: OwnerBriefInput) {
       recoveredPayments: Number(latestSummary.recovered_payments ?? 0)
     },
     telegramMessage: renderOwnerBriefMessage({
+      contentItems,
       handedOffItems,
       hermesDraftTasks,
       latestSummary,
