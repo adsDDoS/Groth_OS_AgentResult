@@ -523,8 +523,45 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
   ].join("\n");
 }
 
+function renderDailyWorkMessage(brief: OwnerBrief) {
+  const lines = [
+    "Рабочий ритм простой:",
+    "",
+    "Утром — посмотреть, что требует решения.",
+    "По материалам — согласовать, вернуть на правки или передать в выпуск.",
+    "После выхода — подтвердить публикацию и проверить сигнал.",
+    ""
+  ];
+
+  if (brief.counts.decisions > 0) {
+    lines.push(`Сейчас важно: закрыть ${brief.counts.decisions} решение.`);
+  } else if (brief.counts.handedOff > 0) {
+    lines.push(`Сейчас важно: подтвердить выход ${brief.counts.handedOff} переданного материала.`);
+  } else {
+    lines.push("Сейчас важно: проверить результат и подготовить следующий материал.");
+  }
+
+  return lines.join("\n");
+}
+
+function renderUnknownIntentMessage() {
+  return "Не понял, какое действие нужно зафиксировать. Можно написать: что дальше, покажи материал, согласую, нужны правки, передал в выпуск, вышло, что по результату.";
+}
+
 function includesAny(value: string, patterns: string[]) {
   return patterns.some((pattern) => value.includes(pattern));
+}
+
+function isApprovalIntent(text: string) {
+  if (["ок", "окей", "согласую", "одобряю"].includes(text)) return true;
+
+  return includesAny(text, [
+    "да, согласую",
+    "да согласую",
+    "можно выпускать",
+    "согласую материал",
+    "одобряю материал"
+  ]);
 }
 
 function commandButton(command: string, label: string, targetId?: string | null): TelegramCommandButton {
@@ -821,7 +858,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
 
   return {
     command,
-    text: "Не понял действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, передал в выпуск, вышло, что по результату.",
+    text: renderUnknownIntentMessage(),
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
@@ -862,7 +899,18 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     };
   }
 
-  if (includesAny(text, ["что требует", "что решить", "что дальше", "что сейчас", "что мне сделать", "сводка", "статус"])) {
+  if (includesAny(text, [
+    "что требует",
+    "что решить",
+    "что дальше",
+    "что сейчас",
+    "что мне сделать",
+    "что сейчас важно",
+    "что важно сейчас",
+    "следующий шаг",
+    "сводка",
+    "статус"
+  ])) {
     const commandResult = await executeTelegramCommand({ command: "/brief", note: input.note }, context);
     return {
       ...commandResult,
@@ -871,7 +919,41 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     };
   }
 
-  if (includesAny(text, ["покажи пост", "скинь пост", "покажи материал", "скинь материал", "покажи текст", "скинь текст", "черновик"])) {
+  if (includesAny(text, [
+    "что нам нужно делать каждый день",
+    "что нужно делать каждый день",
+    "что делать каждый день",
+    "каждый день",
+    "ежедневно",
+    "ежедневный",
+    "как с тобой работать",
+    "как работать с тобой",
+    "как мы работаем",
+    "режим взаимодействия",
+    "как пользоваться тобой"
+  ])) {
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    return {
+      intent: "daily_owner_loop",
+      command: null,
+      text: renderDailyWorkMessage(ownerBrief),
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  if (includesAny(text, [
+    "покажи пост",
+    "скинь пост",
+    "покажи материал",
+    "скинь материал",
+    "посмотреть материал",
+    "можно посмотреть материал",
+    "покажи текст",
+    "скинь текст",
+    "черновик"
+  ])) {
     const commandResult = await executeTelegramCommand({ command: "/post", note: input.note }, context);
     return {
       ...commandResult,
@@ -907,8 +989,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     };
   }
 
-  if (["да", "ок", "окей", "согласую", "утверждаю", "можно", "подтверждаю", "одобряю"].includes(text) ||
-    includesAny(text, ["да, соглас", "ок, соглас", "можно выпускать", "подтверждаю выпуск"])) {
+  if (isApprovalIntent(text)) {
     const commandResult = await executeTelegramCommand({ command: "/osapprove", note: input.note }, context);
     return {
       ...commandResult,
@@ -943,7 +1024,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
   return {
     intent: "unknown",
     command: null,
-    text: "Не распознал действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, что по результату.",
+    text: renderUnknownIntentMessage(),
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
@@ -1183,7 +1264,7 @@ async function processTelegramOwnerControlUpdate(update: TelegramUpdate, allowed
 
     await sendTelegramOwnerControlMessage({
       chatId,
-      text: "Не понял действие. Можно написать: что дальше, покажи пост, согласую, нужны правки, передал в выпуск, вышло, что по результату."
+      text: renderUnknownIntentMessage()
     });
     return;
   }

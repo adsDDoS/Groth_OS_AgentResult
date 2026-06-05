@@ -176,8 +176,9 @@ Supported intent body:
 Common intent examples:
 
 - `что дальше`, `что требует решения` -> brief;
-- `покажи пост`, `скинь текст` -> current material;
-- `да`, `ок`, `согласую` -> approve current decision;
+- `что делать каждый день`, `как с тобой работать` -> daily owner loop;
+- `покажи пост`, `покажи материал`, `можно посмотреть материал` -> current material;
+- `ок`, `окей`, `согласую`, `одобряю`, `можно выпускать`, `да, согласую` -> approve current decision;
 - `нужны правки`, `переделай` -> request changes;
 - `передал`, `передал в выпуск`, `пусть выложат` -> manual handoff;
 - `вышло`, `опубликовано`, `пост вышел` -> confirm published;
@@ -185,6 +186,8 @@ Common intent examples:
 - `что по результату` -> result summary.
 
 Owner-facing response text should use natural action language instead of listing slash commands as the main next step. Slash commands remain supported as a technical compatibility contract for Hermes quick commands and dry-runs.
+
+Approval safety: approval words inside longer questions must not approve anything. For example, `окей, что нам нужно делать каждый день?` maps to daily owner loop, not approval. Standalone `ок` / `окей` is approval.
 
 Command response includes:
 
