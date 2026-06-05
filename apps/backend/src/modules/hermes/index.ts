@@ -10,8 +10,16 @@ type Row = Record<string, unknown>;
 
 const idParams = z.object({ id: z.string().uuid() });
 const dispatchBody = z.object({
-  note: z.string().optional()
+  note: z.string().optional(),
+  dryRun: z.boolean().optional()
 });
+const hermesChatCompletionSchema = z.object({
+  choices: z.array(z.object({
+    message: z.object({
+      content: z.unknown()
+    }).passthrough()
+  }).passthrough()).default([])
+}).passthrough();
 const hermesArtifactSchema = z.object({
   type: z.string(),
   targetType: z.string().optional(),
@@ -115,6 +123,7 @@ async function buildHermesTaskEnvelope(task: Row, tenantId: string) {
     expectedOutput: {
       kind: "structured_hermes_result",
       schemaVersion: 1,
+      strictJsonOnly: true,
       allowedProposedActions: ["approval_request", "task", "handoff", "result_note"]
     },
     sourcePayload: asRecord(task.payload)
@@ -159,6 +168,17 @@ async function updateHermesRun(input: { runId: string; tenantId: string; status:
      where id = $1 and tenant_id = $5
      returning *`,
     [input.runId, input.status, input.output, input.error ?? null, input.tenantId]
+  );
+  return result.rows[0] ?? null;
+}
+
+async function markHermesRunRunning(input: { runId: string; tenantId: string; output?: Row }) {
+  const result = await query(
+    `update task_runs
+     set "status" = $2, "output" = $3
+     where id = $1 and tenant_id = $4
+     returning *`,
+    [input.runId, "running", input.output ?? {}, input.tenantId]
   );
   return result.rows[0] ?? null;
 }
@@ -275,46 +295,330 @@ async function applyHermesArtifacts(input: {
   return acceptedActions;
 }
 
-export async function hermesRoutes(app: FastifyInstance) {
-  app.post("/hermes/tasks/:id/dispatch", async (request) => {
-    const { id } = idParams.parse(request.params);
-    const body = dispatchBody.parse(request.body ?? {});
-    const taskResult = await query("select * from tasks where id = $1 and tenant_id = $2", [id, request.tenantId]);
-    const task = taskResult.rows[0] ?? null;
-    if (!task) return { data: null };
+function stringifyForPrompt(value: unknown) {
+  return JSON.stringify(value, null, 2);
+}
 
-    const envelope = await buildHermesTaskEnvelope(task as Row, request.tenantId);
-    const run = await createHermesRun({
-      tenantId: request.tenantId,
-      taskId: id,
+function buildHermesPrompt(envelope: Row) {
+  return [
+    "Ты Hermes Agent внутри AgentResult Growth Control.",
+    "Задача: подготовить материал или рабочий результат по backend envelope.",
+    "",
+    "Жесткие правила:",
+    "- не публикуй, не отправляй наружу и не принимай решение за собственника;",
+    "- не обещай гарантированный рост, магию, гарантированные деньги или результат без данных;",
+    "- пиши лаконично, профессионально, для собственника B2B-компании в РФ;",
+    "- язык: решение, задача, выпуск, заявка, контроль, результат;",
+    "- не используй backend-admin терминологию в тексте материала;",
+    "- верни только валидный JSON без markdown и пояснений.",
+    "",
+    "Формат ответа:",
+    stringifyForPrompt({
+      status: "completed",
+      summary: "Кратко что подготовлено.",
+      artifacts: [
+        {
+          type: "draft",
+          targetType: "content_item",
+          payload: {
+            title: "Название материала",
+            bodyMd: "Текст материала",
+            channel: "telegram",
+            contentType: "telegram_post"
+          }
+        }
+      ],
+      proposedActions: [
+        {
+          type: "approval_request",
+          scope: "social_post",
+          summary: "Согласовать материал перед выпуском.",
+          payload: {}
+        }
+      ],
+      riskFlags: ["public claim"]
+    }),
+    "",
+    "Backend envelope:",
+    stringifyForPrompt(envelope)
+  ].join("\n");
+}
+
+function contentText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map((part) => {
+      if (typeof part === "string") return part;
+      const record = asRecord(part);
+      return textValue(record.text, "");
+    }).filter(Boolean).join("\n");
+  }
+  return "";
+}
+
+function extractJsonObject(text: string) {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed;
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) return fenced[1].trim();
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+  return trimmed;
+}
+
+async function callHermesRuntime(input: { envelope: Row; runId: string }) {
+  if (!config.hermesApiKey) {
+    throw new Error("HERMES_API_KEY is not configured");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.hermesRequestTimeoutMs);
+  try {
+    const response = await fetch(`${config.hermesBaseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${config.hermesApiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: config.hermesModel,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: "Return only strict JSON that matches the requested schema. Do not publish or send anything."
+          },
+          {
+            role: "user",
+            content: buildHermesPrompt(input.envelope)
+          }
+        ]
+      }),
+      signal: controller.signal
+    });
+    const rawText = await response.text();
+    if (!response.ok) {
+      throw new Error(`Hermes API ${response.status}: ${rawText.slice(0, 500)}`);
+    }
+
+    const parsedCompletion = hermesChatCompletionSchema.parse(JSON.parse(rawText));
+    const firstContent = contentText(parsedCompletion.choices[0]?.message.content);
+    if (!firstContent) {
+      throw new Error("Hermes API returned an empty completion");
+    }
+
+    const rawResult = JSON.parse(extractJsonObject(firstContent));
+    return hermesResultSchema.parse({
+      ...rawResult,
+      runId: input.runId
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function applyHermesResult(input: {
+  task: Row;
+  body: z.infer<typeof hermesResultSchema>;
+  tenantId: string;
+  userId?: string;
+}) {
+  const acceptedActions = input.body.status === "completed"
+    ? await applyHermesArtifacts({
+      artifacts: input.body.artifacts,
+      riskFlags: input.body.riskFlags,
+      task: input.task,
+      tenantId: input.tenantId,
+      userId: input.userId
+    })
+    : [];
+  const taskResultPayload = {
+    source: "hermes",
+    status: input.body.status,
+    summary: input.body.summary ?? null,
+    artifacts: input.body.artifacts,
+    proposedActions: input.body.proposedActions,
+    riskFlags: input.body.riskFlags,
+    acceptedActions,
+    approvalRequired: acceptedActions.length > 0 ||
+      input.body.proposedActions.some((action) => action.type === "approval_request") ||
+      input.body.riskFlags.length > 0
+  };
+  const updatedTask = await updateTaskResult({
+    taskId: String(input.task.id),
+    tenantId: input.tenantId,
+    status: taskStatusFromHermes(input.body.status),
+    result: taskResultPayload
+  });
+  const run = input.body.runId
+    ? await updateHermesRun({
+      runId: input.body.runId,
+      tenantId: input.tenantId,
+      status: input.body.status,
+      output: taskResultPayload,
+      error: input.body.error
+    })
+    : null;
+
+  await recordTaskEvent({
+    tenantId: input.tenantId,
+    taskId: input.task.id,
+    eventType: "hermes_result_received",
+    payload: {
+      runId: input.body.runId ?? null,
+      status: input.body.status,
+      artifactCount: input.body.artifacts.length,
+      acceptedActionCount: acceptedActions.length,
+      proposedActionCount: input.body.proposedActions.length,
+      riskFlags: arrayValue(input.body.riskFlags)
+    }
+  });
+
+  return {
+    task: updatedTask,
+    run,
+    acceptedActions,
+    approvalRequired: taskResultPayload.approvalRequired
+  };
+}
+
+export async function dispatchHermesTask(input: {
+  taskId: string;
+  tenantId: string;
+  userId?: string;
+  note?: string;
+  dryRun?: boolean;
+}) {
+  const taskResult = await query("select * from tasks where id = $1 and tenant_id = $2", [input.taskId, input.tenantId]);
+  const task = taskResult.rows[0] ?? null;
+  if (!task) return null;
+
+  const envelope = await buildHermesTaskEnvelope(task as Row, input.tenantId);
+  const run = await createHermesRun({
+    tenantId: input.tenantId,
+    taskId: input.taskId,
+    envelope,
+    note: input.note
+  });
+  if (!run?.id) {
+    return {
+      run: null,
       envelope,
-      note: body.note
+      delivery: "failed",
+      error: "Hermes run was not created"
+    };
+  }
+  const runId = String(run.id);
+
+  await query(
+    `update tasks
+     set "status" = $2, updated_at = now()
+     where id = $1 and tenant_id = $3
+     returning *`,
+    [input.taskId, "dispatched", input.tenantId]
+  );
+  await recordTaskEvent({
+    tenantId: input.tenantId,
+    taskId: input.taskId,
+    eventType: "hermes_dispatch_prepared",
+    payload: {
+      runId,
+      hermesBaseUrl: config.hermesBaseUrl,
+      envelope
+    }
+  });
+
+  if (input.dryRun || !config.hermesApiKey) {
+    return {
+      run,
+      envelope,
+      delivery: "prepared"
+    };
+  }
+
+  await markHermesRunRunning({
+    runId,
+    tenantId: input.tenantId,
+    output: { hermesBaseUrl: config.hermesBaseUrl, model: config.hermesModel }
+  });
+
+  try {
+    const hermesResult = await callHermesRuntime({ envelope, runId });
+    const applied = await applyHermesResult({
+      task: task as Row,
+      body: hermesResult,
+      tenantId: input.tenantId,
+      userId: input.userId
     });
 
-    await query(
-      `update tasks
-       set "status" = $2, updated_at = now()
-       where id = $1 and tenant_id = $3
-       returning *`,
-      [id, "dispatched", request.tenantId]
-    );
+    return {
+      ...applied,
+      envelope,
+      delivery: "completed"
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const failedPayload = {
+      source: "hermes",
+      status: "failed",
+      summary: null,
+      artifacts: [],
+      proposedActions: [],
+      riskFlags: [],
+      acceptedActions: [],
+      approvalRequired: false,
+      error: message
+    };
+    const updatedTask = await updateTaskResult({
+      taskId: input.taskId,
+      tenantId: input.tenantId,
+      status: "failed",
+      result: failedPayload
+    });
+    const failedRun = await updateHermesRun({
+      runId,
+      tenantId: input.tenantId,
+      status: "failed",
+      output: failedPayload,
+      error: message
+    });
     await recordTaskEvent({
-      tenantId: request.tenantId,
-      taskId: id,
-      eventType: "hermes_dispatch_prepared",
+      tenantId: input.tenantId,
+      taskId: input.taskId,
+      eventType: "hermes_dispatch_failed",
       payload: {
-        runId: run?.id ?? null,
+        runId,
         hermesBaseUrl: config.hermesBaseUrl,
-        envelope
+        error: message
       }
     });
 
     return {
-      data: {
-        run,
-        envelope,
-        delivery: "prepared"
-      }
+      task: updatedTask,
+      run: failedRun,
+      acceptedActions: [],
+      approvalRequired: false,
+      envelope,
+      delivery: "failed",
+      error: message
+    };
+  }
+}
+
+export async function hermesRoutes(app: FastifyInstance) {
+  app.post("/hermes/tasks/:id/dispatch", async (request) => {
+    const { id } = idParams.parse(request.params);
+    const body = dispatchBody.parse(request.body ?? {});
+    return {
+      data: await dispatchHermesTask({
+        taskId: id,
+        tenantId: request.tenantId,
+        userId: request.userId,
+        note: body.note,
+        dryRun: body.dryRun
+      })
     };
   });
 
@@ -325,64 +629,13 @@ export async function hermesRoutes(app: FastifyInstance) {
     const task = taskResult.rows[0] ?? null;
     if (!task) return { data: null };
 
-    const acceptedActions = body.status === "completed"
-      ? await applyHermesArtifacts({
-        artifacts: body.artifacts,
-        riskFlags: body.riskFlags,
+    return {
+      data: await applyHermesResult({
         task: task as Row,
+        body,
         tenantId: request.tenantId,
         userId: request.userId
       })
-      : [];
-    const taskResultPayload = {
-      source: "hermes",
-      status: body.status,
-      summary: body.summary ?? null,
-      artifacts: body.artifacts,
-      proposedActions: body.proposedActions,
-      riskFlags: body.riskFlags,
-      acceptedActions,
-      approvalRequired: acceptedActions.length > 0 ||
-        body.proposedActions.some((action) => action.type === "approval_request") ||
-        body.riskFlags.length > 0
-    };
-    const updatedTask = await updateTaskResult({
-      taskId: id,
-      tenantId: request.tenantId,
-      status: taskStatusFromHermes(body.status),
-      result: taskResultPayload
-    });
-    const run = body.runId
-      ? await updateHermesRun({
-        runId: body.runId,
-        tenantId: request.tenantId,
-        status: body.status,
-        output: taskResultPayload,
-        error: body.error
-      })
-      : null;
-
-    await recordTaskEvent({
-      tenantId: request.tenantId,
-      taskId: id,
-      eventType: "hermes_result_received",
-      payload: {
-        runId: body.runId ?? null,
-        status: body.status,
-        artifactCount: body.artifacts.length,
-        acceptedActionCount: acceptedActions.length,
-        proposedActionCount: body.proposedActions.length,
-        riskFlags: arrayValue(body.riskFlags)
-      }
-    });
-
-    return {
-      data: {
-        task: updatedTask,
-        run,
-        acceptedActions,
-        approvalRequired: taskResultPayload.approvalRequired
-      }
     };
   });
 }

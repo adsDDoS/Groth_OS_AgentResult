@@ -180,6 +180,17 @@ Backend owns business state, approvals, publishing status, audit, Telegram callb
 
 Hermes must not directly publish, send emails, update live site content, approve risky claims, mark handoffs as published, or move money-sensitive workflow state outside explicit backend approval rules.
 
+Current Hermes task dispatch contract:
+
+- backend creates the task and remains the system of record;
+- `POST /hermes/tasks/:id/dispatch` builds the backend-owned envelope;
+- when `HERMES_API_KEY` is configured, backend calls Hermes API Server through `POST /v1/chat/completions`;
+- Hermes must return strict JSON with status, artifacts, proposed actions, risk flags, and summary;
+- backend validates the result and applies only accepted artifacts;
+- a `draft` artifact becomes a `content_item` in `review` and opens owner approval;
+- `dryRun: true` prepares the envelope without calling Hermes;
+- production Docker should use the internal service URL `http://agentresult-os-hermes:8642` or an equivalent private network URL, not Telegram as the task transport.
+
 Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent only if the gateway responsibility is deliberately switched back to Hermes. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend polling/webhook at the same time.
 
 Current Telegram gateway decision: use backend owner-control polling middleware as the active owner-chat mode. In this Telegram owner-control contour, Hermes is not the chat gateway and should be invoked only by explicit backend workflows for generating or revising materials. It should not own ordinary owner messages in Telegram.
@@ -204,7 +215,8 @@ Current Telegram onboarding flow:
 - while onboarding is active, ordinary owner replies fill the current setup step and must not be treated as approval/handoff/result commands;
 - writes collected context into the company profile;
 - creates a Hermes `content_writer` task for the first material;
-- waits for Hermes to return a `draft` artifact through backend;
+- dispatches that task to Hermes through backend immediately;
+- receives a `draft` artifact through backend;
 - saves the Hermes draft as a content item in `review`;
 - opens an approval for that material;
 - returns the owner to the normal Growth Control loop: show material, approve, request changes, hand off, confirm live.

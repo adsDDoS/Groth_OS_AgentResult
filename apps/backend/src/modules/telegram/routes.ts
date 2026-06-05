@@ -6,6 +6,7 @@ import { resetMemoryDemoStore } from "../../db/memory.js";
 import { createAgentTask } from "../agents/runner.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
+import { dispatchHermesTask } from "../hermes/index.js";
 
 type Row = Record<string, unknown>;
 type TelegramButton = {
@@ -709,6 +710,11 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
 
   await updateCompanyFromOnboarding(context.tenantId, answers);
   const hermesTask = await createOnboardingHermesDraftTask(context, answers);
+  const hermesDispatch = await dispatchHermesTask({
+    taskId: String(hermesTask.id),
+    tenantId: context.tenantId,
+    userId: context.userId
+  });
   const completedState = await saveOnboardingState(context.tenantId, {
     answers,
     completedAt: new Date().toISOString(),
@@ -718,6 +724,14 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
+  const dispatchDelivery = hermesDispatch && typeof hermesDispatch === "object"
+    ? (hermesDispatch as Row).delivery
+    : null;
+  const dispatchLine = dispatchDelivery === "completed"
+    ? "Черновик подготовлен и появился на согласование."
+    : dispatchDelivery === "prepared"
+      ? "Задача подготовлена для Hermes. Следующий шаг: получить черновик."
+      : "Задача создана, но Hermes пока не вернул черновик. Проверьте статус позже.";
 
   return {
     intent: "onboarding_complete",
@@ -731,9 +745,10 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
       `Согласование: ${textValue(answers.approvalRules, "публичные материалы ждут решения собственника")}`,
       "",
       `Hermes получил задачу: ${title}`,
-      "Следующий шаг: дождаться черновика. После подготовки материал появится на согласование."
+      dispatchLine
     ].join("\n"),
     buttons: ownerControlButtons(ownerBrief),
+    hermesDispatch,
     hermesTask,
     ownerBrief,
     onboarding: completedState

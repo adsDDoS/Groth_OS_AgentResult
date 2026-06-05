@@ -105,9 +105,13 @@ Publishing creates jobs only after required approval exists.
 - `POST /hermes/tasks/:id/dispatch`
 - `POST /hermes/tasks/:id/result`
 
-`POST /hermes/tasks/:id/dispatch` prepares a backend-owned task envelope for Hermes and records a `task_runs` row with status `dispatch_prepared`. It does not publish, send, or make owner decisions.
+`POST /hermes/tasks/:id/dispatch` creates a backend-owned task envelope, records a `task_runs` row, and calls the Hermes API Server through `POST /v1/chat/completions` when `HERMES_API_KEY` is configured. Hermes must return a strict JSON result. Backend then validates the result, saves accepted `draft` artifacts into `content_items` with status `review`, and opens owner approval. It does not publish, send, or make owner decisions.
 
-`POST /hermes/tasks/:id/result` accepts a structured Hermes result envelope, validates it, writes the result to the task, and records a `hermes_result_received` task event. When Hermes returns a `draft` artifact, backend saves it as a content item in `review`, stores the first content version, and opens an approval. Proposed non-draft actions remain proposed; backend approval rules decide what becomes a release, handoff, or result later.
+For diagnostics, pass `{ "dryRun": true }` to prepare and store the envelope without calling Hermes.
+
+`POST /hermes/tasks/:id/result` accepts the same structured Hermes result envelope from external workers, validates it, writes the result to the task, and records a `hermes_result_received` task event. When Hermes returns a `draft` artifact, backend saves it as a content item in `review`, stores the first content version, and opens an approval. Proposed non-draft actions remain proposed; backend approval rules decide what becomes a release, handoff, or result later.
+
+Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task: the owner completes setup, backend sends the queued task to Hermes, Hermes returns a `draft`, and backend opens approval.
 
 Result body:
 

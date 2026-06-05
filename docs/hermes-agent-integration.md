@@ -77,6 +77,8 @@ AgentResult OS already has the correct control foundation:
 - `POST /telegram/webhook`;
 - `HERMES_BASE_URL`;
 - `HERMES_API_KEY`;
+- `HERMES_MODEL` defaults to `hermes-agent`;
+- `HERMES_REQUEST_TIMEOUT_MS` defaults to `180000`;
 - `HERMES_TELEGRAM_BOT_TOKEN`;
 - `HERMES_TELEGRAM_ALLOWED_USERS`;
 - `HERMES_TELEGRAM_HOME_CHANNEL`;
@@ -360,10 +362,14 @@ Hermes data should live in a persistent volume, separate from Postgres. Backups 
 - Store Hermes run id in `task_events`. Done.
 - Validate result envelopes with zod. Done.
 
-Current Phase 1 behavior:
+Current dispatch behavior:
 
 - `dispatch` prepares the Hermes task envelope and stores a `task_runs` row with `dispatch_prepared`;
-- `result` accepts structured Hermes output, updates the task result, and records `hermes_result_received`;
+- if `HERMES_API_KEY` is configured and the request is not `dryRun`, backend calls Hermes API Server through `POST /v1/chat/completions`;
+- Hermes must return strict JSON matching the backend result envelope;
+- backend validates the result, updates the task, stores accepted `draft` artifacts as review content, and opens owner approval;
+- Telegram onboarding calls the same dispatch service immediately after creating the first queued Hermes task;
+- `result` remains available for external workers that send structured Hermes output back later;
 - proposed actions remain proposed until backend approval rules turn them into actual approvals, handoffs, releases, or result records.
 
 ### Phase 2: Worker
