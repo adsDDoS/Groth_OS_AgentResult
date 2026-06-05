@@ -151,7 +151,7 @@ Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup
 
 Preferred Telegram command contract:
 
-- `/brief`: show decisions, handoffs, releases, leads, money, next action.
+- `/brief`: show decisions, handoffs, releases, leads, next action; show money only when there is a real monetary signal or a sales/receivables context.
 - `/post`: show the material text waiting for approval.
 - `/osapprove`: record approval through backend in Hermes polling mode.
 - `/changes`: request changes through backend.
@@ -160,6 +160,8 @@ Preferred Telegram command contract:
 - `/onboarding`: start setup flow through Telegram.
 
 Hermes should call `POST /telegram/commands` for these commands and return only the backend response text to the owner.
+
+In the content/SEO Telegram contour, do not show `Деньги: 0`. Money is a valid AgentResult OS metric for sales, receivables, and real business signals, but it should not appear as an empty placeholder in a content release loop where there is no measured monetary source.
 
 Owners should not need to remember slash commands. For ordinary owner language such as "что дальше", "покажи пост", "согласую", "нужны правки", "передал в выпуск", "вышло", "что по результату", or "опубликуй напрямую", Hermes should call `POST /telegram/intent` with the raw owner text and return only backend `data.text`. The backend intent router maps common phrases to safe commands/actions and keeps risky requests inside the approval-first loop.
 

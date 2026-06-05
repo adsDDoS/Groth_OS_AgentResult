@@ -201,7 +201,7 @@ Supported command body:
 
 Supported commands:
 
-- `/brief`: current decisions, handoffs, outputs, leads, money, next action;
+- `/brief`: current decisions, handoffs, outputs, leads, next action; money only when there is a real monetary signal;
 - `/post`: text of the material waiting for approval;
 - `/osapprove`: records approval for the current or specified decision in Hermes polling mode;
 - `/changes`: records that changes are needed;

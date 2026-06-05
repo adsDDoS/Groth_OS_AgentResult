@@ -79,6 +79,22 @@ function truncateText(value: string, maxLength = 120) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}…` : value;
 }
 
+function telegramMetricLines(input: {
+  decisions?: number;
+  handedOff?: number;
+  leads?: number;
+  money?: number;
+  published?: number;
+}) {
+  return [
+    typeof input.decisions === "number" ? `Решения: ${input.decisions}` : null,
+    typeof input.handedOff === "number" ? `Передано вручную: ${input.handedOff}` : null,
+    typeof input.published === "number" ? `Вышло: ${input.published}` : null,
+    typeof input.leads === "number" ? `Заявки: ${input.leads}` : null,
+    Number(input.money ?? 0) > 0 ? `Деньги: ${input.money}` : null
+  ].filter((line): line is string => Boolean(line));
+}
+
 function ownerBriefNextAction(pendingApprovals: Row[], handedOffItems: Row[]) {
   if (pendingApprovals.length) {
     return {
@@ -201,11 +217,13 @@ function renderOwnerBriefMessage(input: {
   const lines = [
     "AgentResult OS",
     "",
-    `Решения: ${pendingApprovals.length}`,
-    `Передано вручную: ${handedOffItems.length}`,
-    `Вышло: ${publishedItems.length}`,
-    `Заявки: ${leads}`,
-    `Деньги: ${money}`,
+    ...telegramMetricLines({
+      decisions: pendingApprovals.length,
+      handedOff: handedOffItems.length,
+      published: publishedItems.length,
+      leads,
+      money
+    }),
     ""
   ];
 
@@ -415,11 +433,13 @@ function renderCommandBrief(brief: OwnerBrief) {
   const lines = [
     "AgentResult OS — сводка",
     "",
-    `Решения: ${brief.counts.decisions}`,
-    `Передано вручную: ${brief.counts.handedOff}`,
-    `Вышло: ${brief.counts.published}`,
-    `Заявки: ${brief.counts.leads}`,
-    `Деньги: ${brief.counts.money}`,
+    ...telegramMetricLines({
+      decisions: brief.counts.decisions,
+      handedOff: brief.counts.handedOff,
+      published: brief.counts.published,
+      leads: brief.counts.leads,
+      money: brief.counts.money
+    }),
     ""
   ];
 
@@ -459,10 +479,12 @@ function renderResultMessage(brief: OwnerBrief) {
   return [
     "AgentResult OS — результат",
     "",
-    `Вышло: ${brief.counts.published}`,
-    `Передано вручную: ${brief.counts.handedOff}`,
-    `Заявки: ${brief.counts.leads}`,
-    `Деньги: ${brief.counts.money}`,
+    ...telegramMetricLines({
+      handedOff: brief.counts.handedOff,
+      published: brief.counts.published,
+      leads: brief.counts.leads,
+      money: brief.counts.money
+    }),
     "",
     brief.counts.decisions
       ? "Следующий шаг: закрыть решение в очереди."
