@@ -189,6 +189,13 @@ function telegramMetricLines(input: {
   ].filter((line): line is string => Boolean(line));
 }
 
+function priorityMetricLines(priority: OwnerPriority, counts: { decisions: number; handedOff: number; preparing: number }) {
+  if (priority.type === "confirm_publication") return [`Ждёт подтверждения: ${counts.handedOff}`];
+  if (priority.type === "approval") return [`Требует решения: ${counts.decisions}`];
+  if (priority.type === "preparing") return [`В подготовке: ${counts.preparing}`];
+  return ["Срочных действий нет"];
+}
+
 function ownerPriority(input: { decisions: Row[]; handoffs: Row[]; preparing: Row[] }): OwnerPriority {
   if (input.handoffs.length) return { type: "confirm_publication", handoff: input.handoffs[0] };
   if (input.decisions.length) return { type: "approval", decision: input.decisions[0] };
@@ -333,18 +340,13 @@ function renderOwnerBriefMessage(input: {
     preparing: hermesDraftTasks
   });
   const primaryHermesTask = priority.type === "preparing" ? priority.preparingTask : null;
-  const leads = Number(latestSummary.leads ?? 0);
-  const money = Number(latestSummary.recovered_payments ?? 0);
-
   const lines = [
     "AgentResult OS",
     "",
-    ...telegramMetricLines({
+    ...priorityMetricLines(priority, {
       decisions: pendingApprovals.length,
       handedOff: handedOffItems.length,
-      published: publishedItems.length,
-      leads,
-      money
+      preparing: hermesDraftTasks.length
     }),
     ""
   ];
@@ -921,12 +923,10 @@ function renderCommandBrief(brief: OwnerBrief) {
   const lines = [
     "AgentResult Growth Control",
     "",
-    ...telegramMetricLines({
+    ...priorityMetricLines(priority, {
       decisions: brief.counts.decisions,
       handedOff: brief.counts.handedOff,
-      published: brief.counts.published,
-      leads: brief.counts.leads,
-      money: brief.counts.money
+      preparing: brief.counts.preparing
     }),
     ""
   ];
