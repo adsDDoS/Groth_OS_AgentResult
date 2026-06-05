@@ -209,6 +209,23 @@ Direct Telegram channel publication is not enabled in the current owner-control 
 
 Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.
 
+Telegram owner-control must feel like a short business control surface, not a command-line bot. The main status answer should be split into compact blocks:
+
+```text
+Ждёт выхода
+Ждёт решения
+Готовится
+```
+
+If a handed-off material and a new approval exist at the same time, keep the priority clear:
+
+```text
+Сначала подтвердить выход.
+Также готов новый материал.
+```
+
+Slash commands may stay as fallback, but natural phrases must work for owner questions such as `что готово`, `покажи новое`, `что ждёт решения`, and `что вышло`. Do not let question-like phrases accidentally execute a state-changing action.
+
 Current Telegram onboarding flow:
 
 - starts with `/onboarding` or natural setup intent;
