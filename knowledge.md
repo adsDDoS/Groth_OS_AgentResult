@@ -137,7 +137,7 @@ Hermes must not directly publish, send emails, update live site content, approve
 
 Hermes may be connected directly to a Telegram bot as the owner-facing conversational agent only if the gateway responsibility is deliberately switched back to Hermes. In that mode Hermes owns the conversation, but AgentResult backend still owns business actions and state changes. Do not point the same Telegram bot token at both Hermes gateway and backend polling/webhook at the same time.
 
-Current Telegram gateway decision: use backend owner-control polling middleware as the active owner-chat mode. Hermes remains available as agent runtime/API for generation, revision, scheduled work, and structured backend tasks, but it should not own ordinary owner messages in Telegram.
+Current Telegram gateway decision: use backend owner-control polling middleware as the active owner-chat mode. In this Telegram owner-control contour, Hermes is not the chat gateway and should be invoked only by explicit backend workflows for generating or revising materials. It should not own ordinary owner messages in Telegram.
 
 Backend owner-control polling middleware exists behind `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`. It reads Telegram updates, checks `TELEGRAM_ALLOWED_USERS` / `HERMES_TELEGRAM_ALLOWED_USERS`, sends ordinary owner text to backend `POST /telegram/intent` logic directly, and sends back only owner-facing text. Keep it disabled while Hermes polling owns the same bot token. To switch to true backend-owned owner control, disable Hermes Telegram polling for that token first, then enable the backend middleware.
 

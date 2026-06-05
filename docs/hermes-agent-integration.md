@@ -121,7 +121,7 @@ Recommended initial path:
 4. Add a result callback/writeback endpoint in AgentResult backend.
 5. Keep Telegram owner decisions in AgentResult backend, not inside Hermes state.
 
-For an owner-facing conversational bot, AgentResult OS currently uses backend owner-control polling as the Telegram gateway. Ordinary owner messages go to the backend intent router first. Hermes remains the runtime for generation, revision, scheduled work, and structured backend tasks. If Hermes is deliberately switched back to owning Telegram, AgentResult backend must not use the same bot token as its own polling/webhook receiver. See `docs/hermes-telegram-bot.md`.
+For an owner-facing conversational bot, AgentResult OS currently uses backend owner-control polling as the Telegram gateway. Ordinary owner messages go to the backend intent router first. In this Telegram owner-control contour, Hermes should be invoked only by explicit backend workflows for generating or revising materials. If Hermes is deliberately switched back to owning Telegram, AgentResult backend must not use the same bot token as its own polling/webhook receiver. See `docs/hermes-telegram-bot.md`.
 
 Use Hermes' native Telegram variables inside the Hermes service: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and optionally `TELEGRAM_HOME_CHANNEL`. In AgentResult env, keep them namespaced as `HERMES_TELEGRAM_BOT_TOKEN`, `HERMES_TELEGRAM_ALLOWED_USERS`, and `HERMES_TELEGRAM_HOME_CHANNEL`, then map them in `infra/docker-compose.yml`.
 
@@ -388,7 +388,7 @@ Current Phase 1 behavior:
 
 - Run backend owner-control middleware as the Telegram gateway. Done.
 - Route ordinary owner messages through backend intent router. Done.
-- Keep Hermes available for generation, revision, scheduled work, and structured backend tasks.
+- Keep Hermes out of ordinary Telegram owner messages; call it only through explicit backend workflows for material generation or revision in this contour.
 - Do not point the same Telegram bot token at both Hermes and backend polling/webhook.
 - Use `POST /telegram/actions` or command/intent contracts for recorded owner decisions.
 - Keep owner decision state in Postgres.

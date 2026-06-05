@@ -159,7 +159,7 @@ Current production owner-control mode runs the backend polling middleware instea
 - provide `TELEGRAM_ALLOWED_USERS` or `HERMES_TELEGRAM_ALLOWED_USERS`;
 - disable Hermes Telegram polling for that token first.
 
-In this mode ordinary owner messages go directly through backend intent routing. Hermes should be called only by explicit backend workflows for generation or revision tasks.
+In this mode ordinary owner messages go directly through backend intent routing. Hermes should be called only by explicit backend workflows for material generation or revision.
 
 If the product is deliberately switched back to Hermes polling, Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. In backend owner-control mode, slash commands are compatibility shortcuts handled by backend, while visible owner copy should stay natural.
 
