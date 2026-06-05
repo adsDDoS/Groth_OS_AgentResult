@@ -160,6 +160,7 @@ Preferred Telegram command contract:
 - `/handoff`: mark the approved material as manually handed off for release.
 - `/published`: confirm that a handed-off material is live.
 - `/reset`: restart the Telegram owner-control dialogue without deleting AgentResult OS data.
+- `/demo_reset`: reset local demo state explicitly; do not use it for normal owner dialogue.
 - `/onboarding`: start setup flow through Telegram.
 
 Backend owner-control middleware should call `POST /telegram/commands` logic for these compatibility commands and return only the backend response text to the owner.

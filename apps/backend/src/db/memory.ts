@@ -606,6 +606,8 @@ const store: Record<string, Row[]> = {
   conversion_events: []
 };
 
+const seedStore = structuredClone(store);
+
 loadPersistedStore();
 normalizeAgentResultWorkspace();
 persistStore();
@@ -994,6 +996,19 @@ function persistStore() {
   const tempPath = `${localStorePath}.tmp`;
   writeFileSync(tempPath, JSON.stringify(store, null, 2));
   renameSync(tempPath, localStorePath);
+}
+
+export function resetMemoryDemoStore() {
+  for (const table of Object.keys(store)) {
+    delete store[table];
+  }
+
+  for (const [table, rows] of Object.entries(structuredClone(seedStore))) {
+    store[table] = rows;
+  }
+
+  normalizeAgentResultWorkspace();
+  persistStore();
 }
 
 function tableRows(table: string) {

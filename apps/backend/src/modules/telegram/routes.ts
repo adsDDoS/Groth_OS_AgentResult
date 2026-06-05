@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
+import { resetMemoryDemoStore } from "../../db/memory.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 
@@ -563,6 +564,23 @@ function renderResetMessage(brief: OwnerBrief) {
   return lines.join("\n");
 }
 
+function renderDemoResetMessage(brief: OwnerBrief) {
+  const lines = [
+    "Демо-состояние сброшено.",
+    "",
+    "Вернул базовый сценарий AgentResult OS: одно решение, один подтверждённый выпуск, один материал в плане и результатные сигналы.",
+    ""
+  ];
+
+  if (brief.counts.decisions > 0) {
+    lines.push("Следующий шаг: посмотреть материал и принять решение.");
+  } else {
+    lines.push("Следующий шаг: проверить текущее состояние.");
+  }
+
+  return lines.join("\n");
+}
+
 function renderUnknownIntentMessage() {
   return "Не понял, какое действие нужно зафиксировать. Можно написать: что дальше, покажи материал, согласую, нужны правки, передал в выпуск, вышло, что по результату.";
 }
@@ -780,6 +798,28 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
       text: renderResetMessage(ownerBrief),
       buttons: ownerControlButtons(ownerBrief),
       ownerBrief
+    };
+  }
+
+  if (["demo_reset", "demo-reset", "reset_demo", "сброс_демо", "сброс-демо"].includes(command)) {
+    if (config.storageMode !== "local") {
+      return {
+        command,
+        text: "Сброс демо доступен только в local demo-контуре.",
+        buttons: ownerControlButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
+    resetMemoryDemoStore();
+    const resetBriefData = await loadOwnerBriefData(context.tenantId);
+    const resetBrief = buildOwnerBrief(resetBriefData);
+
+    return {
+      command,
+      text: renderDemoResetMessage(resetBrief),
+      buttons: ownerControlButtons(resetBrief),
+      ownerBrief: resetBrief
     };
   }
 
