@@ -248,6 +248,8 @@ Owners should not need to remember slash commands. For ordinary owner language s
 
 Owner-facing Telegram copy should not list slash commands as the primary next step. Commands may remain available internally and as compatibility shortcuts, but the visible language should be natural: "посмотреть материал", "согласовать", "нужны правки", "передал в выпуск", "вышло", "что по результату".
 
+When Telegram asks the owner to confirm publication, phrase it as an owner action, not bot usage. Prefer `Если материал уже опубликован, подтвердите выход.` over `Когда материал вышел, напишите: вышло.`
+
 Telegram brief and "что дальше" should show one compact priority counter, not a full metric strip. If a material is handed off, show `Ждёт подтверждения: N`; if a decision is pending, show `Требует решения: N`; if AgentResult is preparing a draft, show `В подготовке: N`; if nothing is urgent, show `Срочных действий нет`.
 
 The Telegram intent router should understand daily owner-work questions such as "что делать каждый день", "как с тобой работать", "что сейчас важно", "следующий шаг", and "режим взаимодействия". Answer with a concise professional operating rhythm: decisions, materials, handoff, publication confirmation, and result signal.

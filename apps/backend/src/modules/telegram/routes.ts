@@ -940,7 +940,7 @@ function renderCommandBrief(brief: OwnerBrief) {
     lines.push("Приоритет: подтвердить выход.");
     lines.push(textValue(priority.handoff.title, "Переданный материал"));
     lines.push("");
-    lines.push("Когда материал вышел, напишите: вышло.");
+    lines.push("Если материал уже опубликован, подтвердите выход.");
   } else if (priority.type === "approval") {
     lines.push("Приоритет: принять решение.");
     lines.push(textValue(priority.decision.title, "Материал ждёт решения"));
@@ -1049,7 +1049,7 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
     `Канал: ${channelLabel(input.item.channel)}`,
     "",
     "Следующий шаг: после выхода подтвердить публикацию.",
-    "Когда материал выйдет, напишите: вышло."
+    "Если материал уже опубликован, подтвердите выход."
   ].join("\n");
 }
 
