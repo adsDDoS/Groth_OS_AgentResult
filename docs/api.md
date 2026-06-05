@@ -192,6 +192,7 @@ Common intent examples:
 - `нужны правки`, `переделай` -> request changes;
 - `передал`, `передал в выпуск`, `пусть выложат` -> manual handoff;
 - `вышло`, `опубликовано`, `пост вышел` -> confirm published;
+- `подготовь пост про ...`, `поставь тему в работу ...`, `следующий материал ...` -> create a backend `content_writer` task, start Hermes dispatch, save the returned draft, and open approval;
 - `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
 - `что по результату` -> result summary.
 
@@ -224,6 +225,7 @@ Supported commands:
 - `/changes`: records that changes are needed;
 - `/handoff`: marks the current approved material as manually handed off for release;
 - `/published`: confirms that a handed-off material went live;
+- `/prepare ...`: creates the next material task and starts the backend task -> Hermes run -> draft -> approval loop;
 - `/reset`: restarts the Telegram owner-control dialogue without deleting AgentResult OS data;
 - `/demo_reset`: explicitly resets local demo state;
 - `/onboarding`: starts the Telegram setup flow: offer, client, release channel, approval rules, first material.

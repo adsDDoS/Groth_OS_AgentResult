@@ -418,8 +418,9 @@ function buildOwnerBrief(input: OwnerBriefInput) {
   const hermesDraftTasks = tasks.filter((row) => {
     const payload = row.payload && typeof row.payload === "object" ? row.payload as Row : {};
     const status = textValue(row.status, "");
+    const source = textValue(payload.source, "");
     return payload.expectedArtifact === "draft" &&
-      payload.source === "telegram_onboarding" &&
+      ["telegram_onboarding", "telegram_next_material"].includes(source) &&
       ["queued", "dispatched", "dispatch_prepared", "running"].includes(status);
   });
   const contentById = new Map(contentItems.map((row) => [row.id, row]));
@@ -743,9 +744,32 @@ async function createOnboardingHermesDraftTask(context: { tenantId: string; user
   });
 }
 
-function runOnboardingHermesDraftJob(input: {
+function defaultNextMaterialTitle(value?: string) {
+  return onboardingTitle(textValue(value, "Следующий материал AgentResult"));
+}
+
+function createNextMaterialTask(context: { tenantId: string; userId?: string }, input: { channel?: string; topic?: string }) {
+  const channel = normalizeChannel(textValue(input.channel, "telegram"));
+  const title = defaultNextMaterialTitle(input.topic);
+  return createAgentTask({
+    tenantId: context.tenantId,
+    role: "content_writer",
+    taskType: "prepare_next_material",
+    payload: {
+      channel,
+      contentType: channel === "email" ? "email" : "telegram_post",
+      expectedArtifact: "draft",
+      source: "telegram_next_material",
+      title
+    },
+    createdBy: context.userId
+  });
+}
+
+function runHermesDraftJob(input: {
   app?: FastifyInstance;
   chatId?: number | string;
+  integrationProvider: string;
   taskId: string;
   tenantId: string;
   title: string;
@@ -784,9 +808,9 @@ function runOnboardingHermesDraftJob(input: {
 
       await query(
         `insert into integrations (tenant_id, provider, status, config)
-         values ($1, 'telegram_onboarding_hermes_job', $2, $3)
+         values ($1, $2, $3, $4)
          returning *`,
-        [input.tenantId, textValue(String(delivery ?? "unknown"), "unknown"), { taskId: input.taskId, delivery }]
+        [input.tenantId, input.integrationProvider, textValue(String(delivery ?? "unknown"), "unknown"), { taskId: input.taskId, delivery }]
       );
     } catch (error) {
       input.app?.log.error({ error, taskId: input.taskId }, "Telegram onboarding Hermes background job failed");
@@ -859,9 +883,10 @@ async function continueOnboarding(input: TelegramIntentInput, context: TelegramE
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
-  runOnboardingHermesDraftJob({
+  runHermesDraftJob({
     app: context.app,
     chatId: context.telegramChatId,
+    integrationProvider: "telegram_onboarding_hermes_job",
     taskId: String(hermesTask.id),
     tenantId: context.tenantId,
     title,
@@ -992,6 +1017,17 @@ function renderPreparationStatusMessage(brief: OwnerBrief) {
     `Результат: ${textValue(item.expectedResult, "черновик на согласование")}`,
     "",
     "Когда черновик будет готов, он появится в решениях."
+  ].join("\n");
+}
+
+function renderMaterialPreparationStartedMessage(input: { channel: string; title: string }) {
+  return [
+    "Задача поставлена в работу.",
+    "",
+    `Тема: ${input.title}`,
+    `Канал: ${channelLabel(input.channel)}`,
+    "",
+    "AgentResult готовит черновик. Когда он будет готов, появится решение на согласование."
   ].join("\n");
 }
 
@@ -1373,6 +1409,53 @@ async function createManualHandoff(context: { tenantId: string; userId?: string 
   };
 }
 
+function nextMaterialTopicFromText(value: string) {
+  const cleaned = value
+    .trim()
+    .replace(/^\/+prepare\b/i, "")
+    .replace(/^\/+next_material\b/i, "")
+    .replace(/^подготовь\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^сделай\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^напиши\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^поставь\s+(тему|материал|пост|черновик)\s+в\s+работу\s*/i, "")
+    .replace(/^в\s+работу\s*/i, "")
+    .replace(/^следующий\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^(про|о)\s+/i, "")
+    .replace(/^:\s*/, "")
+    .trim();
+
+  return cleaned || "Следующий материал AgentResult";
+}
+
+async function startNextMaterialPreparation(input: { rawText?: string }, context: TelegramExecutionContext) {
+  const topic = nextMaterialTopicFromText(textValue(input.rawText, ""));
+  const task = await createNextMaterialTask(context, { topic });
+  const payload = task.payload && typeof task.payload === "object" ? task.payload as Row : {};
+  const title = textValue(payload.title, defaultNextMaterialTitle(topic));
+  const channel = textValue(payload.channel, "telegram");
+
+  runHermesDraftJob({
+    app: context.app,
+    chatId: context.telegramChatId,
+    integrationProvider: "telegram_next_material_hermes_job",
+    taskId: String(task.id),
+    tenantId: context.tenantId,
+    title,
+    userId: context.userId
+  });
+
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  return {
+    command: "prepare",
+    text: renderMaterialPreparationStartedMessage({ channel, title }),
+    buttons: ownerControlButtons(ownerBrief),
+    ownerBrief,
+    task
+  };
+}
+
 async function executeTelegramCommand(input: TelegramCommandInput, context: TelegramExecutionContext) {
   const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
   const briefData = await loadOwnerBriefData(context.tenantId);
@@ -1440,6 +1523,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
   if (["onboarding", "start_setup", "setup", "настройка"].includes(command)) {
     return startOnboarding(context);
+  }
+
+  if (command === "prepare" || command === "next_material" || command.startsWith("prepare ") || command.startsWith("next_material ")) {
+    return startNextMaterialPreparation({ rawText: input.command }, context);
   }
 
   if (["handoff", "передано", "передал", "в выпуск"].includes(command)) {
@@ -1608,6 +1695,30 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
       text: renderDailyWorkMessage(ownerBrief),
       buttons: ownerControlButtons(ownerBrief),
       ownerBrief
+    };
+  }
+
+  if (includesAny(text, [
+    "подготовь материал",
+    "подготовь пост",
+    "подготовь черновик",
+    "сделай материал",
+    "сделай пост",
+    "напиши материал",
+    "напиши пост",
+    "поставь тему в работу",
+    "поставь материал в работу",
+    "поставь пост в работу",
+    "следующий материал",
+    "следующий пост",
+    "новый материал",
+    "новый пост"
+  ])) {
+    const preparation = await startNextMaterialPreparation({ rawText: input.text }, context);
+    return {
+      ...preparation,
+      intent: "prepare_next_material",
+      command: null
     };
   }
 

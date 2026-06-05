@@ -262,6 +262,8 @@ Hermes Telegram slash commands must also be registered in Hermes `quick_commands
 
 When Hermes drafts a new material in Telegram, it must save the approved draft to backend through `POST /telegram/materials` before asking for release. The endpoint creates a content item, stores the text, opens an approval, and returns owner-facing text with `/post`, `/osapprove`, and `/changes`. Hermes must not offer direct publication or channel delivery for a newly drafted material that is not yet recorded in backend.
 
+When the owner asks for a new material in Telegram, use the backend task loop, not a standalone chat draft. Natural phrases such as `подготовь пост про ...`, `поставь тему в работу ...`, or `/prepare ...` should create a `content_writer` task with `expectedArtifact: draft`, start Hermes dispatch through backend, show the material as `В подготовке`, then save the returned draft as a review content item and open approval.
+
 When `POST /telegram/commands` returns `buttons`, use those backend-provided buttons for Telegram inline controls or command shortcuts. Do not invent button labels or action payloads in Hermes.
 
 `POST /telegram/commands/send` is the backend-owned delivery path for the same command contract. It sends the command text with Telegram inline buttons when backend Telegram delivery is intentionally configured. Use it for controlled backend delivery or dry-runs; do not run backend webhook ownership and Hermes polling against the same bot token unless the gateway responsibility is explicitly switched.
