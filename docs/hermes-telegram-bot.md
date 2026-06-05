@@ -148,7 +148,9 @@ Preferred Telegram commands:
 
 Backend owner-control middleware calls the same command contract for compatibility shortcuts and sends only returned owner-facing `text`.
 
-Owners should not need to remember slash commands. For ordinary phrases like `что дальше`, `покажи пост`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, backend owner-control middleware calls the backend intent router directly and sends only returned owner-facing text. Backend owns the intent-to-action mapping.
+Owners should not need to remember slash commands. For ordinary phrases like `что сегодня`, `что дальше`, `покажи пост`, `покажи материал`, `согласую`, `нужны правки`, `передал в выпуск`, `вышло`, `что по результату`, and `опубликуй напрямую`, backend owner-control middleware calls the backend intent router directly and sends only returned owner-facing text. Backend owns the intent-to-action mapping.
+
+Approval safety: approval words inside longer questions must not approve anything. `окей, что нам нужно делать каждый день?` maps to daily owner loop, and `можно выпускать?` should not approve because it is a question.
 
 Keep Hermes Telegram display quiet for owner-facing mode: `tool_progress: none`, `tool_preview_length: 0`, `tool_progress_command: false`, `long_running_notifications: false`, `busy_ack_detail: false`, `background_process_notifications: none`, and `interim_assistant_messages: false`. Prompt rules alone are not enough to suppress terminal/tool progress messages in Telegram.
 
@@ -163,7 +165,7 @@ In this mode ordinary owner messages go directly through backend intent routing.
 
 If the product is deliberately switched back to Hermes polling, Telegram slash commands are handled by Hermes gateway before the model sees the message. Register AgentResult commands in Hermes `quick_commands`; prompt instructions alone are not enough. In backend owner-control mode, slash commands are compatibility shortcuts handled by backend, while visible owner copy should stay natural.
 
-When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation.
+When the command response includes `buttons`, Hermes should render them as Telegram inline buttons or command shortcuts when the messaging gateway supports it. Button text and command payload should come from backend response, not from model improvisation. Backend may return command names without a leading slash for inline button payloads; slash commands remain supported only as compatibility shortcuts.
 
 Backend can also execute and deliver the same command through `POST /telegram/commands/send`. This is for intentionally backend-owned Telegram delivery or dry-runs. Do not run backend webhook ownership and Hermes polling against the same bot token unless the gateway responsibility has been deliberately switched.
 

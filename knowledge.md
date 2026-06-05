@@ -8,6 +8,32 @@ AgentResult OS is an owner-facing operating system for B2B companies in the Russ
 
 It is not an internal engineering admin panel. It is not a generic AI dashboard. It is not a content toy. It is the control layer where a business owner sees what requires a decision, what the system prepared, what is blocking movement, and what business signal appeared after work went outside.
 
+The current product focus is `AgentResult Growth Control`.
+
+AgentResult Growth Control is an AI-system for the owner of a B2B company that turns ideas, materials, tasks, and decisions into regular release and tracked result. It does not promise that AI will grow the business by itself. It solves a narrower and more valuable problem:
+
+```text
+AI and the team prepare work,
+but materials do not get approved,
+tasks hang,
+release is irregular,
+and the owner does not see what is actually moving.
+```
+
+The main product idea:
+
+```text
+AgentResult Growth Control is the daily Telegram growth control surface where the owner sees what is ready, what requires a decision, what has been handed off, what went live, and what signal appeared.
+```
+
+The canonical loop:
+
+```text
+AI prepares -> owner approves -> team releases or hands off -> result is tracked
+```
+
+This loop is more important than dashboard breadth, AI autonomy, or extra metrics. Every product decision should strengthen this loop.
+
 The product language is:
 
 - money
@@ -20,6 +46,8 @@ The product language is:
 - handoff
 - CRM discipline
 - receivables
+
+Money is a valid AgentResult metric only where there is a real monetary source: deal, invoice, receivable, payment promise, CRM event, or qualified request with value. In the content/growth contour, do not show empty money metrics such as `Деньги: 0`.
 
 Avoid product language that sounds like:
 
@@ -45,9 +73,10 @@ The main implementation format:
 
 Primary products:
 
+- AgentResult Growth Control
 - AgentResult Sales OS
 - AgentResult Collect / DebtorPilot
-- AI Growth OS
+- AI Growth OS prototype / legacy naming
 
 Current site:
 
@@ -127,6 +156,22 @@ The safest automation is not "AI does everything." The safest automation is a cl
 Hermes prepares -> owner approves -> system publishes or hands off -> result is tracked
 ```
 
+For Growth Control, the practical status chain is:
+
+```text
+prepared -> review -> approved -> handed_off -> published -> signal/task
+```
+
+Do not collapse `handed_off` into `published`. A material handed to a channel owner, editor, contractor, or team member is not live until the owner or responsible person confirms publication.
+
+Do not start with full autonomy. Start with control:
+
+- Hermes prepares.
+- Backend stores state and opens decisions.
+- Owner decides in Telegram or dashboard.
+- Team releases or receives the handoff.
+- Backend records the result.
+
 ## Hermes Integration Principle
 
 Hermes Agent should be treated as the agent runtime and owner-notification worker, not as the system of record.
@@ -175,6 +220,8 @@ The Telegram intent router should understand daily owner-work questions such as 
 
 Approval safety rule: do not treat approval words inside a longer question as approval. Standalone `ок` / `окей` counts as approval, and explicit decision phrases such as `согласую`, `одобряю`, `можно выпускать`, `да, согласую` count as approval. A phrase like `окей, что нам нужно делать каждый день?` must not approve anything.
 
+Questions must not approve materials. A phrase like `можно выпускать?` should be treated as a question or unknown intent, not as approval. The owner must make an explicit decision: `согласую`, `одобряю`, `да, согласую`, or `можно выпускать` without a question.
+
 Hermes Telegram slash commands must also be registered in Hermes `quick_commands`; prompt instructions alone do not make `/brief` or `/post` available in the Telegram gateway. Current VPS runtime maps `/brief`, `/post`, `/changes`, `/onboarding`, `/osbrief`, `/ospost`, and `/osapprove` to a small helper that calls backend `POST /telegram/commands` and prints only `data.text`. Use and show `/osapprove` as the safe approval command because `/approve` can be reserved by Hermes for tool approval flows. Backend may still accept `/approve` internally for non-Hermes callers, but owner-facing Telegram copy should prefer `/osapprove`.
 
 When Hermes drafts a new material in Telegram, it must save the approved draft to backend through `POST /telegram/materials` before asking for release. The endpoint creates a content item, stores the text, opens an approval, and returns owner-facing text with `/post`, `/osapprove`, and `/changes`. Hermes must not offer direct publication or channel delivery for a newly drafted material that is not yet recorded in backend.
@@ -188,9 +235,37 @@ Canonical implementation note:
 - detailed spec: `docs/hermes-agent-integration.md`
 - preferred loop: backend task -> Hermes run -> structured result -> backend validation -> owner decision -> release/handoff/result
 
+## Growth Control Architecture
+
+AgentResult Growth Control consists of six practical contours.
+
+1. Hermes Agent
+
+Hermes prepares work but does not make final owner decisions. It may propose topics, prepare briefs, draft posts/articles/emails/landing pages/commercial offers, adapt materials for channels, research competitors, summarize sources, help with edits, and suggest the next step. It must not publish, send, promise results, or change critical statuses without backend approval rules.
+
+2. Backend State Agent
+
+Backend is the system of record. It stores company context, tasks, materials, approvals, publishing calendar, manual handoffs, confirmed releases, result signals, audit, and approval-first rules. Backend synchronizes Telegram and dashboard. Without backend state, Hermes becomes only a message stream.
+
+3. Telegram Owner-Control
+
+Telegram is the daily owner control surface. It should show decisions, ready materials, handoffs, publication confirmations, result signals, and next owner actions. It should understand natural owner phrases such as "что сегодня", "покажи материал", "согласую", "нужны правки", "передал в выпуск", "вышло", and "что дальше". Slash commands may exist for compatibility, but they should not be the primary UX.
+
+4. Dashboard
+
+Dashboard is the setup, source-of-truth, demo/private-beta, control, and fallback surface. It should not become the daily place where the owner must work. Its job is to make the system trustworthy, configurable, and inspectable.
+
+5. Release Control
+
+Release Control manages the path from approved material to external release. It separates "approved", "handed off", and "published". It supports manual handoff for Telegram, site/CMS, email, VC/Habr, or a responsible person. It requires confirmation before counting a material as live.
+
+6. Results Loop
+
+Results Loop records what happened after work went outside: published materials, manual handoffs waiting for confirmation, leads, replies, comments, incoming requests, CRM events, tasks created from signals, and the next owner-level action. It must not show fake metrics or empty money counters where no measured source exists.
+
 ## Dashboard Role
 
-The dashboard is not the main daily workplace forever. Long-term, Hermes should push decisions and summaries to the owner in Telegram.
+The dashboard is not the main daily workplace forever. Long-term, Telegram Owner-Control should be the daily surface where the owner makes decisions and checks status.
 
 The dashboard should act as:
 
@@ -204,6 +279,17 @@ The dashboard should act as:
 The owner should not feel forced to live inside the dashboard every day.
 
 If a dashboard section exists only to explain the product, remove or compress it. If a section does not help the owner decide, approve, configure, hand off, or see results, it is suspect.
+
+Dashboard should support Growth Control, not compete with Telegram. It should answer:
+
+- what requires a decision;
+- what is ready to go outside;
+- what has been handed off;
+- what went live;
+- what signal appeared;
+- what must the owner do next.
+
+Avoid making dashboard the place where the owner must work every day.
 
 ## Production Demo Surface
 

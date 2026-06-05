@@ -99,6 +99,37 @@ function truncateText(value: string, maxLength = 120) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}…` : value;
 }
 
+function channelLabel(value: unknown) {
+  const channel = textValue(value, "manual").toLowerCase();
+  const labels: Record<string, string> = {
+    email: "Email",
+    habr: "Habr",
+    manual: "ручная передача",
+    site: "сайт",
+    telegram: "Telegram",
+    vc: "VC.ru",
+    "vc.ru": "VC.ru"
+  };
+
+  return labels[channel] ?? textValue(value, "ручная передача");
+}
+
+function riskLabel(value: unknown) {
+  const risk = textValue(value, "").toLowerCase();
+  const labels: Record<string, string> = {
+    "channel publishing": "публикация в канал",
+    "public claim": "публичное утверждение",
+    "sensitive claim": "чувствительное утверждение"
+  };
+
+  return labels[risk] ?? textValue(value, "");
+}
+
+function riskLine(riskFlags: unknown[]) {
+  const risks = riskFlags.map(riskLabel).filter(Boolean);
+  return risks.length ? `Риски: ${risks.join(", ")}` : "";
+}
+
 function telegramMetricLines(input: {
   decisions?: number;
   handedOff?: number;
@@ -450,8 +481,9 @@ function renderDecisionContent(brief: OwnerBrief) {
 
 function renderCommandBrief(brief: OwnerBrief) {
   const decision = brief.decisions[0];
+  const handoff = brief.handoffs[0];
   const lines = [
-    "AgentResult OS — сводка",
+    "AgentResult Growth Control",
     "",
     ...telegramMetricLines({
       decisions: brief.counts.decisions,
@@ -466,11 +498,18 @@ function renderCommandBrief(brief: OwnerBrief) {
   if (decision) {
     lines.push("Требует решения:");
     lines.push(decision.title);
-    if (decision.riskFlags.length) lines.push(`Риски: ${decision.riskFlags.join(", ")}`);
+    const risks = riskLine(decision.riskFlags);
+    if (risks) lines.push(risks);
     lines.push("");
     lines.push("Можно посмотреть материал, согласовать или запросить правки.");
+  } else if (handoff) {
+    lines.push("Ждёт подтверждения выхода:");
+    lines.push(textValue(handoff.title, "Переданный материал"));
+    lines.push("");
+    lines.push("Когда материал выйдет, напишите: вышло.");
   } else {
     lines.push("Сейчас нет решений в очереди.");
+    lines.push("Следующий шаг: проверить результат и подготовить следующий материал.");
   }
 
   return lines.join("\n");
@@ -481,7 +520,7 @@ function renderMaterialCreatedMessage(input: { approval: Row; contentItem: Row }
     "Материал сохранён.",
     "",
     `Решение: ${textValue(input.approval.summary, "Согласовать материал")}`,
-    `Канал: ${textValue(input.contentItem.channel, "telegram")}`,
+    `Канал: ${channelLabel(input.contentItem.channel)}`,
     "",
     "Следующий шаг: посмотреть материал, согласовать или запросить правки."
   ].join("\n");
@@ -497,7 +536,7 @@ function renderDirectPublishingBoundary() {
 
 function renderResultMessage(brief: OwnerBrief) {
   return [
-    "AgentResult OS — результат",
+    "AgentResult Growth Control — результат",
     "",
     ...telegramMetricLines({
       handedOff: brief.counts.handedOff,
@@ -517,7 +556,7 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
     "Передано в выпуск вручную.",
     "",
     `Материал: ${textValue(input.item.title, "Материал")}`,
-    `Канал: ${textValue(input.item.channel, "manual")}`,
+    `Канал: ${channelLabel(input.item.channel)}`,
     "",
     "Следующий шаг: после выхода подтвердить публикацию.",
     "Когда материал выйдет, напишите: вышло."
@@ -526,11 +565,12 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
 
 function renderDailyWorkMessage(brief: OwnerBrief) {
   const lines = [
-    "Рабочий ритм простой:",
+    "Ежедневный контур:",
     "",
-    "Утром — посмотреть, что требует решения.",
-    "По материалам — согласовать, вернуть на правки или передать в выпуск.",
-    "После выхода — подтвердить публикацию и проверить сигнал.",
+    "1. Посмотреть, что требует решения.",
+    "2. По материалам: согласовать, вернуть на правки или передать в выпуск.",
+    "3. После выхода подтвердить публикацию.",
+    "4. Проверить сигнал и следующий шаг.",
     ""
   ];
 
@@ -581,23 +621,47 @@ function renderDemoResetMessage(brief: OwnerBrief) {
   return lines.join("\n");
 }
 
-function renderUnknownIntentMessage() {
-  return "Не понял, какое действие нужно зафиксировать. Можно написать: что дальше, покажи материал, согласую, нужны правки, передал в выпуск, вышло, что по результату.";
+function renderUnknownIntentMessage(brief?: OwnerBrief) {
+  const lines = [
+    "Не зафиксировал действие.",
+    "",
+    "Можно написать обычным языком: что сегодня, показать материал, согласовать, нужны правки, передал в выпуск, вышло, что по результату."
+  ];
+
+  if (brief?.counts.decisions) {
+    lines.push("");
+    lines.push(`Сейчас требует решения: ${brief.counts.decisions}.`);
+  } else if (brief?.counts.handedOff) {
+    lines.push("");
+    lines.push(`Сейчас ждёт подтверждения выхода: ${brief.counts.handedOff}.`);
+  }
+
+  return lines.join("\n");
 }
 
 function includesAny(value: string, patterns: string[]) {
   return patterns.some((pattern) => value.includes(pattern));
 }
 
+function isQuestionLike(text: string) {
+  return text.includes("?") || /^(что|зачем|почему|как|где|когда|можно ли|надо ли|нужно ли)\b/.test(text);
+}
+
 function isApprovalIntent(text: string) {
+  if (isQuestionLike(text)) return false;
+
   if (["ок", "окей", "согласую", "одобряю"].includes(text)) return true;
 
   return includesAny(text, [
     "да, согласую",
     "да согласую",
+    "да, одобряю",
+    "да одобряю",
     "можно выпускать",
+    "давай выпускать",
     "согласую материал",
-    "одобряю материал"
+    "одобряю материал",
+    "утверждаю"
   ]);
 }
 
@@ -612,13 +676,13 @@ function commandButton(command: string, label: string, targetId?: string | null)
 function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
   const buttons = [
-    commandButton("/post", "Показать пост", targetId),
-    commandButton("/onboarding", "Настройка")
+    commandButton("post", "Показать материал", targetId),
+    commandButton("onboarding", "Настройка")
   ];
 
   if (targetId) {
-    buttons.splice(1, 0, commandButton("/osapprove", "Согласовать", targetId));
-    buttons.splice(2, 0, commandButton("/changes", "Нужны правки", targetId));
+    buttons.splice(1, 0, commandButton("osapprove", "Согласовать", targetId));
+    buttons.splice(2, 0, commandButton("changes", "Нужны правки", targetId));
   }
 
   return buttons;
@@ -626,11 +690,11 @@ function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
 
 function postCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   const targetId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
-  const buttons = [commandButton("/brief", "Сводка")];
+  const buttons = [commandButton("brief", "Сводка")];
 
   if (targetId) {
-    buttons.unshift(commandButton("/changes", "Нужны правки", targetId));
-    buttons.unshift(commandButton("/osapprove", "Согласовать", targetId));
+    buttons.unshift(commandButton("changes", "Нужны правки", targetId));
+    buttons.unshift(commandButton("osapprove", "Согласовать", targetId));
   }
 
   return buttons;
@@ -638,8 +702,8 @@ function postCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
 
 function onboardingCommandButtons(): TelegramCommandButton[] {
   return [
-    commandButton("/brief", "Сводка"),
-    commandButton("/post", "Показать пост")
+    commandButton("brief", "Сводка"),
+    commandButton("post", "Показать материал")
   ];
 }
 
@@ -677,9 +741,9 @@ function findApprovedContentForHandoff(input: BriefData) {
 
 function handoffButtonsForBrief(brief: OwnerBrief): TelegramCommandButton[] {
   const itemId = typeof brief.handoffs[0]?.id === "string" ? brief.handoffs[0].id : null;
-  const buttons = [commandButton("/result", "Результат")];
+  const buttons = [commandButton("result", "Результат")];
 
-  if (itemId) buttons.unshift(commandButton("/published", "Подтвердить выход", itemId));
+  if (itemId) buttons.unshift(commandButton("published", "Подтвердить выход", itemId));
 
   return buttons;
 }
@@ -687,7 +751,7 @@ function handoffButtonsForBrief(brief: OwnerBrief): TelegramCommandButton[] {
 function ownerControlButtons(brief: OwnerBrief): TelegramCommandButton[] {
   if (brief.counts.decisions > 0) return briefCommandButtons(brief);
   if (brief.counts.handedOff > 0) return handoffButtonsForBrief(brief);
-  return [commandButton("/result", "Результат"), commandButton("/onboarding", "Настройка")];
+  return [commandButton("result", "Результат"), commandButton("onboarding", "Настройка")];
 }
 
 async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
@@ -932,7 +996,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
 
   return {
     command,
-    text: renderUnknownIntentMessage(),
+    text: renderUnknownIntentMessage(ownerBrief),
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief
   };
@@ -974,26 +1038,6 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
   }
 
   if (includesAny(text, [
-    "что требует",
-    "что решить",
-    "что дальше",
-    "что сейчас",
-    "что мне сделать",
-    "что сейчас важно",
-    "что важно сейчас",
-    "следующий шаг",
-    "сводка",
-    "статус"
-  ])) {
-    const commandResult = await executeTelegramCommand({ command: "/brief", note: input.note }, context);
-    return {
-      ...commandResult,
-      intent: "brief",
-      command: "/brief"
-    };
-  }
-
-  if (includesAny(text, [
     "что нам нужно делать каждый день",
     "что нужно делать каждый день",
     "что делать каждый день",
@@ -1018,6 +1062,27 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
   }
 
   if (includesAny(text, [
+    "что сегодня",
+    "что на сегодня",
+    "что требует",
+    "что решить",
+    "что дальше",
+    "что сейчас",
+    "что мне сделать",
+    "что сейчас важно",
+    "что важно сейчас",
+    "сводка",
+    "статус"
+  ])) {
+    const commandResult = await executeTelegramCommand({ command: "/brief", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "brief",
+      command: null
+    };
+  }
+
+  if (includesAny(text, [
     "покажи пост",
     "скинь пост",
     "покажи материал",
@@ -1032,7 +1097,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     return {
       ...commandResult,
       intent: "show_material",
-      command: "/post"
+      command: null
     };
   }
 
@@ -1041,7 +1106,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     return {
       ...commandResult,
       intent: "request_changes",
-      command: "/changes"
+      command: null
     };
   }
 
@@ -1050,7 +1115,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     return {
       ...commandResult,
       intent: "manual_handoff",
-      command: "/handoff"
+      command: null
     };
   }
 
@@ -1059,7 +1124,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     return {
       ...commandResult,
       intent: "confirm_published",
-      command: "/published"
+      command: null
     };
   }
 
@@ -1068,20 +1133,11 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     return {
       ...commandResult,
       intent: "approve_current",
-      command: "/osapprove"
+      command: null
     };
   }
 
-  if (includesAny(text, ["онбординг", "настройка", "настроить", "запуск"])) {
-    const commandResult = await executeTelegramCommand({ command: "/onboarding", note: input.note }, context);
-    return {
-      ...commandResult,
-      intent: "onboarding",
-      command: "/onboarding"
-    };
-  }
-
-  if (includesAny(text, ["результат", "заявки", "деньги", "сигналы", "что по результату"])) {
+  if (includesAny(text, ["результат", "заявки", "деньги", "сигналы", "что по результату", "следующий шаг"])) {
     const briefData = await loadOwnerBriefData(context.tenantId);
     const ownerBrief = buildOwnerBrief(briefData);
     return {
@@ -1093,12 +1149,21 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     };
   }
 
+  if (includesAny(text, ["онбординг", "настройка", "настроить", "запуск"])) {
+    const commandResult = await executeTelegramCommand({ command: "/onboarding", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "onboarding",
+      command: null
+    };
+  }
+
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   return {
     intent: "unknown",
     command: null,
-    text: renderUnknownIntentMessage(),
+    text: renderUnknownIntentMessage(ownerBrief),
     buttons: ownerControlButtons(ownerBrief),
     ownerBrief
   };

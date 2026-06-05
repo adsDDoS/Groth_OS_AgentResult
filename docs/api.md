@@ -175,7 +175,7 @@ Supported intent body:
 
 Common intent examples:
 
-- `что дальше`, `что требует решения` -> brief;
+- `что сегодня`, `что дальше`, `что требует решения` -> brief;
 - `что делать каждый день`, `как с тобой работать` -> daily owner loop;
 - `покажи пост`, `покажи материал`, `можно посмотреть материал` -> current material;
 - `ок`, `окей`, `согласую`, `одобряю`, `можно выпускать`, `да, согласую` -> approve current decision;
@@ -187,7 +187,7 @@ Common intent examples:
 
 Owner-facing response text should use natural action language instead of listing slash commands as the main next step. Slash commands remain supported as a technical compatibility contract for Hermes quick commands and dry-runs.
 
-Approval safety: approval words inside longer questions must not approve anything. For example, `окей, что нам нужно делать каждый день?` maps to daily owner loop, not approval. Standalone `ок` / `окей` is approval.
+Approval safety: approval words inside longer questions must not approve anything. For example, `окей, что нам нужно делать каждый день?` maps to daily owner loop, not approval. `можно выпускать?` should not approve because it is a question. Standalone `ок` / `окей` is approval.
 
 Command response includes:
 
@@ -222,11 +222,13 @@ Command button shape:
 
 ```json
 {
-  "command": "/osapprove",
+  "command": "osapprove",
   "label": "Согласовать",
   "targetId": "optional-approval-uuid"
 }
 ```
+
+Command buttons may use command names without a leading slash. Backend still accepts slash commands for compatibility, but owner-facing Telegram text should not present slash commands as the primary UX.
 
 `POST /telegram/commands/send` executes the same command contract, then sends the resulting text to the configured owner chat with Telegram inline buttons. Use `dryRun: true` to inspect the exact Telegram payload without sending.
 
