@@ -196,6 +196,19 @@ Direct Telegram channel publication is not enabled in the current owner-control 
 
 Future Telegram onboarding should be driven by `/onboarding`: step-by-step setup through the bot, with concise explanation of capabilities, required business context, approval rules, channels, access, and first result loop.
 
+Current Telegram onboarding flow:
+
+- starts with `/onboarding` or natural setup intent;
+- asks for offer, client, release channel, approval rules, and first material;
+- stores active state in backend, not in the model prompt;
+- while onboarding is active, ordinary owner replies fill the current setup step and must not be treated as approval/handoff/result commands;
+- writes collected context into the company profile;
+- creates the first material in `review`;
+- opens an approval for that material;
+- returns the owner to the normal Growth Control loop: show material, approve, request changes, hand off, confirm live.
+
+Owner may cancel onboarding with `стоп`, `отмена`, or `остановить настройку`; this stops the setup flow and does not delete AgentResult OS data.
+
 Preferred Telegram command contract:
 
 - `/brief`: show decisions, handoffs, releases, leads, next action; show money only when there is a real monetary signal or a sales/receivables context.

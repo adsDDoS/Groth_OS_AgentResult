@@ -144,7 +144,11 @@ Preferred Telegram commands:
 - `/changes`: request changes through backend.
 - `/handoff`: mark the approved material as manually handed off for release.
 - `/published`: confirm that a handed-off material went live.
-- `/onboarding`: start setup flow through Telegram.
+- `/onboarding`: start setup flow through Telegram: offer, client, release channel, approval rules, first material.
+
+Onboarding is backend-owned. While it is active, ordinary owner replies fill the current setup step instead of being treated as approval, handoff, or generic intent. The final answer updates company context, creates the first material in review, opens an approval, and returns natural next actions.
+
+The owner can stop the setup with `стоп`, `отмена`, or `остановить настройку`; this does not delete AgentResult OS data.
 
 Backend owner-control middleware calls the same command contract for compatibility shortcuts and sends only returned owner-facing `text`.
 

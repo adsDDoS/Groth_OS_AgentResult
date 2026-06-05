@@ -30,6 +30,13 @@ type OwnerBriefInput = {
   latestSummary: Row;
 };
 type BriefData = Awaited<ReturnType<typeof loadOwnerBriefData>>;
+type OnboardingStep = "offer" | "client" | "channel" | "approval_rules" | "first_material" | "done";
+type OnboardingState = {
+  answers: Record<string, string>;
+  completedAt?: string;
+  step: OnboardingStep;
+  updatedAt?: string;
+};
 
 const telegramActionSchema = z.object({
   action: z.enum(["approval.approve", "approval.request_changes", "publishing.confirm_live"]),
@@ -63,6 +70,12 @@ const telegramMaterialSchema = z.object({
   channel: z.string().min(2).default("telegram"),
   contentType: z.string().min(2).default("telegram_post"),
   note: z.string().optional()
+});
+const onboardingStateSchema = z.object({
+  answers: z.record(z.string()).default({}),
+  completedAt: z.string().optional(),
+  step: z.enum(["offer", "client", "channel", "approval_rules", "first_material", "done"]).default("offer"),
+  updatedAt: z.string().optional()
 });
 
 type TelegramActionInput = z.infer<typeof telegramActionSchema>;
@@ -112,6 +125,16 @@ function channelLabel(value: unknown) {
   };
 
   return labels[channel] ?? textValue(value, "ручная передача");
+}
+
+function normalizeChannel(value: string) {
+  const text = value.toLowerCase();
+  if (text.includes("email") || text.includes("почт")) return "email";
+  if (text.includes("habr") || text.includes("хабр")) return "habr";
+  if (text.includes("vc")) return "vc";
+  if (text.includes("сайт") || text.includes("cms")) return "site";
+  if (text.includes("telegram") || text.includes("телеграм") || text.includes("тг")) return "telegram";
+  return "manual";
 }
 
 function riskLabel(value: unknown) {
@@ -408,6 +431,44 @@ async function loadOwnerBriefData(tenantId: string) {
   };
 }
 
+async function loadOnboardingState(tenantId: string): Promise<(OnboardingState & { id?: string }) | null> {
+  const result = await query(
+    "select * from integrations where tenant_id = $1 order by created_at desc limit $2",
+    [tenantId, 200]
+  );
+  const row = (result.rows as Row[]).find((item) => item.provider === "telegram_onboarding" && item.status === "active");
+  const parsed = onboardingStateSchema.safeParse(row?.config);
+
+  return row && parsed.success ? { ...parsed.data, id: typeof row.id === "string" ? row.id : undefined } : null;
+}
+
+async function saveOnboardingState(tenantId: string, state: OnboardingState & { id?: string }) {
+  const payload: OnboardingState = {
+    answers: state.answers,
+    ...(state.completedAt ? { completedAt: state.completedAt } : {}),
+    step: state.step,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (state.id) {
+    await patchJson("integrations", state.id, {
+      provider: "telegram_onboarding",
+      status: state.step === "done" ? "completed" : "active",
+      config: payload
+    }, tenantId);
+    return { ...payload, id: state.id };
+  }
+
+  const row = await insertJson("integrations", {
+    provider: "telegram_onboarding",
+    status: state.step === "done" ? "completed" : "active",
+    config: payload,
+    last_checked_at: null
+  }, tenantId);
+
+  return { ...payload, id: typeof row.id === "string" ? row.id : undefined };
+}
+
 async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
   let result: Row | null = null;
 
@@ -447,18 +508,264 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   };
 }
 
-function renderOnboardingMessage() {
+function onboardingPrompt(step: OnboardingStep) {
+  if (step === "offer") {
+    return [
+      "Настроим Growth Control.",
+      "",
+      "Шаг 1/5 — оффер.",
+      "Что продаёте и какой результат должен увидеть клиент?"
+    ].join("\n");
+  }
+
+  if (step === "client") {
+    return [
+      "Шаг 2/5 — клиент.",
+      "Кому продаёте: сегмент, роль ЛПР, главная боль?"
+    ].join("\n");
+  }
+
+  if (step === "channel") {
+    return [
+      "Шаг 3/5 — канал выпуска.",
+      "Куда в первую очередь выпускаем материалы: Telegram, сайт, email, VC/Habr или ручная передача ответственному?"
+    ].join("\n");
+  }
+
+  if (step === "approval_rules") {
+    return [
+      "Шаг 4/5 — правила согласования.",
+      "Что обязательно должно ждать вашего решения перед выпуском?"
+    ].join("\n");
+  }
+
   return [
-    "AgentResult OS — настройка",
-    "",
-    "1. Контекст бизнеса: что продаём, кому, какая цель.",
-    "2. Правила согласования: что можно готовить, что требует решения.",
-    "3. Каналы: сайт, Telegram, email, ручная передача.",
-    "4. Доступы: кто отвечает за выпуск и подтверждение результата.",
-    "5. Первый цикл: материал -> решение -> выпуск -> сигнал.",
-    "",
-    "Начнём с контекста бизнеса: что продаём и какой результат нужен в ближайшие 2 недели?"
+    "Шаг 5/5 — первый материал.",
+    "Какую тему или задачу подготовить первой?"
   ].join("\n");
+}
+
+function onboardingProgressLine(state: OnboardingState) {
+  const labels: Record<OnboardingStep, string> = {
+    approval_rules: "правила согласования",
+    channel: "канал выпуска",
+    client: "клиент",
+    done: "готово",
+    first_material: "первый материал",
+    offer: "оффер"
+  };
+
+  return `Текущий шаг: ${labels[state.step]}.`;
+}
+
+function renderOnboardingMessage(state?: OnboardingState) {
+  if (state && state.step !== "done") {
+    return [
+      "Настройка уже начата.",
+      onboardingProgressLine(state),
+      "",
+      onboardingPrompt(state.step)
+    ].join("\n");
+  }
+
+  return [
+    "AgentResult Growth Control — настройка",
+    "",
+    "Зафиксируем минимум для первого рабочего цикла:",
+    "оффер, клиент, канал выпуска, правила согласования и первый материал.",
+    "",
+    onboardingPrompt("offer")
+  ].join("\n");
+}
+
+function nextOnboardingStep(step: OnboardingStep): OnboardingStep {
+  if (step === "offer") return "client";
+  if (step === "client") return "channel";
+  if (step === "channel") return "approval_rules";
+  if (step === "approval_rules") return "first_material";
+  return "done";
+}
+
+function onboardingAnswerKey(step: OnboardingStep) {
+  const keys: Record<OnboardingStep, string> = {
+    approval_rules: "approvalRules",
+    channel: "channel",
+    client: "client",
+    done: "done",
+    first_material: "firstMaterial",
+    offer: "offer"
+  };
+
+  return keys[step];
+}
+
+function onboardingTitle(value: string) {
+  const normalized = value.replace(/^тема\s*[:—-]\s*/i, "").trim();
+  return truncateText(normalized || "Первый материал Growth Control", 90);
+}
+
+function onboardingDraftBody(answers: Record<string, string>) {
+  const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
+  return [
+    title,
+    "",
+    `Оффер: ${textValue(answers.offer, "не указан")}`,
+    `Клиент: ${textValue(answers.client, "не указан")}`,
+    `Канал выпуска: ${channelLabel(normalizeChannel(textValue(answers.channel, "manual")))}`,
+    "",
+    "Черновик:",
+    "Показываем конкретную проблему клиента, связываем её с оффером и ведём к одному следующему действию. Без обещаний гарантированного результата и без публикации без согласования.",
+    "",
+    `Тема первого материала: ${title}`
+  ].join("\n");
+}
+
+async function updateCompanyFromOnboarding(tenantId: string, answers: Record<string, string>) {
+  const existing = await query("select * from companies where tenant_id = $1 order by created_at asc limit 1", [tenantId]);
+  const current = existing.rows[0] as Row | undefined;
+  const profile = current?.profile && typeof current.profile === "object" ? current.profile as Row : {};
+  const mergedProfile = {
+    ...profile,
+    approvalOwner: textValue(answers.approvalRules, textValue(profile.approvalOwner, "")),
+    channels: channelLabel(normalizeChannel(textValue(answers.channel, textValue(profile.channels, "manual")))),
+    icp: textValue(answers.client, textValue(profile.icp, "")),
+    onboarding: {
+      channel: normalizeChannel(textValue(answers.channel, "manual")),
+      completedAt: new Date().toISOString(),
+      firstMaterial: textValue(answers.firstMaterial, ""),
+      source: "telegram_owner_control"
+    },
+    positioning: textValue(answers.offer, textValue(profile.positioning, ""))
+  };
+
+  if (current?.id) {
+    await query(
+      `update companies set name = coalesce($2, name), profile = coalesce($3, profile), website_url = coalesce($4, website_url), updated_at = now()
+       where id = $1 returning *`,
+      [current.id, current.name ?? null, mergedProfile, current.website_url ?? null]
+    );
+    return;
+  }
+
+  await query("insert into companies (tenant_id, name, profile, website_url) values ($1, $2, $3, $4) returning *", [
+    tenantId,
+    "Новая B2B-компания",
+    mergedProfile,
+    null
+  ]);
+}
+
+async function createOnboardingFirstMaterial(context: { tenantId: string; userId?: string }, answers: Record<string, string>) {
+  const channel = normalizeChannel(textValue(answers.channel, "manual"));
+  const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
+  const bodyMd = onboardingDraftBody(answers);
+  const contentItem = await insertJson("content_items", {
+    title,
+    content_type: channel === "email" ? "email" : "telegram_post",
+    channel,
+    status: "review",
+    body_md: bodyMd,
+    metadata: {
+      approval_rules: textValue(answers.approvalRules, ""),
+      onboarding_source: "telegram_owner_control"
+    }
+  }, context.tenantId);
+
+  await insertJson("content_versions", {
+    content_item_id: contentItem.id,
+    version: 1,
+    body_md: bodyMd,
+    change_note: "Первый материал из Telegram-настройки",
+    created_by: context.userId ?? null
+  }, context.tenantId);
+
+  return createApprovalRequest({
+    tenantId: context.tenantId,
+    scope: "social_post",
+    targetType: "content_item",
+    targetId: String(contentItem.id),
+    requestedBy: context.userId,
+    riskFlags: ["public claim", "channel publishing"],
+    summary: `Согласовать первый материал: ${title}`
+  });
+}
+
+async function startOnboarding(context: { tenantId: string; userId?: string }) {
+  const existing = await loadOnboardingState(context.tenantId);
+  const isResume = Boolean(existing && existing.step !== "done");
+  const state = isResume
+    ? existing as OnboardingState & { id?: string }
+    : await saveOnboardingState(context.tenantId, { answers: {}, step: "offer" });
+
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  return {
+    command: "onboarding",
+    text: isResume ? renderOnboardingMessage(state) : renderOnboardingMessage(),
+    buttons: ownerControlButtons(ownerBrief),
+    ownerBrief,
+    onboarding: state
+  };
+}
+
+async function continueOnboarding(input: TelegramIntentInput, context: { tenantId: string; userId?: string }, state: OnboardingState & { id?: string }) {
+  const answer = input.text.trim();
+  const answers = {
+    ...state.answers,
+    [onboardingAnswerKey(state.step)]: answer
+  };
+  const nextStep = nextOnboardingStep(state.step);
+
+  if (nextStep !== "done") {
+    const nextState = await saveOnboardingState(context.tenantId, {
+      answers,
+      id: state.id,
+      step: nextStep
+    });
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+
+    return {
+      intent: "onboarding_continue",
+      command: null,
+      text: onboardingPrompt(nextStep),
+      buttons: ownerControlButtons(ownerBrief),
+      ownerBrief,
+      onboarding: nextState
+    };
+  }
+
+  await updateCompanyFromOnboarding(context.tenantId, answers);
+  await createOnboardingFirstMaterial(context, answers);
+  const completedState = await saveOnboardingState(context.tenantId, {
+    answers,
+    completedAt: new Date().toISOString(),
+    id: state.id,
+    step: "done"
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+  const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
+
+  return {
+    intent: "onboarding_complete",
+    command: null,
+    text: [
+      "Настройка зафиксирована.",
+      "",
+      `Оффер: ${textValue(answers.offer, "не указан")}`,
+      `Клиент: ${textValue(answers.client, "не указан")}`,
+      `Канал выпуска: ${channelLabel(normalizeChannel(textValue(answers.channel, "manual")))}`,
+      `Согласование: ${textValue(answers.approvalRules, "публичные материалы ждут решения собственника")}`,
+      "",
+      `Первый материал создан: ${title}`,
+      "Следующий шаг: посмотреть материал, согласовать или запросить правки."
+    ].join("\n"),
+    buttons: briefCommandButtons(ownerBrief),
+    ownerBrief,
+    onboarding: completedState
+  };
 }
 
 function renderDecisionContent(brief: OwnerBrief) {
@@ -906,12 +1213,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
   }
 
   if (["onboarding", "start_setup", "setup", "настройка"].includes(command)) {
-    return {
-      command,
-      text: renderOnboardingMessage(),
-      buttons: onboardingCommandButtons(),
-      ownerBrief
-    };
+    return startOnboarding(context);
   }
 
   if (["handoff", "передано", "передал", "в выпуск"].includes(command)) {
@@ -1012,6 +1314,28 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
       intent: "slash_command",
       command: commandResult.command
     };
+  }
+
+  const onboardingState = await loadOnboardingState(context.tenantId);
+  if (onboardingState && onboardingState.step !== "done") {
+    if (includesAny(text, ["отмена", "стоп", "остановить настройку", "прервать настройку"])) {
+      await saveOnboardingState(context.tenantId, {
+        ...onboardingState,
+        step: "done",
+        completedAt: new Date().toISOString()
+      });
+      const briefData = await loadOwnerBriefData(context.tenantId);
+      const ownerBrief = buildOwnerBrief(briefData);
+      return {
+        intent: "onboarding_cancelled",
+        command: null,
+        text: "Настройку остановил. Текущие данные AgentResult OS не сбрасывал.",
+        buttons: ownerControlButtons(ownerBrief),
+        ownerBrief
+      };
+    }
+
+    return continueOnboarding(input, context, onboardingState);
   }
 
   if (includesAny(text, [

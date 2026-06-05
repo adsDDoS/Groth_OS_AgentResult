@@ -216,7 +216,17 @@ Supported commands:
 - `/published`: confirms that a handed-off material went live;
 - `/reset`: restarts the Telegram owner-control dialogue without deleting AgentResult OS data;
 - `/demo_reset`: explicitly resets local demo state;
-- `/onboarding`: starts step-by-step setup in Telegram.
+- `/onboarding`: starts the Telegram setup flow: offer, client, release channel, approval rules, first material.
+
+Onboarding flow:
+
+- state is stored in `integrations` with provider `telegram_onboarding`;
+- each ordinary owner reply fills the current setup step while onboarding is active;
+- collected offer/client/channel/rules are written into the company profile;
+- the final answer creates the first content item in `review` and opens an approval;
+- owner can then continue with normal language: show material, approve, request changes, hand off, confirm live.
+
+Onboarding can be cancelled with `стоп`, `отмена`, or `остановить настройку`. This stops only the setup flow and does not delete existing AgentResult OS data.
 
 Command button shape:
 
