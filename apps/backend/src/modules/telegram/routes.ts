@@ -647,6 +647,12 @@ function handoffButtonsForBrief(brief: OwnerBrief): TelegramCommandButton[] {
   return buttons;
 }
 
+function ownerControlButtons(brief: OwnerBrief): TelegramCommandButton[] {
+  if (brief.counts.decisions > 0) return briefCommandButtons(brief);
+  if (brief.counts.handedOff > 0) return handoffButtonsForBrief(brief);
+  return [commandButton("/result", "Результат"), commandButton("/onboarding", "Настройка")];
+}
+
 async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
   const contentItem = await insertJson("content_items", {
     title: input.title,
@@ -894,7 +900,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
       intent: "direct_publication_boundary",
       command: null,
       text: renderDirectPublishingBoundary(),
-      buttons: briefCommandButtons(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -938,7 +944,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
       intent: "daily_owner_loop",
       command: null,
       text: renderDailyWorkMessage(ownerBrief),
-      buttons: briefCommandButtons(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -1014,7 +1020,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
       intent: "result",
       command: null,
       text: renderResultMessage(ownerBrief),
-      buttons: briefCommandButtons(ownerBrief),
+      buttons: ownerControlButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -1025,7 +1031,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: { tena
     intent: "unknown",
     command: null,
     text: renderUnknownIntentMessage(),
-    buttons: briefCommandButtons(ownerBrief),
+    buttons: ownerControlButtons(ownerBrief),
     ownerBrief
   };
 }
