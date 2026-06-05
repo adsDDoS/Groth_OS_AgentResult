@@ -3,6 +3,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
+import { createApprovalRequest } from "../approvals/service.js";
+import { insertJson } from "../common/repository.js";
 
 type Row = Record<string, unknown>;
 
@@ -85,7 +87,7 @@ async function loadTaskContext(task: Row, tenantId: string) {
         status: target.status,
         contentType: target.content_type,
         channel: target.channel,
-        body: target.body ?? target.content ?? null,
+        body: target.body_md ?? null,
         metadata: target.metadata ?? {}
       }
       : null
@@ -172,6 +174,107 @@ async function updateTaskResult(input: { taskId: string; tenantId: string; statu
   return updated.rows[0] ?? null;
 }
 
+function artifactPayload(artifact: z.infer<typeof hermesArtifactSchema>) {
+  return asRecord(artifact.payload);
+}
+
+function contentTypeForChannel(channel: string) {
+  if (channel === "email") return "email";
+  if (channel === "site") return "landing_page";
+  if (channel === "vc" || channel === "habr") return "article";
+  return "telegram_post";
+}
+
+function draftBodyFromArtifact(artifact: z.infer<typeof hermesArtifactSchema>) {
+  const payload = artifactPayload(artifact);
+  return textValue(payload.bodyMd, textValue(payload.body_md, textValue(payload.body, textValue(payload.text, ""))));
+}
+
+function draftTitleFromArtifact(artifact: z.infer<typeof hermesArtifactSchema>, task: Row) {
+  const payload = artifactPayload(artifact);
+  const taskPayload = asRecord(task.payload);
+  return textValue(payload.title, textValue(taskPayload.title, textValue(taskPayload.firstMaterial, "Материал Hermes")));
+}
+
+async function applyDraftArtifact(input: {
+  artifact: z.infer<typeof hermesArtifactSchema>;
+  riskFlags: string[];
+  task: Row;
+  tenantId: string;
+  userId?: string;
+}) {
+  const payload = artifactPayload(input.artifact);
+  const taskPayload = asRecord(input.task.payload);
+  const bodyMd = draftBodyFromArtifact(input.artifact);
+  if (!bodyMd) return null;
+
+  const channel = textValue(payload.channel, textValue(taskPayload.channel, "telegram"));
+  const contentType = textValue(payload.contentType, textValue(payload.content_type, textValue(taskPayload.contentType, contentTypeForChannel(channel))));
+  const title = draftTitleFromArtifact(input.artifact, input.task);
+  const contentItem = await insertJson("content_items", {
+    title,
+    content_type: contentType,
+    channel,
+    status: "review",
+    body_md: bodyMd,
+    metadata: {
+      approval_rules: textValue(taskPayload.approvalRules, ""),
+      hermes_artifact_type: input.artifact.type,
+      hermes_task_id: input.task.id ?? null,
+      onboarding_source: taskPayload.source === "telegram_onboarding" ? "telegram_owner_control" : null,
+      source: "hermes"
+    }
+  }, input.tenantId);
+
+  await insertJson("content_versions", {
+    content_item_id: contentItem.id,
+    version: 1,
+    body_md: bodyMd,
+    change_note: "Черновик Hermes",
+    created_by: input.userId ?? null
+  }, input.tenantId);
+
+  const approval = await createApprovalRequest({
+    tenantId: input.tenantId,
+    scope: "social_post",
+    targetType: "content_item",
+    targetId: String(contentItem.id),
+    requestedBy: input.userId,
+    riskFlags: input.riskFlags.length ? input.riskFlags : ["public claim", "channel publishing"],
+    summary: `Согласовать материал Hermes: ${title}`
+  });
+
+  return {
+    approval,
+    contentItem,
+    type: "content_draft_saved"
+  };
+}
+
+async function applyHermesArtifacts(input: {
+  artifacts: z.infer<typeof hermesArtifactSchema>[];
+  riskFlags: string[];
+  task: Row;
+  tenantId: string;
+  userId?: string;
+}) {
+  const acceptedActions: Row[] = [];
+
+  for (const artifact of input.artifacts) {
+    if (artifact.type !== "draft") continue;
+    const accepted = await applyDraftArtifact({
+      artifact,
+      riskFlags: input.riskFlags,
+      task: input.task,
+      tenantId: input.tenantId,
+      userId: input.userId
+    });
+    if (accepted) acceptedActions.push(accepted);
+  }
+
+  return acceptedActions;
+}
+
 export async function hermesRoutes(app: FastifyInstance) {
   app.post("/hermes/tasks/:id/dispatch", async (request) => {
     const { id } = idParams.parse(request.params);
@@ -222,6 +325,15 @@ export async function hermesRoutes(app: FastifyInstance) {
     const task = taskResult.rows[0] ?? null;
     if (!task) return { data: null };
 
+    const acceptedActions = body.status === "completed"
+      ? await applyHermesArtifacts({
+        artifacts: body.artifacts,
+        riskFlags: body.riskFlags,
+        task: task as Row,
+        tenantId: request.tenantId,
+        userId: request.userId
+      })
+      : [];
     const taskResultPayload = {
       source: "hermes",
       status: body.status,
@@ -229,8 +341,10 @@ export async function hermesRoutes(app: FastifyInstance) {
       artifacts: body.artifacts,
       proposedActions: body.proposedActions,
       riskFlags: body.riskFlags,
-      acceptedActions: [],
-      approvalRequired: body.proposedActions.some((action) => action.type === "approval_request") || body.riskFlags.length > 0
+      acceptedActions,
+      approvalRequired: acceptedActions.length > 0 ||
+        body.proposedActions.some((action) => action.type === "approval_request") ||
+        body.riskFlags.length > 0
     };
     const updatedTask = await updateTaskResult({
       taskId: id,
@@ -256,6 +370,7 @@ export async function hermesRoutes(app: FastifyInstance) {
         runId: body.runId ?? null,
         status: body.status,
         artifactCount: body.artifacts.length,
+        acceptedActionCount: acceptedActions.length,
         proposedActionCount: body.proposedActions.length,
         riskFlags: arrayValue(body.riskFlags)
       }
@@ -265,7 +380,7 @@ export async function hermesRoutes(app: FastifyInstance) {
       data: {
         task: updatedTask,
         run,
-        acceptedActions: [],
+        acceptedActions,
         approvalRequired: taskResultPayload.approvalRequired
       }
     };

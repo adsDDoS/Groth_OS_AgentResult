@@ -3,6 +3,7 @@ import { z } from "zod";
 import { config } from "../../config.js";
 import { query } from "../../db/client.js";
 import { resetMemoryDemoStore } from "../../db/memory.js";
+import { createAgentTask } from "../agents/runner.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 
@@ -604,22 +605,6 @@ function onboardingTitle(value: string) {
   return truncateText(normalized || "Первый материал Growth Control", 90);
 }
 
-function onboardingDraftBody(answers: Record<string, string>) {
-  const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
-  return [
-    title,
-    "",
-    `Оффер: ${textValue(answers.offer, "не указан")}`,
-    `Клиент: ${textValue(answers.client, "не указан")}`,
-    `Канал выпуска: ${channelLabel(normalizeChannel(textValue(answers.channel, "manual")))}`,
-    "",
-    "Черновик:",
-    "Показываем конкретную проблему клиента, связываем её с оффером и ведём к одному следующему действию. Без обещаний гарантированного результата и без публикации без согласования.",
-    "",
-    `Тема первого материала: ${title}`
-  ].join("\n");
-}
-
 async function updateCompanyFromOnboarding(tenantId: string, answers: Record<string, string>) {
   const existing = await query("select * from companies where tenant_id = $1 order by created_at asc limit 1", [tenantId]);
   const current = existing.rows[0] as Row | undefined;
@@ -655,38 +640,24 @@ async function updateCompanyFromOnboarding(tenantId: string, answers: Record<str
   ]);
 }
 
-async function createOnboardingFirstMaterial(context: { tenantId: string; userId?: string }, answers: Record<string, string>) {
+async function createOnboardingHermesDraftTask(context: { tenantId: string; userId?: string }, answers: Record<string, string>) {
   const channel = normalizeChannel(textValue(answers.channel, "manual"));
   const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
-  const bodyMd = onboardingDraftBody(answers);
-  const contentItem = await insertJson("content_items", {
-    title,
-    content_type: channel === "email" ? "email" : "telegram_post",
-    channel,
-    status: "review",
-    body_md: bodyMd,
-    metadata: {
-      approval_rules: textValue(answers.approvalRules, ""),
-      onboarding_source: "telegram_owner_control"
-    }
-  }, context.tenantId);
-
-  await insertJson("content_versions", {
-    content_item_id: contentItem.id,
-    version: 1,
-    body_md: bodyMd,
-    change_note: "Первый материал из Telegram-настройки",
-    created_by: context.userId ?? null
-  }, context.tenantId);
-
-  return createApprovalRequest({
+  return createAgentTask({
     tenantId: context.tenantId,
-    scope: "social_post",
-    targetType: "content_item",
-    targetId: String(contentItem.id),
-    requestedBy: context.userId,
-    riskFlags: ["public claim", "channel publishing"],
-    summary: `Согласовать первый материал: ${title}`
+    role: "content_writer",
+    taskType: "prepare_onboarding_first_material",
+    payload: {
+      approvalRules: textValue(answers.approvalRules, ""),
+      channel,
+      client: textValue(answers.client, ""),
+      contentType: channel === "email" ? "email" : "telegram_post",
+      expectedArtifact: "draft",
+      offer: textValue(answers.offer, ""),
+      source: "telegram_onboarding",
+      title
+    },
+    createdBy: context.userId
   });
 }
 
@@ -737,7 +708,7 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
   }
 
   await updateCompanyFromOnboarding(context.tenantId, answers);
-  await createOnboardingFirstMaterial(context, answers);
+  const hermesTask = await createOnboardingHermesDraftTask(context, answers);
   const completedState = await saveOnboardingState(context.tenantId, {
     answers,
     completedAt: new Date().toISOString(),
@@ -759,10 +730,11 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
       `Канал выпуска: ${channelLabel(normalizeChannel(textValue(answers.channel, "manual")))}`,
       `Согласование: ${textValue(answers.approvalRules, "публичные материалы ждут решения собственника")}`,
       "",
-      `Первый материал создан: ${title}`,
-      "Следующий шаг: посмотреть материал, согласовать или запросить правки."
+      `Hermes получил задачу: ${title}`,
+      "Следующий шаг: дождаться черновика. После подготовки материал появится на согласование."
     ].join("\n"),
-    buttons: briefCommandButtons(ownerBrief),
+    buttons: ownerControlButtons(ownerBrief),
+    hermesTask,
     ownerBrief,
     onboarding: completedState
   };

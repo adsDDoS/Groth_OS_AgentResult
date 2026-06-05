@@ -107,7 +107,7 @@ Publishing creates jobs only after required approval exists.
 
 `POST /hermes/tasks/:id/dispatch` prepares a backend-owned task envelope for Hermes and records a `task_runs` row with status `dispatch_prepared`. It does not publish, send, or make owner decisions.
 
-`POST /hermes/tasks/:id/result` accepts a structured Hermes result envelope, validates it, writes the result to the task, and records a `hermes_result_received` task event. Proposed actions remain proposed; backend approval rules decide what becomes an approval, release, handoff, or result later.
+`POST /hermes/tasks/:id/result` accepts a structured Hermes result envelope, validates it, writes the result to the task, and records a `hermes_result_received` task event. When Hermes returns a `draft` artifact, backend saves it as a content item in `review`, stores the first content version, and opens an approval. Proposed non-draft actions remain proposed; backend approval rules decide what becomes a release, handoff, or result later.
 
 Result body:
 
@@ -120,8 +120,12 @@ Result body:
     {
       "type": "draft",
       "targetType": "content_item",
-      "targetId": "content-item-uuid",
-      "payload": {}
+      "payload": {
+        "title": "Почему AI-черновики не превращаются в выпуск",
+        "bodyMd": "Prepared material text...",
+        "channel": "telegram",
+        "contentType": "telegram_post"
+      }
     }
   ],
   "proposedActions": [
@@ -223,7 +227,9 @@ Onboarding flow:
 - state is stored in `integrations` with provider `telegram_onboarding`;
 - each ordinary owner reply fills the current setup step while onboarding is active;
 - collected offer/client/channel/rules are written into the company profile;
-- the final answer creates the first content item in `review` and opens an approval;
+- the final answer creates a Hermes `content_writer` task for the first material;
+- Hermes returns a `draft` artifact through `POST /hermes/tasks/:id/result`;
+- backend saves that draft as a content item in `review` and opens approval;
 - owner can then continue with normal language: show material, approve, request changes, hand off, confirm live.
 
 Onboarding can be cancelled with `стоп`, `отмена`, or `остановить настройку`. This stops only the setup flow and does not delete existing AgentResult OS data.

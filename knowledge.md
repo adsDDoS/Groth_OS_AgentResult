@@ -203,7 +203,9 @@ Current Telegram onboarding flow:
 - stores active state in backend, not in the model prompt;
 - while onboarding is active, ordinary owner replies fill the current setup step and must not be treated as approval/handoff/result commands;
 - writes collected context into the company profile;
-- creates the first material in `review`;
+- creates a Hermes `content_writer` task for the first material;
+- waits for Hermes to return a `draft` artifact through backend;
+- saves the Hermes draft as a content item in `review`;
 - opens an approval for that material;
 - returns the owner to the normal Growth Control loop: show material, approve, request changes, hand off, confirm live.
 

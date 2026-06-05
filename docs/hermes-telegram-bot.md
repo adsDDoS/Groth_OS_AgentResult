@@ -146,7 +146,7 @@ Preferred Telegram commands:
 - `/published`: confirm that a handed-off material went live.
 - `/onboarding`: start setup flow through Telegram: offer, client, release channel, approval rules, first material.
 
-Onboarding is backend-owned. While it is active, ordinary owner replies fill the current setup step instead of being treated as approval, handoff, or generic intent. The final answer updates company context, creates the first material in review, opens an approval, and returns natural next actions.
+Onboarding is backend-owned. While it is active, ordinary owner replies fill the current setup step instead of being treated as approval, handoff, or generic intent. The final answer updates company context and creates a Hermes `content_writer` task for the first material. When Hermes returns a `draft` artifact through backend, backend saves the material in review, opens approval, and returns the owner to the normal Growth Control loop.
 
 The owner can stop the setup with `стоп`, `отмена`, or `остановить настройку`; this does not delete AgentResult OS data.
 
