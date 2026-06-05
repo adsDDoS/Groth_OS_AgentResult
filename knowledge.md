@@ -215,10 +215,12 @@ Current Telegram onboarding flow:
 - while onboarding is active, ordinary owner replies fill the current setup step and must not be treated as approval/handoff/result commands;
 - writes collected context into the company profile;
 - creates a Hermes `content_writer` task for the first material;
-- dispatches that task to Hermes through backend immediately;
-- receives a `draft` artifact through backend;
+- starts a backend background job for Hermes dispatch;
+- immediately tells the owner that the task is in work;
+- receives a `draft` artifact through backend when Hermes finishes;
 - saves the Hermes draft as a content item in `review`;
 - opens an approval for that material;
+- sends the owner a separate Telegram message that the draft is ready for decision;
 - returns the owner to the normal Growth Control loop: show material, approve, request changes, hand off, confirm live.
 
 Owner may cancel onboarding with `стоп`, `отмена`, or `остановить настройку`; this stops the setup flow and does not delete AgentResult OS data.

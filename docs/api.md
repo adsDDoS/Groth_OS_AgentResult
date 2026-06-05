@@ -111,7 +111,7 @@ For diagnostics, pass `{ "dryRun": true }` to prepare and store the envelope wit
 
 `POST /hermes/tasks/:id/result` accepts the same structured Hermes result envelope from external workers, validates it, writes the result to the task, and records a `hermes_result_received` task event. When Hermes returns a `draft` artifact, backend saves it as a content item in `review`, stores the first content version, and opens an approval. Proposed non-draft actions remain proposed; backend approval rules decide what becomes a release, handoff, or result later.
 
-Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task: the owner completes setup, backend sends the queued task to Hermes, Hermes returns a `draft`, and backend opens approval.
+Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task. The owner completes setup, backend starts a background Hermes job, immediately responds that the task is in work, then saves the returned `draft`, opens approval, and sends a separate Telegram owner-control message when the draft is ready.
 
 Result body:
 

@@ -31,6 +31,12 @@ type OwnerBriefInput = {
   contentItems: Row[];
   latestSummary: Row;
 };
+type TelegramExecutionContext = {
+  app?: FastifyInstance;
+  telegramChatId?: number | string;
+  tenantId: string;
+  userId?: string;
+};
 type BriefData = Awaited<ReturnType<typeof loadOwnerBriefData>>;
 type OnboardingStep = "offer" | "client" | "channel" | "approval_rules" | "first_material" | "done";
 type OnboardingState = {
@@ -662,7 +668,66 @@ async function createOnboardingHermesDraftTask(context: { tenantId: string; user
   });
 }
 
-async function startOnboarding(context: { tenantId: string; userId?: string }) {
+function runOnboardingHermesDraftJob(input: {
+  app?: FastifyInstance;
+  chatId?: number | string;
+  taskId: string;
+  tenantId: string;
+  title: string;
+  userId?: string;
+}) {
+  void (async () => {
+    try {
+      const dispatch = await dispatchHermesTask({
+        taskId: input.taskId,
+        tenantId: input.tenantId,
+        userId: input.userId
+      });
+      const delivery = dispatch && typeof dispatch === "object" ? (dispatch as Row).delivery : null;
+      const briefData = await loadOwnerBriefData(input.tenantId);
+      const ownerBrief = buildOwnerBrief(briefData);
+
+      if (input.chatId && delivery === "completed") {
+        await sendTelegramOwnerControlMessage({
+          chatId: input.chatId,
+          text: [
+            "Черновик готов к решению.",
+            "",
+            input.title,
+            "",
+            "Можно посмотреть материал, согласовать или вернуть на правки."
+          ].join("\n"),
+          buttons: briefCommandButtons(ownerBrief)
+        });
+      } else if (input.chatId) {
+        await sendTelegramOwnerControlMessage({
+          chatId: input.chatId,
+          text: "Hermes не вернул черновик. Задача сохранена, проверьте статус позже.",
+          buttons: briefCommandButtons(ownerBrief)
+        });
+      }
+
+      await query(
+        `insert into integrations (tenant_id, provider, status, config)
+         values ($1, 'telegram_onboarding_hermes_job', $2, $3)
+         returning *`,
+        [input.tenantId, textValue(String(delivery ?? "unknown"), "unknown"), { taskId: input.taskId, delivery }]
+      );
+    } catch (error) {
+      input.app?.log.error({ error, taskId: input.taskId }, "Telegram onboarding Hermes background job failed");
+      if (input.chatId) {
+        await sendTelegramOwnerControlMessage({
+          chatId: input.chatId,
+          text: "Hermes не вернул черновик. Задача сохранена, проверьте статус позже."
+        }).catch((sendError) => {
+          input.app?.log.error({ error: sendError, taskId: input.taskId }, "Telegram onboarding failure notification failed");
+        });
+      }
+    }
+  })();
+}
+
+async function startOnboarding(context: TelegramExecutionContext) {
   const existing = await loadOnboardingState(context.tenantId);
   const isResume = Boolean(existing && existing.step !== "done");
   const state = isResume
@@ -681,7 +746,7 @@ async function startOnboarding(context: { tenantId: string; userId?: string }) {
   };
 }
 
-async function continueOnboarding(input: TelegramIntentInput, context: { tenantId: string; userId?: string }, state: OnboardingState & { id?: string }) {
+async function continueOnboarding(input: TelegramIntentInput, context: TelegramExecutionContext, state: OnboardingState & { id?: string }) {
   const answer = input.text.trim();
   const answers = {
     ...state.answers,
@@ -710,11 +775,6 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
 
   await updateCompanyFromOnboarding(context.tenantId, answers);
   const hermesTask = await createOnboardingHermesDraftTask(context, answers);
-  const hermesDispatch = await dispatchHermesTask({
-    taskId: String(hermesTask.id),
-    tenantId: context.tenantId,
-    userId: context.userId
-  });
   const completedState = await saveOnboardingState(context.tenantId, {
     answers,
     completedAt: new Date().toISOString(),
@@ -724,14 +784,14 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const title = onboardingTitle(textValue(answers.firstMaterial, "Первый материал Growth Control"));
-  const dispatchDelivery = hermesDispatch && typeof hermesDispatch === "object"
-    ? (hermesDispatch as Row).delivery
-    : null;
-  const dispatchLine = dispatchDelivery === "completed"
-    ? "Черновик подготовлен и появился на согласование."
-    : dispatchDelivery === "prepared"
-      ? "Задача подготовлена для Hermes. Следующий шаг: получить черновик."
-      : "Задача создана, но Hermes пока не вернул черновик. Проверьте статус позже.";
+  runOnboardingHermesDraftJob({
+    app: context.app,
+    chatId: context.telegramChatId,
+    taskId: String(hermesTask.id),
+    tenantId: context.tenantId,
+    title,
+    userId: context.userId
+  });
 
   return {
     intent: "onboarding_complete",
@@ -745,10 +805,15 @@ async function continueOnboarding(input: TelegramIntentInput, context: { tenantI
       `Согласование: ${textValue(answers.approvalRules, "публичные материалы ждут решения собственника")}`,
       "",
       `Hermes получил задачу: ${title}`,
-      dispatchLine
+      context.telegramChatId
+        ? "Задача в работе. Я пришлю черновик отдельным сообщением, когда он будет готов."
+        : "Задача в работе. Черновик появится на согласование после подготовки."
     ].join("\n"),
     buttons: ownerControlButtons(ownerBrief),
-    hermesDispatch,
+    hermesJob: {
+      delivery: "queued",
+      taskId: hermesTask.id
+    },
     hermesTask,
     ownerBrief,
     onboarding: completedState
@@ -1143,7 +1208,7 @@ async function createManualHandoff(context: { tenantId: string; userId?: string 
   };
 }
 
-async function executeTelegramCommand(input: TelegramCommandInput, context: { tenantId: string; userId?: string }) {
+async function executeTelegramCommand(input: TelegramCommandInput, context: TelegramExecutionContext) {
   const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
@@ -1291,7 +1356,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: { te
   };
 }
 
-async function executeTelegramIntent(input: TelegramIntentInput, context: { tenantId: string; userId?: string }) {
+async function executeTelegramIntent(input: TelegramIntentInput, context: TelegramExecutionContext) {
   const text = input.text.trim().toLowerCase().replace(/\s+/g, " ");
 
   if (text.startsWith("/")) {
@@ -1662,12 +1727,14 @@ function renderTelegramActionResultMessage(actionResult: Awaited<ReturnType<type
 async function processTelegramOwnerControlUpdate(update: TelegramUpdate, allowedUsers: Set<string>, app: FastifyInstance) {
   const chatId = telegramUpdateChatId(update);
   const userId = telegramUpdateUserId(update);
-  const context = {
+
+  if (!chatId) return;
+  const context: TelegramExecutionContext = {
+    app,
+    telegramChatId: chatId,
     tenantId: config.telegramOwnerControlTenantId,
     userId: config.telegramOwnerControlUserId
   };
-
-  if (!chatId) return;
 
   if (!isTelegramOwnerAllowed(update, allowedUsers)) {
     app.log.warn({ updateId: update.update_id, userId }, "Rejected Telegram owner-control update from non-allowed user");
