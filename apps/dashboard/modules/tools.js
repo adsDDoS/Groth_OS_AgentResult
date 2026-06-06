@@ -153,7 +153,7 @@ export function createToolsModule(ctx) {
         url: text("Connected inside AgentResult workspace", "Подключён внутри рабочего контура AgentResult"),
         summary: text("Prepares briefs, drafts, analysis and action proposals.", "Готовит ТЗ, черновики, анализ и предложения действий."),
         permissions: ["read", "prepare"],
-        limits: text("No public access and no side effects without owner approval.", "Нет публичного доступа и действий наружу без согласования.")
+        limits: text("No public access and no side effects without owner approval.", "Нет публичного доступа и внешних действий без согласования.")
       },
       {
         id: "postgres",
@@ -166,7 +166,7 @@ export function createToolsModule(ctx) {
         modules: ["offer-brain", "results-loop", "proof-engine"],
         owner: "AgentResult",
         url: text("Connected inside AgentResult workspace", "Подключено внутри рабочего контура AgentResult"),
-        summary: text("Stores tasks, approvals, receivables, CRM and events.", "Хранит задачи, согласования, дебиторку, CRM и события."),
+        summary: text("Stores tasks, approvals, CRM signals and events.", "Хранит задачи, согласования, CRM-сигналы и события."),
         permissions: ["read"],
         limits: text("No direct access from public screens.", "Не давать прямой доступ из публичных экранов.")
       },
@@ -241,7 +241,7 @@ export function createToolsModule(ctx) {
         modules: ["proof-engine", "results-loop"],
         owner: "Egor / AgentResult",
         url: text("Manual import and weekly export pack", "Ручной импорт и недельный экспорт-пакет"),
-        summary: text("Fallback for receivables, metrics and handoff before full integrations.", "Запасной способ для дебиторки, метрик и передачи материалов до полных интеграций."),
+        summary: text("Fallback for signals, metrics and handoff before full integrations.", "Запасной способ для сигналов, метрик и передачи материалов до полных интеграций."),
         permissions: ["read", "prepare", "approval"],
         limits: text("Keep sensitive client data out of shared exports.", "Не добавлять чувствительные клиентские данные в общие экспорты.")
       },
@@ -273,7 +273,7 @@ export function createToolsModule(ctx) {
         url: "",
         summary: text("Useful for long-form market arguments and founder voice.", "Подходит для длинных рыночных материалов и голоса основателя."),
         permissions: ["prepare", "approval"],
-        limits: text("No external publishing without final owner review.", "Не публиковать наружу без финального ревью собственника.")
+        limits: text("No external publishing without final owner review.", "Не выпускать без финального решения собственника.")
       },
       {
         id: "habr",

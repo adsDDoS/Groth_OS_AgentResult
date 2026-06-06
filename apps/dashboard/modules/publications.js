@@ -206,7 +206,7 @@ function publishingReleaseQueues() {
     {
       id: "decision",
       title: text("Needs decision", "Ждёт решения"),
-      note: text("Approve, return, or reject before anything goes outside.", "Согласовать, вернуть или отклонить до выхода наружу."),
+      note: text("Approve, return, or reject before release.", "Согласовать, вернуть или отклонить перед выпуском."),
       items: state.calendar.filter((item) => ["review", "draft"].includes(item.status)),
       empty: text("No decisions waiting.", "Нет решений на ожидании.")
     },

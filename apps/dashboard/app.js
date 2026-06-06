@@ -121,7 +121,7 @@ const RU = {
   "Backend is offline": "Сервис недоступен",
   "API connected": "Сервис подключён",
   "Demo data is active": "Активны демо-данные",
-  "Publishing APIs": "API публикаций",
+  "Publishing APIs": "Каналы выпуска",
   "Manual-first mode active": "Включён ручной режим",
   "Next best actions": "Лучшие следующие действия",
   "Fastest path to useful demand": "Самый короткий путь к полезному спросу",
@@ -400,9 +400,9 @@ const demo = {
       positioning:
         "B2B AI-agent systems для продаж, роста, CRM-автоматизации и операционного контроля. Основной формат: агентная система + рабочий контур + Telegram-контур управления + интеграции.",
       icp:
-        "Собственники B2B-компаний, агентства, интеграторы, SaaS-команды, сервисные компании и бизнесы с длинным циклом сделки, дебиторкой и слабой CRM-дисциплиной.",
+        "Собственники B2B-компаний, агентства, интеграторы, SaaS-команды и сервисные компании, где материалы, заявки и решения часто зависают между людьми.",
       pains:
-        "Лиды теряются; менеджеры не ведут CRM; повторные касания пропускаются; собственник не видит реальную картину продаж; контент хаотичен; сайт не создаёт спрос; дебиторка висит без системы; AI кажется рискованным.",
+        "Материалы готовятся, но не выходят; заявки и ответы теряются; решения собственника запаздывают; команда работает в чатах; результат после выпуска не фиксируется.",
       proof:
         "Рабочий WebApp-прототип AgentResult, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, отдельный прототип AI Growth OS и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
       forbiddenClaims:
@@ -411,21 +411,21 @@ const demo = {
       competitors:
         "CRM integrators, Bitrix24 and amoCRM implementers, AI automation shops, performance agencies, no-code automators, internal operators, generic AI tools and SDR services.",
       products:
-        "AgentResult Sales OS — AI-agent sales system / CRM automation\nAgentResult Collect / DebtorPilot — AI collection automation / receivables\nAI Growth OS — B2B growth/content/SEO/GEO operating system",
+        "AgentResult Growth Control — контур решений, выпуска и результата\nAgentResult Sales OS — AI-agent sales system / CRM automation\nAgentResult Collect — отдельный контур денежных сигналов",
       domains: "agentresult-crm.vercel.app\nagentresult.ru\napp.agentresult.ru\napi.agentresult.ru\nagentresult.online",
       channels: "Telegram-контур управления, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
-      approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and receivables actions."
+      approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and money-sensitive actions."
     }
   },
   demand: [
     { id: "d1", title: "AI-агенты для B2B-продаж", item_type: "product_page", intent: "commercial", audience: "Собственники B2B-компаний", priority: 100, status: "brief" },
     { id: "d2", title: "Telegram CRM для собственника", item_type: "use_case_page", intent: "problem-aware", audience: "Собственники, которым не хочется жить внутри CRM", priority: 92, status: "brief" },
-    { id: "d3", title: "Как вернуть просроченную дебиторку без отдельного оператора", item_type: "pain_page", intent: "problem-aware", audience: "Собственники и финансисты", priority: 88, status: "research" },
-    { id: "d4", title: "AI Growth OS для B2B-компаний", item_type: "product_page", intent: "commercial", audience: "Собственники и маркетинг B2B-компаний", priority: 84, status: "draft" }
+    { id: "d3", title: "Почему материалы не должны зависать в чатах", item_type: "pain_page", intent: "problem-aware", audience: "Собственники и руководители роста", priority: 88, status: "research" },
+    { id: "d4", title: "AgentResult Growth Control для B2B-компаний", item_type: "product_page", intent: "commercial", audience: "Собственники и маркетинг B2B-компаний", priority: 84, status: "draft" }
   ],
   content: [
     { id: "c1", title: "Почему одного AI-агента недостаточно, чтобы наладить продажи", content_type: "telegram_post", channel: "telegram", status: "review", owner: "Egor" },
-    { id: "c2", title: "AI Growth OS для B2B-компаний", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
+    { id: "c2", title: "AgentResult Growth Control для B2B-компаний", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
     { id: "c3", title: "Почему B2B-компаниям нужна агентная операционная система, а не только CRM", content_type: "article_outline", channel: "website", status: "brief", owner: "Egor" },
     { id: "c4", title: "Email: безопасный запуск AI Growth OS", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
     { id: "c5", title: "Лид-магнит: чеклист готовности к AgentResult OS", content_type: "lead_magnet", channel: "website", status: "idea", owner: "Egor" }
@@ -764,8 +764,8 @@ function normalizeAgentResultLanguageArtifacts() {
     ["Проверка owner workflow: согласование и публикация", "Проверка согласования и публикации"],
     ["Weekly AgentResult growth pack", "Недельный пакет публикаций AgentResult"],
     ["AI agents for B2B sales", "AI-агенты для B2B-продаж"],
-    ["How to recover overdue receivables without hiring an operator", "Как системно возвращать просроченную дебиторку"],
-    ["Как вернуть просроченную дебиторку без отдельного оператора", "Как системно возвращать просроченную дебиторку"],
+    ["How to recover overdue receivables without hiring an operator", "Как не терять решения и выпуск в чатах"],
+    ["Как вернуть просроченную дебиторку без отдельного оператора", "Как не терять решения и выпуск в чатах"],
     ["Telegram CRM for the owner", "Telegram CRM для собственника"],
     ["Owner workflow demand topic", "Проверка согласования и публикации"],
     ["Owner workflow material", "Проверка согласования и публикации"],
@@ -778,7 +778,7 @@ function normalizeAgentResultLanguageArtifacts() {
     if (item.audience === "B2B owner") item.audience = "Собственники B2B-компаний";
     if (item.audience === "B2B owners") item.audience = "Собственники B2B-компаний";
     if (item.audience === "Owners who do not want to live inside CRM") item.audience = "Собственники, которым не хочется жить внутри CRM";
-    if (item.audience === "Owners and finance leads with overdue invoices") item.audience = "Собственники и финансисты с просроченной дебиторкой";
+    if (item.audience === "Owners and finance leads with overdue invoices") item.audience = "Собственники и руководители роста";
   }
   for (const item of state.content) {
     if (replacements.has(item.title)) item.title = replacements.get(item.title);
@@ -1059,13 +1059,8 @@ function renderFormModal() {
           ${numberField(text("Leads", "Заявки"), "metricLeads", state.metrics.leads || 0)}
           ${numberField(text("Tasks created", "Создано задач"), "metricTasks", state.metrics.tasks_created || 0)}
         </div>
-        <div class="form-grid two-col">
+        <div class="form-grid">
           ${numberField(text("Published materials", "Опубликовано материалов"), "metricPublished", state.metrics.published_materials || 0)}
-          ${numberField(text("Receivables in progress", "Дебиторка в работе"), "metricReceivables", state.metrics.receivables_in_progress || 0)}
-        </div>
-        <div class="form-grid two-col">
-          ${numberField(text("Promised payments", "Обещанные оплаты"), "metricPromised", state.metrics.promised_payments || 0)}
-          ${numberField(text("Recovered payments", "Возвращённые оплаты"), "metricRecovered", state.metrics.recovered_payments || 0)}
         </div>
       `
     },
@@ -1264,24 +1259,12 @@ function actionButton(label, variant, action) {
 function renderOverview() {
   const pending = state.approvals.filter((item) => item.status === "pending");
   const publishedCount = state.calendar.filter((item) => item.status === "published").length;
-  const handedOffCount = handedOffCalendarCount(state.calendar);
   const blockers = growthBlockers(pending);
   const ownerMoves = ownerNextMoves(pending);
 
   return `
     ${hermesDailyBrief(pending, blockers, ownerMoves)}
     ${resultPath(pending, publishedCount)}
-    ${todaySignalStrip({ pendingCount: pending.length, handedOffCount })}
-  `;
-}
-
-function todaySignalStrip({ pendingCount, handedOffCount }) {
-  return `
-    <section class="today-signal-strip">
-      ${compactMetric(text("Decisions", "Решения"), pendingCount, text("waiting for owner", "ждут собственника"))}
-      ${compactMetric(text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting confirmation", "ждёт подтверждения"))}
-      ${compactMetric(text("Leads", "Заявки"), state.metrics.leads || 0, text("from forms, CRM or replies", "из форм, CRM или ответов"))}
-    </section>
   `;
 }
 
@@ -1375,7 +1358,7 @@ function hermesDailyBrief(pending, blockers, ownerMoves) {
     ? text(`Approve: ${urgent.title}`, `Согласовать: ${urgent.title}`)
     : blockers[0]?.title || text("No urgent decisions", "Срочных решений нет");
   const note = urgent
-    ? text("Nothing goes public before this decision.", "До этого решения наружу ничего не уйдёт.")
+    ? text("Nothing goes to release before this decision.", "До решения материал не уйдёт в выпуск.")
     : text("No owner action is needed right now.", "Сейчас действие собственника не нужно.");
   const action = urgent ? "go-approval" : ownerMoves[0]?.action || "go-demand-map";
   const label = urgent ? text("Open decision", "Открыть решение") : ownerMoves[0]?.label || text("Open plan", "Открыть план");
@@ -1414,7 +1397,7 @@ function growthBlockers(pending) {
   }
   if (!state.calendar.some((item) => isShippedStatus(item.status))) {
     blockers.push({
-      title: text("No material has left the system", "Ни один материал ещё не вышел наружу"),
+      title: text("No material has been released yet", "Ни один материал ещё не вышел"),
       meta: text("Drafts become business value only after publish or handoff.", "Черновики становятся ценностью после публикации или передачи."),
       label: text("Open", "Открыть"),
       action: "go-calendar",
@@ -1462,7 +1445,7 @@ function ownerNextMoves(pending) {
     },
     {
       title: text("Import first result numbers", "Загрузить первые цифры результата"),
-      meta: text("Leads, published materials or receivables.", "Заявки, публикации или дебиторка."),
+      meta: text("Leads, published materials or replies.", "Заявки, публикации или ответы."),
       label: text("Import", "Загрузить"),
       action: "import-metrics",
       id: "metrics"
@@ -1555,7 +1538,7 @@ function renderContentPipeline() {
       </div>
       <div class="material-summary compact">
         ${compactMaterialMetric(text("Needs decision", "Ждёт решения"), waiting)}
-        ${compactMaterialMetric(text("Ready outside", "Готово наружу"), ready)}
+        ${compactMaterialMetric(text("Ready for release", "Готово к выпуску"), ready)}
         ${compactMaterialMetric(text("Needs work", "Нужно дописать"), needsWork)}
       </div>
     </section>
@@ -1589,7 +1572,7 @@ function materialOwnerQueues(excludeId = "") {
       empty: text("No decisions waiting.", "Нет материалов на решении.")
     },
     {
-      title: text("Ready outside", "Готово наружу"),
+      title: text("Ready for release", "Готово к выпуску"),
       note: text("Put into release plan or hand off.", "Поставить в план выпуска или передать."),
       items: items.filter((item) => ["approved", "scheduled"].includes(item.status) && item.id !== excludeId),
       empty: text("Nothing ready for release yet.", "Пока ничего не готово к выпуску.")
@@ -1670,7 +1653,7 @@ function materialQueueTitle(item) {
 }
 
 function materialQueueNote(item) {
-  if (item.status === "review") return text("Owner decision is needed before this goes outside.", "Нужно решение собственника, прежде чем материал выйдет наружу.");
+  if (item.status === "review") return text("Owner decision is needed before release.", "Нужно решение собственника перед выпуском.");
   if (item.status === "approved") return text("The material is approved. Put it into the publication plan or hand it off.", "Материал согласован. Поставьте его в план публикаций или передайте вручную.");
   if (item.status === "scheduled") return text("The material is in the publication plan. Confirm when it goes live.", "Материал стоит в плане публикаций. Подтвердите, когда он выйдет.");
   if (["idea", "brief", "draft"].includes(item.status)) return text("The material is not ready for approval yet.", "Материал ещё не готов к согласованию.");
@@ -1750,9 +1733,7 @@ function renderAgents() {
 function renderAnalytics() {
   const metrics = deriveMetrics(state.metrics);
   return `
-    ${resultNextMovePanel(metrics)}
-    ${resultSignalPanel(metrics)}
-    ${resultProofStrip(metrics)}
+    ${resultFlowPanel(metrics)}
     <article class="panel full">
       <div class="panel-heading">
         <div>
@@ -1765,16 +1746,60 @@ function renderAnalytics() {
   `;
 }
 
-function resultSignalPanel(metrics) {
+function resultFlowPanel(metrics) {
   const signal = primaryBusinessSignal(metrics);
+  const next = resultNextMove(metrics);
+  const publishedCount = state.calendar.filter((item) => item.status === "published").length;
+  const handedOffCount = handedOffCalendarCount(state.calendar);
+  const releaseNote = handedOffCount
+    ? text(`${handedOffCount} awaiting live confirmation.`, `${handedOffCount} ждёт подтверждения выхода.`)
+    : publishedCount
+      ? text("Confirmed materials are counted in the result.", "Подтверждённые материалы учтены в результате.")
+      : text("Release appears here after confirmation.", "Выпуск появится здесь после подтверждения.");
+  const steps = [
+    {
+      title: text("Released", "Вышло"),
+      value: String(publishedCount),
+      note: releaseNote,
+      state: publishedCount ? "done" : handedOffCount ? "active" : "muted",
+      action: handedOffCount ? "go-calendar-handoff" : "go-calendar",
+      label: handedOffCount ? text("Confirm release", "Подтвердить выход") : text("Open publications", "Открыть публикации")
+    },
+    {
+      title: text("Signal", "Сигнал"),
+      value: signal.value,
+      note: signal.note,
+      state: Number(signal.value || 0) ? "done" : publishedCount ? "active" : "muted",
+      action: "import-metrics",
+      label: metrics.leads ? text("Check source", "Проверить источник") : text("Add signal", "Добавить сигнал")
+    },
+    {
+      title: text("Next step", "Следующий шаг"),
+      value: "",
+      note: next.title,
+      state: "active",
+      action: next.action,
+      id: next.id || "",
+      label: next.label
+    }
+  ];
+
   return `
-    <section class="result-signal-panel">
-      <div>
-        <p class="eyebrow">${text("Business signal", "Бизнес-сигнал")}</p>
-        <h3>${escapeHtml(signal.title)}</h3>
-        <p>${escapeHtml(signal.note)}</p>
+    <section class="result-path analytics-flow" aria-label="${escapeAttr(text("Result flow", "Логика результата"))}">
+      <div class="result-path-head">
+        <p class="eyebrow">${text("Result loop", "Контур результата")}</p>
+        <h3>${text("Released -> signal -> next step", "Вышло -> сигнал -> следующий шаг")}</h3>
       </div>
-      <strong>${escapeHtml(signal.value)}</strong>
+      <div class="result-path-steps">
+        ${steps.map((step, index) => `
+          <article class="result-path-step ${step.state}">
+            <span>${index + 1}</span>
+            <strong>${escapeHtml(step.value ? `${step.title}: ${step.value}` : step.title)}</strong>
+            <p>${escapeHtml(step.note)}</p>
+            <button class="button secondary table-button" data-action="${escapeAttr(step.action)}" data-id="${escapeAttr(step.id || "")}">${escapeHtml(step.label)}</button>
+          </article>
+        `).join("")}
+      </div>
     </section>
   `;
 }
@@ -1797,7 +1822,7 @@ function primaryBusinessSignal(metrics) {
   if (metrics.published_materials) {
     return {
       value: String(metrics.published_materials),
-      title: text("Work went outside", "Работа вышла наружу"),
+      title: text("Work has been released", "Работа вышла"),
       note: text("Published or handed-off materials are visible. Next signal should come from a lead, form or reply.", "Видны опубликованные или переданные материалы. Следующий сигнал ждём из заявки, формы или ответа.")
     };
   }
@@ -1806,19 +1831,6 @@ function primaryBusinessSignal(metrics) {
     title: text("No market signal yet", "Рыночного сигнала пока нет"),
     note: text("Preparation is visible, but no lead, reply or confirmed live signal has been recorded yet.", "Подготовка видна, но заявка, ответ или подтверждённый внешний сигнал ещё не зафиксированы.")
   };
-}
-
-function resultProofStrip(metrics) {
-  const handedOffCount = handedOffCalendarCount(state.calendar);
-  const publishedCount = state.calendar.filter((item) => item.status === "published").length;
-  const proof = [
-    [text("Published", "Вышло"), publishedCount, text("confirmed live", "подтверждённый выход")],
-    [text("Manual handoff", "Передано вручную"), handedOffCount, text("awaiting live confirmation", "ждёт подтверждения выхода")],
-    [text("Waiting decision", "Ждёт решения"), metrics.pending_approvals, text("before release", "до выпуска")],
-    [text("Leads", "Заявки"), metrics.leads, text("from forms, CRM or replies", "из форм, CRM или ответов")],
-    [text("Next tasks", "Следующие задачи"), metrics.tasks_created, text("created from signals", "созданы по сигналам")]
-  ];
-  return `<div class="metric-grid">${proof.map(([label, value, note], index) => metricCard(label, value, note, index === 3 ? "dark" : index === 4 ? "coral" : "")).join("")}</div>`;
 }
 
 function resultActionList(metrics) {
@@ -1846,20 +1858,6 @@ function resultActionList(metrics) {
         ? text("Create tasks from the current signals when you are ready to tighten the loop.", "Создайте задачи по текущим сигналам, когда будете готовы усиливать контур.")
         : text("First get a release or recorded lead, then improvement tasks will become useful.", "Сначала нужен выпуск или зафиксированная заявка, потом задачи улучшения станут полезными."))}</p>
     </div>
-  `;
-}
-
-function resultNextMovePanel(metrics) {
-  const next = resultNextMove(metrics);
-  return `
-    <article class="panel full next-move-panel">
-      <div>
-        <p class="eyebrow">${text("Owner next move", "Следующий шаг собственника")}</p>
-        <h3>${escapeHtml(next.title)}</h3>
-        <p>${escapeHtml(next.note)}</p>
-      </div>
-      <button class="button ${next.variant}" data-action="${escapeAttr(next.action)}" data-id="${escapeAttr(next.id || "")}">${escapeHtml(next.label)}</button>
-    </article>
   `;
 }
 
@@ -2091,8 +2089,6 @@ function renderTechnicalSettings() {
           ${detailItems.map((item) => `
             <div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)} · ${escapeHtml(item.note)}</strong></div>
           `).join("")}
-          <div><span>${text("Service address", "Адрес сервиса")}</span><strong>${escapeHtml(API_BASE || text("Not connected", "Не подключён"))}</strong></div>
-          <div><span>${text("Workspace", "Рабочая область")}</span><strong>${escapeHtml(TENANT_ID)}</strong></div>
         </div>
       </details>
     </article>
@@ -2145,7 +2141,7 @@ function renderAutopilotSettings() {
         <div class="panel-heading">
           <div>
             <p class="eyebrow">${text("Approval gate", "Контур согласования")}</p>
-            <h3>${text("What never goes out automatically", "Что не уходит наружу автоматически")}</h3>
+            <h3>${text("What never goes out automatically", "Что не выпускается автоматически")}</h3>
           </div>
         </div>
         <div class="automation-list">
@@ -2309,7 +2305,7 @@ function riskChecklist(item, flags, channel, calendarItem, contentItem) {
     {
       ok: true,
       label: text("Tone matches the company", "Тон соответствует компании"),
-      note: text("Practical, specific, without hype.", "Практично, конкретно, без хайпа.")
+      note: text("Practical, specific, without loud promises.", "Практично, конкретно, без громких обещаний.")
     }
   ];
 }
@@ -2433,10 +2429,6 @@ function nextContentAction(status) {
     scheduled: "publish/export"
   };
   return actions[status] || "choose next step";
-}
-
-function metricCard(label, value, note, tone = "") {
-  return `<article class="metric-panel ${tone}"><span>${escapeHtml(tr(label))}</span><strong>${escapeHtml(String(value))}</strong><p>${escapeHtml(tr(note))}</p></article>`;
 }
 
 function queuePanel(title, rows) {
@@ -2574,7 +2566,7 @@ function materialWorkflowFacts(item) {
 function materialOwnerStage(item) {
   if (item.status === "review") return text("Needs decision", "Ждёт решения");
   if (item.status === "approved") return text("Ready to plan", "Готов к плану");
-  if (item.status === "scheduled") return text("Ready outside", "Готово наружу");
+  if (item.status === "scheduled") return text("Ready for release", "Готово к выпуску");
   if (item.status === "published") return text("Already out", "Уже вышло");
   return text("Needs work", "Нужно дописать");
 }
@@ -3009,7 +3001,7 @@ function contentDraftFromDemand(demand, status = "brief") {
         demandBusinessReason(demand),
         demandProblem(demand),
         text("Use practical owner language: money, requests, tasks, control, result.", "Писать языком собственника: деньги, заявки, задачи, контроль, результат."),
-        text("Avoid guaranteed revenue, guaranteed debt recovery and autonomous public actions.", "Не обещать гарантированный рост, возврат дебиторки и автономные публичные действия.")
+        text("Avoid guaranteed revenue, guaranteed debt recovery and autonomous public actions.", "Не обещать гарантированный рост, денежный результат и автономные публичные действия.")
       ].join("\n"),
       proof: demand.notes?.proof || text("Use AgentResult WebApp prototype and build-in-public story.", "Использовать WebApp-прототип AgentResult и build-in-public историю.")
     },
@@ -3275,7 +3267,7 @@ function packageAssets() {
       label: text("Telegram posts: 2", "Посты Telegram: 2"),
       preview: text(
         "Post 1: AI Growth OS is not an AI writer. It is a weekly operating loop: demand map, proof, draft, approval, publication, result.\n\nPost 2: The safest first automation is not automatic publishing. It is a clear approval queue where the owner sees what will go public and why.",
-        "Пост 1: AI Growth OS — не «AI-писатель». Это недельный операционный цикл: карта спроса, доказательства, черновик, согласование, публикация, результат.\n\nПост 2: Самая безопасная первая автоматизация — не автопубликация. Это понятная очередь согласований, где собственник видит, что выйдет наружу и зачем."
+        "Пост 1: AgentResult Growth Control — не «AI-писатель». Это рабочий цикл: тема, доказательства, черновик, согласование, выпуск, результат.\n\nПост 2: Самая безопасная первая автоматизация — не автопубликация. Это понятная очередь согласований, где собственник видит, что выйдет и зачем."
       )
     },
     {
