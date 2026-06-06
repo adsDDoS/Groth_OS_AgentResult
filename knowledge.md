@@ -754,6 +754,7 @@ Pilot demo rule:
 - Use `apps/backend/dist/db/reset-pilot-demo.js` through `npm run demo:reset-pilot` or the backend Docker image after build.
 - Dashboard demo links may set `?demo=reset&api=...&tenant=10000000-0000-4000-8000-000000000001`.
 - Demo story and commands live in `docs/pilot-demo-script.md`.
+- The pre-demo checklist lives in `docs/pilot-demo-checklist.md`.
 - The 5-7 minute script uses ordinary Telegram phrases: `что готово`, `покажи первый`, `согласую`, `передал в выпуск`, `вышло`, `что по результату`.
 
 ## Non-Negotiables

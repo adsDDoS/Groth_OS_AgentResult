@@ -3765,15 +3765,15 @@ async function generateImprovementTasks() {
       title: text("Publish or hand off first approved material", "Опубликовать или передать первый согласованный материал"),
       owner: text("Publishing", "Публикации"),
       status: "next",
-      note: text("Prepared assets do not count as results until they leave the system.", "Подготовленные материалы не считаются результатом, пока не вышли наружу.")
+      note: text("Prepared materials become a result only after release or confirmed handoff.", "Подготовленные материалы становятся результатом после выпуска или подтверждённой передачи.")
     });
   }
-  if (!metrics.receivables_in_progress) {
+  if (!metrics.leads && metrics.published_materials) {
     suggestions.push({
-      title: text("Import first receivables list", "Загрузить первый список дебиторки"),
-      owner: text("Owner", "Собственник"),
+      title: text("Connect a signal source", "Подключить источник сигналов"),
+      owner: text("Sales", "Продажи"),
       status: "next",
-      note: text("DebtorPilot needs a CSV/XLSX starting point before follow-up automation.", "DebtorPilot нужен стартовый CSV/XLSX до автоматизации дожима.")
+      note: text("Connect a form, CRM or table so requests after release are tracked.", "Подключить форму, CRM или таблицу, чтобы заявки после выпуска попадали в контур.")
     });
   }
   if (!suggestions.length) {
