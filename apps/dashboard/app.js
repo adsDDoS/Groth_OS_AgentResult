@@ -3,7 +3,12 @@ import { createPublicationsModule } from "./modules/publications.js?v=agentresul
 import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-88";
 
 const params = new URLSearchParams(window.location.search);
-if (params.get("demo") === "reset") {
+const demoMode = params.get("demo");
+const isPilotDemo = demoMode === "pilot";
+const PILOT_DEMO_TENANT_ID = "10000000-0000-4000-8000-000000000001";
+const PRODUCTION_API_BASE = "https://91-103-140-101.sslip.io";
+
+if (demoMode === "reset" || isPilotDemo) {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {
     const key = localStorage.key(index);
     if (key?.startsWith("aiGrowthOs")) localStorage.removeItem(key);
@@ -12,8 +17,8 @@ if (params.get("demo") === "reset") {
 }
 
 const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-const queryApiBase = params.get("api");
-const queryTenantId = params.get("tenant");
+const queryApiBase = params.get("api") || (isPilotDemo ? PRODUCTION_API_BASE : "");
+const queryTenantId = params.get("tenant") || (isPilotDemo ? PILOT_DEMO_TENANT_ID : "");
 if (queryApiBase) localStorage.setItem("aiGrowthOsApiBase", queryApiBase);
 if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
