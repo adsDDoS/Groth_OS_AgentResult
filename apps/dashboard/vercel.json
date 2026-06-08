@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/agentresult-os-demo/:path*",
+      "destination": "/api/os-demo?path=:path*"
+    }
+  ]
+}

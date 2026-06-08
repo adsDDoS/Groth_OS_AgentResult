@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEMO_API_URL="${DEMO_API_URL:-https://joined-detailed-their-pets.trycloudflare.com/api/agentresult-os-demo}"
+DEMO_API_URL="${DEMO_API_URL:-https://dashboard-orpin-mu-26.vercel.app/api/agentresult-os-demo}"
 DEMO_TENANT_ID="${DEMO_TENANT_ID:-10000000-0000-4000-8000-000000000001}"
 
 curl -sS -m 15 "$DEMO_API_URL/health" | node -e '

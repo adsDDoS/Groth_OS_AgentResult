@@ -146,24 +146,31 @@ https://dashboard-orpin-mu-26.vercel.app/?demo=pilot#/overview
 Current demo API base:
 
 ```text
-https://joined-detailed-their-pets.trycloudflare.com/api/agentresult-os-demo
+https://dashboard-orpin-mu-26.vercel.app/api/agentresult-os-demo
 ```
 
-This is intentionally a read-only dashboard demo contour. It must not start LAB agents, OS Hermes, Telegram polling, or a second public Caddy on ports `80`/`443`.
+This is intentionally a read-only dashboard demo contour. It must not start LAB agents, OS Hermes, Telegram polling, or a public Caddy on ports `80`/`443`. The browser uses a stable Vercel same-origin API path; Vercel serverless proxies to a small HTTP-only read-only proxy on the VPS.
 
 VPS containers for the demo contour:
 
 - `agentresult-os-postgres`: demo Postgres, memory-limited.
 - `agentresult-os-backend`: demo API, memory-limited, `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0`.
+- `agentresult-os-demo-readonly-proxy`: HTTP-only upstream for Vercel serverless, memory limit `128m/128m`.
 - `agentresult-os-hermes`: keep stopped unless explicitly testing Hermes generation.
 
-The public route is added to the existing `agentresult-proxy` Caddy container with:
+The VPS read-only upstream proxy is deployed with:
 
 ```bash
 scripts/deploy-demo-api-proxy-vps.sh
 ```
 
-That script connects `agentresult-proxy` to `agentresult-os-net` and adds only this read-only prefix:
+That script starts `agentresult-os-demo-readonly-proxy` on `:18082` with only this read-only upstream surface:
+
+```text
+http://91.103.140.101:18082
+```
+
+The stable Vercel API prefix is:
 
 ```text
 /api/agentresult-os-demo
@@ -219,7 +226,7 @@ Operational guardrails:
 - Keep `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0` for `agentresult-os-backend`.
 - Do not expose write routes through the demo prefix.
 - Do not run LAB/n8n/debtorpilot while working on this 3.8 GB VPS.
-- Replace the quick `trycloudflare.com` URL with a named tunnel or stable domain before customer-facing use.
+- Keep the customer-facing demo on the stable Vercel URL. If moving off Vercel serverless later, replace the VPS upstream with a named Cloudflare tunnel or real API domain.
 
 ## Backups
 
