@@ -6,7 +6,7 @@ const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
 const isPilotDemo = demoMode === "pilot";
 const PILOT_DEMO_TENANT_ID = "10000000-0000-4000-8000-000000000001";
-const PRODUCTION_API_BASE = "https://91-103-140-101.sslip.io";
+const PRODUCTION_API_BASE = "https://joined-detailed-their-pets.trycloudflare.com/api/agentresult-os-demo";
 
 if (demoMode === "reset" || isPilotDemo) {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {

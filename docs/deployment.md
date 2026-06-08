@@ -129,6 +129,98 @@ Configurable variables:
 - `CONTAINER_NAME`, default `agentresult-os-backend`
 - `HOST_PORT`, default `18830`
 
+## Production-Safe OS Demo
+
+The Vercel dashboard demo uses the pilot tenant:
+
+```text
+10000000-0000-4000-8000-000000000001
+```
+
+Demo URL:
+
+```text
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot#/overview
+```
+
+Current demo API base:
+
+```text
+https://joined-detailed-their-pets.trycloudflare.com/api/agentresult-os-demo
+```
+
+This is intentionally a read-only dashboard demo contour. It must not start LAB agents, OS Hermes, Telegram polling, or a second public Caddy on ports `80`/`443`.
+
+VPS containers for the demo contour:
+
+- `agentresult-os-postgres`: demo Postgres, memory-limited.
+- `agentresult-os-backend`: demo API, memory-limited, `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0`.
+- `agentresult-os-hermes`: keep stopped unless explicitly testing Hermes generation.
+
+The public route is added to the existing `agentresult-proxy` Caddy container with:
+
+```bash
+scripts/deploy-demo-api-proxy-vps.sh
+```
+
+That script connects `agentresult-proxy` to `agentresult-os-net` and adds only this read-only prefix:
+
+```text
+/api/agentresult-os-demo
+```
+
+Allowed methods and paths:
+
+- `GET` / `OPTIONS`
+- `/health`
+- `/me`
+- `/offer`
+- `/demand-map`
+- `/approvals`
+- `/agents`
+- `/analytics/overview`
+- `/content/items`
+- `/publishing/calendar`
+- `/workspace/state`
+- `/tasks`
+
+Smoke check:
+
+```bash
+scripts/smoke-demo-api-proxy-vps.sh
+```
+
+Expected result:
+
+```text
+health ok
+demo approvals ok
+demo results ok
+```
+
+Before Vercel deploy:
+
+```bash
+node --check apps/dashboard/app.js
+npm run lint
+npm run build
+```
+
+Deploy dashboard:
+
+```bash
+cd apps/dashboard
+npx vercel --prod
+```
+
+Operational guardrails:
+
+- Keep `agentresult-os-hermes` stopped for the dashboard demo.
+- Keep `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0` for `agentresult-os-backend`.
+- Do not expose write routes through the demo prefix.
+- Do not run LAB/n8n/debtorpilot while working on this 3.8 GB VPS.
+- Replace the quick `trycloudflare.com` URL with a named tunnel or stable domain before customer-facing use.
+
 ## Backups
 
 ```bash

@@ -3,58 +3,73 @@ set -euo pipefail
 
 VPS_HOST="${VPS_HOST:-root@91.103.140.101}"
 NETWORK_NAME="${NETWORK_NAME:-agentresult-os-net}"
-CONTAINER_NAME="${CONTAINER_NAME:-agentresult-os-demo-api-proxy}"
+PROXY_CONTAINER_NAME="${PROXY_CONTAINER_NAME:-agentresult-proxy}"
+PROXY_CADDYFILE="${PROXY_CADDYFILE:-/opt/agentresult/reverse-proxy/Caddyfile}"
 BACKEND_UPSTREAM="${BACKEND_UPSTREAM:-agentresult-os-backend:3000}"
-DEMO_API_DOMAIN="${DEMO_API_DOMAIN:-91-103-140-101.sslip.io}"
+DEMO_API_PREFIX="${DEMO_API_PREFIX:-/api/agentresult-os-demo}"
 
 ssh "$VPS_HOST" \
-  "NETWORK_NAME='$NETWORK_NAME' CONTAINER_NAME='$CONTAINER_NAME' BACKEND_UPSTREAM='$BACKEND_UPSTREAM' DEMO_API_DOMAIN='$DEMO_API_DOMAIN' bash -s" <<'REMOTE'
+  "NETWORK_NAME='$NETWORK_NAME' PROXY_CONTAINER_NAME='$PROXY_CONTAINER_NAME' PROXY_CADDYFILE='$PROXY_CADDYFILE' BACKEND_UPSTREAM='$BACKEND_UPSTREAM' DEMO_API_PREFIX='$DEMO_API_PREFIX' bash -s" <<'REMOTE'
 set -euo pipefail
 
 docker network inspect "$NETWORK_NAME" >/dev/null
+docker inspect "$PROXY_CONTAINER_NAME" >/dev/null
+test -f "$PROXY_CADDYFILE"
 
-mkdir -p /opt/agentresult-os/demo-api-proxy
-cat > /opt/agentresult-os/demo-api-proxy/Caddyfile <<CADDY
-${DEMO_API_DOMAIN} {
-  encode zstd gzip
-
-  header {
-    Access-Control-Allow-Origin "*"
-    Access-Control-Allow-Methods "GET, OPTIONS"
-    Access-Control-Allow-Headers "content-type, x-tenant-id"
-    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-    X-Content-Type-Options "nosniff"
-    Referrer-Policy "strict-origin-when-cross-origin"
-  }
-
-  @options method OPTIONS
-  respond @options 204
-
-  @demoRead {
-    method GET
-    path /health /me /offer /demand-map /approvals /agents /analytics/overview /content/items /publishing/calendar /workspace/state /tasks
-  }
-  reverse_proxy @demoRead ${BACKEND_UPSTREAM}
-
-  respond 404
-}
-CADDY
-
-if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-  docker stop "$CONTAINER_NAME" >/dev/null || true
-  docker rm "$CONTAINER_NAME" >/dev/null || true
+if ! docker inspect "$PROXY_CONTAINER_NAME" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' | grep -qx "$NETWORK_NAME"; then
+  docker network connect "$NETWORK_NAME" "$PROXY_CONTAINER_NAME"
 fi
 
-docker run -d \
-  --name "$CONTAINER_NAME" \
-  --restart unless-stopped \
-  --network "$NETWORK_NAME" \
-  -p 80:80 \
-  -p 443:443 \
-  -v /opt/agentresult-os/demo-api-proxy/Caddyfile:/etc/caddy/Caddyfile:ro \
-  -v agentresult_demo_api_caddy_data:/data \
-  -v agentresult_demo_api_caddy_config:/config \
-  caddy:2-alpine
+cp "$PROXY_CADDYFILE" "$PROXY_CADDYFILE.bak.$(date +%Y%m%d%H%M%S)"
 
-docker ps --filter "name=$CONTAINER_NAME" --format '{{.Names}} {{.Image}} {{.Status}} {{.Ports}}'
+python3 - "$PROXY_CADDYFILE" "$DEMO_API_PREFIX" "$BACKEND_UPSTREAM" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+prefix = sys.argv[2].rstrip("/")
+upstream = sys.argv[3]
+text = path.read_text()
+start = "  # AgentResult OS demo API: begin\n"
+end = "  # AgentResult OS demo API: end\n"
+
+block = f"""{start}  @agentresult_os_demo_options {{
+    method OPTIONS
+    path {prefix}/health {prefix}/me {prefix}/offer {prefix}/demand-map {prefix}/approvals {prefix}/agents {prefix}/analytics/overview {prefix}/content/items {prefix}/publishing/calendar {prefix}/workspace/state {prefix}/tasks
+  }}
+  handle @agentresult_os_demo_options {{
+    uri strip_prefix {prefix}
+    reverse_proxy {upstream}
+  }}
+
+  @agentresult_os_demo_read {{
+    method GET
+    path {prefix}/health {prefix}/me {prefix}/offer {prefix}/demand-map {prefix}/approvals {prefix}/agents {prefix}/analytics/overview {prefix}/content/items {prefix}/publishing/calendar {prefix}/workspace/state {prefix}/tasks
+  }}
+  handle @agentresult_os_demo_read {{
+    uri strip_prefix {prefix}
+    reverse_proxy {upstream}
+  }}
+
+  handle {prefix}/* {{
+    respond 404
+  }}
+{end}"""
+
+if start in text and end in text:
+    before, rest = text.split(start, 1)
+    _, after = rest.split(end, 1)
+    text = before + block + after
+else:
+    marker = "\n  handle @public_readiness {"
+    if marker not in text:
+        raise SystemExit("Caddyfile insertion marker not found")
+    text = text.replace(marker, "\n" + block + marker, 1)
+
+path.write_text(text)
+PY
+
+docker exec "$PROXY_CONTAINER_NAME" caddy validate --config /etc/caddy/Caddyfile
+docker exec "$PROXY_CONTAINER_NAME" caddy reload --config /etc/caddy/Caddyfile
+docker ps --filter "name=$PROXY_CONTAINER_NAME" --format '{{.Names}} {{.Image}} {{.Status}} {{.Ports}}'
 REMOTE
