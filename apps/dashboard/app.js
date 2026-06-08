@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-88";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-88";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-88";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-89";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-89";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-89";
 
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
@@ -23,7 +23,7 @@ if (queryApiBase) localStorage.setItem("aiGrowthOsApiBase", queryApiBase);
 if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
-const IS_PRODUCTION_DEMO = !isLocalHost && !configuredApiBase;
+const IS_PRODUCTION_DEMO = isPilotDemo || (!isLocalHost && !configuredApiBase);
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
   rawTenantId && rawTenantId !== "null" && rawTenantId !== "undefined"
@@ -360,6 +360,10 @@ const navItems = [
 
 const routeAliases = {
   "demand-map": "growth-plan",
+  strategy: "growth-plan",
+  company: "offer-brain",
+  materials: "content-pipeline",
+  content: "content-pipeline",
   approvals: "publications",
   "publishing-calendar": "publications",
   "manual-export": "publications",
@@ -389,6 +393,10 @@ const routes = {
   analytics: { title: "Results", kicker: "Business signals" },
   settings: { title: "Settings", kicker: "Rules, access, and launch" },
   "demand-map": { title: "Strategy", kicker: "Client acquisition workflow" },
+  strategy: { title: "Strategy", kicker: "Revenue direction" },
+  company: { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
+  materials: { title: "Materials", kicker: "Work that can go outside" },
+  content: { title: "Materials", kicker: "Work that can go outside" },
   approvals: { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "publishing-calendar": { title: "Publications", kicker: "What can be approved, planned, or exported" },
   "manual-export": { title: "Publications", kicker: "What can be approved, planned, or exported" },
@@ -1850,7 +1858,7 @@ function resultActionList(metrics) {
               <strong>${escapeHtml(task.title)}</strong>
               <p>${escapeHtml(task.note || text("Action required", "Требуется действие"))}</p>
             </div>
-            ${taskAction(task)}
+            ${taskAction(task, { demoReview: IS_PRODUCTION_DEMO })}
           </article>
         `).join("")}
       </div>
@@ -1915,8 +1923,9 @@ function resultNextMove(metrics) {
   };
 }
 
-function taskAction(task) {
+function taskAction(task, options = {}) {
   if (task.status === "done" || task.status === "approved") return `<span class="muted">${escapeHtml(text("Done", "Готово"))}</span>`;
+  if (options.demoReview) return `<span class="muted">${escapeHtml(text("Next work", "Следующая работа"))}</span>`;
   return `<button class="button secondary table-button" data-action="complete-task" data-id="${escapeAttr(task.id)}">${escapeHtml(text("Mark done", "Отметить готово"))}</button>`;
 }
 
@@ -2089,7 +2098,7 @@ function renderTechnicalSettings() {
         `).join("")}
       </div>
       <details class="technical-details">
-        <summary>${text("Workspace details", "Детали рабочего контура")}</summary>
+        <summary>${text("Launch details", "Детали запуска")}</summary>
         <div class="settings-list">
           ${detailItems.map((item) => `
             <div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)} · ${escapeHtml(item.note)}</strong></div>
