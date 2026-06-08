@@ -1398,12 +1398,23 @@ select:focus {
   top: 50%;
   left: 50%;
   width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
   transform: translate(-50%, -50%);
   padding: 22px;
   border: 1px solid var(--hairline);
   border-radius: 8px;
   background: var(--canvas);
   box-shadow: var(--shadow-soft);
+}
+
+.decision-modal .detail-actions {
+  position: sticky;
+  bottom: -22px;
+  margin: 16px -22px -22px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--hairline-soft);
+  background: var(--canvas);
 }
 
 .decision-context {
@@ -1663,6 +1674,12 @@ select:focus {
     transform: none;
     border-radius: 14px 14px 0 0;
     padding: 18px;
+  }
+
+  .decision-modal .detail-actions {
+    bottom: -18px;
+    margin: 16px -18px -18px;
+    padding: 14px 18px calc(18px + env(safe-area-inset-bottom));
   }
 
   .toast {

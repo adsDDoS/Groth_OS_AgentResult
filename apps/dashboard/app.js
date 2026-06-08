@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-89";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-89";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-89";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-90";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-90";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-90";
 
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
@@ -1762,6 +1762,7 @@ function renderAnalytics() {
 function resultFlowPanel(metrics) {
   const signal = primaryBusinessSignal(metrics);
   const next = resultNextMove(metrics);
+  const signalAction = resultSignalAction(metrics);
   const publishedCount = state.calendar.filter((item) => item.status === "published").length;
   const handedOffCount = handedOffCalendarCount(state.calendar);
   const releaseNote = handedOffCount
@@ -1783,8 +1784,8 @@ function resultFlowPanel(metrics) {
       value: signal.value,
       note: signal.note,
       state: Number(signal.value || 0) ? "done" : publishedCount ? "active" : "muted",
-      action: "import-metrics",
-      label: metrics.leads ? text("Check source", "Проверить источник") : text("Add signal", "Добавить сигнал")
+      action: signalAction.action,
+      label: signalAction.label
     },
     {
       title: text("Next step", "Следующий шаг"),
@@ -1815,6 +1816,19 @@ function resultFlowPanel(metrics) {
       </div>
     </section>
   `;
+}
+
+function resultSignalAction(metrics) {
+  if (IS_PRODUCTION_DEMO && metrics.leads) {
+    return {
+      action: "show-result-source",
+      label: text("Check source", "Проверить источник")
+    };
+  }
+  return {
+    action: "import-metrics",
+    label: metrics.leads ? text("Check source", "Проверить источник") : text("Add signal", "Добавить сигнал")
+  };
 }
 
 function primaryBusinessSignal(metrics) {
@@ -2885,6 +2899,10 @@ async function handleAction(action, id) {
     "save-tool": saveToolSetup,
     "request-tool-owner": requestToolOwner,
     "import-metrics": () => openFormModal("metrics"),
+    "show-result-source": () => showToast(text(
+      `${state.metrics.leads || 0} leads are recorded in the result loop. Next step: check quality and source before the next release.`,
+      `${state.metrics.leads || 0} заявки зафиксированы в контуре результата. Дальше — проверить качество и источник перед новым выпуском.`
+    )),
     "generate-improvements": generateImprovementTasks,
     "submit-task-form": submitTaskForm
   };
@@ -3959,7 +3977,7 @@ async function decideApproval(item, action, note = "") {
 
   const nextStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "changes_requested";
 
-  if (!state.online || isLocalApproval(item)) {
+  if (!state.online || isLocalApproval(item) || IS_PRODUCTION_DEMO) {
     item.status = nextStatus;
     item.decision_note = note;
     item.decided_at = new Date().toISOString();
@@ -4015,6 +4033,8 @@ async function applyDecisionToSource(approval, decisionStatus) {
         decisionStatus === "approved" ? "scheduled" : decisionStatus === "changes_requested" ? "draft" : "rejected";
       linkedCalendar.updated_at = new Date().toISOString();
       await persistCalendarState(linkedCalendar);
+    } else if (decisionStatus === "approved") {
+      await createCalendarItemForApprovedContent(source, approval);
     }
     return;
   }
@@ -4030,6 +4050,29 @@ async function applyDecisionToSource(approval, decisionStatus) {
       await persistContentState(linkedContent);
     }
   }
+}
+
+async function createCalendarItemForApprovedContent(contentItem, approval) {
+  const item = {
+    id: `local-calendar-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+    title: contentItem.title,
+    channel: contentItem.channel || contentItem.content_type || "manual_export",
+    status: "scheduled",
+    scheduled_for: defaultScheduleDate(),
+    content_item_id: contentItem.id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    metadata: {
+      approval_id: approval.id,
+      release_note: text(
+        "Approved. Ready for manual handoff; publication still requires confirmation.",
+        "Согласовано. Готово к ручной передаче; выход всё ещё требует подтверждения."
+      )
+    }
+  };
+  await persistCalendarState(item);
+  state.metrics.calendar_items = state.calendar.length;
+  state.metrics.published_materials = shippedCalendarCount(state.calendar);
 }
 
 function appendAudit(item, status, note) {
