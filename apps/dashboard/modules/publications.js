@@ -70,13 +70,16 @@ function publicationPilotStrip() {
   const pending = state.approvals.filter((item) => item.status === "pending").length;
   const handedOff = state.calendar.filter((item) => item.status === "handed_off").length;
   const scheduled = state.calendar.filter((item) => item.status === "scheduled").length;
+  const published = state.calendar.filter((item) => item.status === "published").length;
   const nextStep = pending
     ? text("Close the owner decision.", "Закрыть решение собственника.")
     : handedOff
       ? text("Confirm live status.", "Подтвердить выход.")
       : scheduled
         ? text("Hand off the approved material.", "Передать согласованный материал.")
-        : text("Prepare the first material.", "Подготовить первый материал.");
+        : published
+          ? text("Check result and choose the next topic.", "Проверить результат и выбрать следующую тему.")
+          : text("Prepare the first material.", "Подготовить первый материал.");
   const items = [
     [
       text("Release owner", "Ответственный за выпуск"),
@@ -153,8 +156,25 @@ function renderApprovals() {
       </section>
 
       <section class="approval-detail panel">
-        ${selected ? approvalDetail(selected) : `<div class="empty-state"><h3>${text("No approval selected", "Материал не выбран")}</h3><p>${text("Select a request from the list.", "Выберите заявку из списка.")}</p></div>`}
+        ${selected ? approvalDetail(selected) : approvalEmptyState(pendingApprovals.length)}
       </section>
+    </div>
+  `;
+}
+
+function approvalEmptyState(count) {
+  if (count > 0) {
+    return `<div class="empty-state"><h3>${text("Select a decision", "Выберите решение")}</h3><p>${text("Open a material from the queue to approve it, return changes, or reject it.", "Откройте материал из очереди: согласовать, вернуть на правки или отклонить.")}</p></div>`;
+  }
+
+  return `
+    <div class="empty-state">
+      <h3>${text("Decision queue is clear", "Очередь решений чиста")}</h3>
+      <p>${text("There is no material waiting for the owner right now. Check the release plan or take the next material from the pack.", "Сейчас нет материала, который ждёт решения собственника. Проверьте план выпуска или возьмите следующий материал из пакета.")}</p>
+      <div class="detail-actions">
+        <button class="button primary" data-action="open-calendar">${escapeHtml(text("Open release plan", "Открыть план выпуска"))}</button>
+        <button class="button secondary" data-action="set-publication-tab" data-id="pack">${escapeHtml(text("Open material pack", "Открыть пакет материалов"))}</button>
+      </div>
     </div>
   `;
 }
@@ -307,8 +327,8 @@ function releaseQueueCard(item, queueId) {
 
 function releaseQueueAction(item, queueId) {
   if (queueId === "decision") return `<button class="button secondary table-button" data-action="go-approvals" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Approve", "Согласовать"))}</button>`;
-  if (queueId === "handoff" && item.status === "handed_off") return `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Confirm", "Подтвердить"))}</button>`;
-  if (queueId === "handoff") return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Handed off", "Передано"))}</button>`;
+  if (queueId === "handoff" && item.status === "handed_off") return `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Mark as published", "Отметить как опубликованное"))}</button>`;
+  if (queueId === "handoff") return `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Record handoff", "Отметить передачу"))}</button>`;
   return `<span class="muted">${escapeHtml(text("In Results", "В результатах"))}</span>`;
 }
 
@@ -344,7 +364,7 @@ function renderManualExport() {
             <button class="button primary" data-action="copy-pack-item" data-id="${escapeAttr(selectedAsset.id)}">${escapeHtml(text("Copy text", "Скопировать"))}</button>
             ${selectedHandoff
               ? `<button class="button secondary" data-action="open-calendar">${escapeHtml(text("Open release plan", "Открыть план выпуска"))}</button>`
-              : `<button class="button secondary" data-action="mark-pack-handoff" data-id="${escapeAttr(selectedAsset.id)}">${escapeHtml(text("Handed off", "Передано"))}</button>`}
+              : `<button class="button secondary" data-action="mark-pack-handoff" data-id="${escapeAttr(selectedAsset.id)}">${escapeHtml(text("Record handoff", "Отметить передачу"))}</button>`}
             ${selectedAsset.id === "email" ? `<button class="button secondary" data-action="select-tool" data-id="email">${escapeHtml(text("Access", "Доступ"))}</button>` : ""}
           </div>
         </div>

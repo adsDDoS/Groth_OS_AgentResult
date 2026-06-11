@@ -448,7 +448,7 @@ export function createToolsModule(ctx) {
     state.toolOverrides[overrideId] = { ...override, id: overrideId };
     state.selectedToolId = overrideId;
     saveLocalJson("aiGrowthOsToolOverrides", state.toolOverrides);
-    addActivity("Growth Orchestrator", `Saved tool setup: ${override.name}`);
+    addActivity("AgentResult", `Saved tool setup: ${override.name}`);
     showToast(text("Tool setup saved locally.", "Настройка инструмента сохранена локально."));
     render();
   }
@@ -470,7 +470,7 @@ export function createToolsModule(ctx) {
       note: text("Connection cannot move forward until a responsible person is named.", "Подключение не двинется дальше, пока не назначен ответственный."),
       source: "tools"
     });
-    addActivity("Growth Orchestrator", `Marked access responsible needed: ${selected.name}`);
+    addActivity("AgentResult", `Marked access responsible needed: ${selected.name}`);
     showToast(text("Access task created.", "Задача по доступу создана."));
     render();
   }

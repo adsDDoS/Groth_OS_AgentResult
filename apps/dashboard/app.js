@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-91";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-91";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-91";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-93";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-93";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-93";
 
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
@@ -148,7 +148,7 @@ const RU = {
   "Collect 3 proof assets": "Собрать 3 доказательства",
   "Before/after story, screenshot checklist, approved metric source.": "История до/после, чеклист скриншотов, утверждённый источник метрик.",
   "Prepare one weekly content pack": "Подготовить недельный контент-пакет",
-  "SEO page, Telegram posts, VC outline, email, lead magnet.": "SEO-страница, посты в Telegram, план статьи для VC, email, лид-магнит.",
+  "SEO page, Telegram posts, VC outline, email, lead magnet.": "Страница сайта, посты в Telegram, план статьи для VC, email, лид-магнит.",
   "Import first metrics": "Импортировать первые метрики",
   "Start feedback loop for pages, channels and conversion events.": "Запустить обратную связь по страницам, каналам и конверсиям.",
   "Company profile": "Компания",
@@ -315,12 +315,12 @@ const RU = {
   "Analytics Agent task queued placeholder.": "Заглушка: задача Analytics Agent будет поставлена в очередь.",
   "Risk checklist is visible in the approval detail.": "Чеклист рисков уже открыт в деталях согласования.",
   "Approval required before scheduled publishing can run.": "Нужно согласование перед запуском публикации по расписанию.",
-  "Agent workflow": "Работа системы",
-  "Human reviewer": "Человек-ревьюер",
+  "Agent workflow": "Рабочий контур",
+  "Human reviewer": "Собственник",
   "Just now": "Только что",
   "Today": "Сегодня",
   "Target channel: telegram.": "Целевой канал: Telegram.",
-  "AI Growth OS launch post": "Launch-пост AI Growth OS",
+  "AI Growth OS launch post": "Launch-пост AgentResult Growth Control",
   "telegram": "Telegram",
   "website": "сайт",
   "email": "email",
@@ -329,9 +329,9 @@ const RU = {
   "competitor comparison": "сравнение с конкурентом",
   "proof required": "нужны доказательства",
   "multi-channel distribution": "мультиканальная дистрибуция",
-  "Growth Orchestrator": "Growth Orchestrator",
-  "Publishing QA": "Publishing QA",
-  "Content Factory": "Content Factory",
+  "Growth Orchestrator": "AgentResult",
+  "Publishing QA": "Контроль выпуска",
+  "Content Factory": "Подготовка материалов",
   "Manual Export": "Ручной экспорт",
   "Created publishing approval request": "Создал заявку на согласование публикации",
   "Flagged public-channel approval gate": "Отметил обязательное согласование публичного канала",
@@ -417,7 +417,7 @@ const demo = {
       pains:
         "Материалы готовятся, но не выходят; заявки и ответы теряются; решения собственника запаздывают; команда работает в чатах; результат после выпуска не фиксируется.",
       proof:
-        "Рабочий WebApp-прототип AgentResult, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, отдельный прототип AI Growth OS и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
+        "Рабочий WebApp-прототип AgentResult, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, прототип Growth Control и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
       forbiddenClaims:
         "No guaranteed revenue growth, no guaranteed debt recovery, no 'replace the whole sales team', no error-free autonomy, no legal actions without approval, no automatic publishing or sending without approval.",
       tone: "Practical, direct, confident, owner-level, no hype.",
@@ -442,8 +442,8 @@ const demo = {
     { id: "c1", title: "Почему одного AI-агента недостаточно, чтобы наладить продажи", content_type: "telegram_post", channel: "telegram", status: "review", owner: "Egor" },
     { id: "c2", title: "AgentResult Growth Control для B2B-компаний", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
     { id: "c3", title: "Почему B2B-компаниям нужна агентная операционная система, а не только CRM", content_type: "article_outline", channel: "website", status: "brief", owner: "Egor" },
-    { id: "c4", title: "Email: безопасный запуск AI Growth OS", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
-    { id: "c5", title: "Лид-магнит: чеклист готовности к AgentResult OS", content_type: "lead_magnet", channel: "website", status: "idea", owner: "Egor" }
+    { id: "c4", title: "Email: безопасный запуск AgentResult Growth Control", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
+    { id: "c5", title: "Лид-магнит: чеклист готовности к AgentResult Growth Control", content_type: "lead_magnet", channel: "website", status: "idea", owner: "Egor" }
   ],
   approvals: [
     {
@@ -455,19 +455,19 @@ const demo = {
       content_item_id: "c1",
       status: "pending",
       risk_flags: ["public claim", "channel publishing"],
-      requested_by: "Growth Orchestrator",
+      requested_by: "AgentResult",
       preview: "Сам по себе AI не двигает продажи. Нужен операционный контур: задачи, CRM, согласования, Telegram-контроль и история действий."
     },
     {
       id: "a2",
-      summary: "Согласовать формулировки для страницы AI Growth OS",
+      summary: "Согласовать формулировки для страницы AgentResult Growth Control",
       scope: "sensitive_claim",
       target_type: "content_item",
       target_id: "c2",
       content_item_id: "c2",
       status: "pending",
       risk_flags: ["competitor comparison", "proof required"],
-      requested_by: "Publishing QA",
+      requested_by: "Контроль выпуска",
       preview: "Перед публичной публикацией странице нужны формулировки, подкреплённые доказательствами."
     },
     {
@@ -480,16 +480,16 @@ const demo = {
       status: "pending",
       risk_flags: ["multi-channel distribution"],
       requested_by: "Content Factory",
-      preview: "В пакете: одна SEO-страница, два Telegram-поста, один план статьи, одно письмо и один лид-магнит."
+      preview: "В пакете: страница сайта, два Telegram-поста, план статьи, письмо и лид-магнит."
     }
   ],
   calendar: [
     { id: "p1", title: "Telegram-пост: почему бизнесу нужен операционный контур, а не один AI-агент", channel: "telegram", scheduled_for: "2026-05-28 10:00", status: "review" },
-    { id: "p2", title: "AI Growth OS для B2B-компаний", channel: "website", scheduled_for: "2026-05-29 12:00", status: "scheduled" },
+    { id: "p2", title: "AgentResult Growth Control для B2B-компаний", channel: "website", scheduled_for: "2026-05-29 12:00", status: "scheduled" },
     { id: "p3", title: "Недельный пакет публикаций AgentResult", channel: "manual_export", scheduled_for: "2026-05-30 16:00", status: "draft" }
   ],
   agents: [
-    "Growth Orchestrator",
+    "AgentResult",
     "Offer Architect",
     "SEO Research",
     "GEO / AI Search",
@@ -500,7 +500,7 @@ const demo = {
     "Lead Magnet",
     "Analytics",
     "Competitor Watch",
-    "Publishing QA"
+    "Контроль выпуска"
   ]
 };
 
@@ -553,8 +553,8 @@ const state = {
   channelSettings: loadLocalJson("aiGrowthOsChannelSettings", {}),
   contentDetails: {},
   activity: loadLocalJson("aiGrowthOsActivity", [
-    { at: "Today 09:42", actor: "Growth Orchestrator", event: "Подготовил первый недельный пакет материалов AgentResult" },
-    { at: "Today 09:39", actor: "Publishing QA", event: "Отметил контур согласования для продуктовых формулировок" },
+    { at: "Today 09:42", actor: "AgentResult", event: "Подготовил первый недельный пакет материалов AgentResult" },
+    { at: "Today 09:39", actor: "Контроль выпуска", event: "Отметил контур согласования для продуктовых формулировок" },
     { at: "Today 09:31", actor: "Offer Architect", event: "Обновил позиционирование AgentResult и язык интерфейса для собственника" }
   ])
 };
@@ -1101,11 +1101,11 @@ function renderFormModal() {
         <div class="form-grid two-col">
           ${selectField(text("Owner", "Ответственный"), "taskOwner", [
             ["Owner", text("Owner", "Собственник")],
-            ["Growth Orchestrator", "Growth Orchestrator"],
-            ["Content Factory", "Content Factory"],
-            ["Publishing QA", "Publishing QA"],
+            ["AgentResult", "AgentResult"],
+            ["Подготовка материалов", text("Material preparation", "Подготовка материалов")],
+            ["Контроль выпуска", text("Release control", "Контроль выпуска")],
             ["Sales owner", text("Sales owner", "Ответственный за продажи")]
-          ], "Growth Orchestrator")}
+          ], "AgentResult")}
           ${selectField(text("Status", "Статус"), "taskStatus", [
             ["next", text("Next", "Следующая")],
             ["in_progress", text("In progress", "В работе")],
@@ -1550,9 +1550,9 @@ function renderContentPipeline() {
   const focusItems = materialFocusItems();
   const nextItem = focusItems[0] || null;
   const queues = materialOwnerQueues(nextItem?.id || "");
-  const waiting = state.content.filter((item) => item.status === "review").length;
-  const ready = state.content.filter((item) => ["approved", "scheduled"].includes(item.status)).length;
-  const needsWork = state.content.filter((item) => ["idea", "brief", "draft"].includes(item.status)).length;
+  const waiting = state.content.filter((item) => materialOwnerStatus(item) === "review").length;
+  const ready = state.content.filter((item) => ["approved", "scheduled", "handed_off"].includes(materialOwnerStatus(item))).length;
+  const needsWork = state.content.filter((item) => ["idea", "brief", "draft", "changes"].includes(materialOwnerStatus(item))).length;
   const nextAction = nextItem ? materialPrimaryAction(nextItem) : { action: "go-demand-map", label: text("Open strategy", "Открыть стратегию") };
 
   return `
@@ -1585,8 +1585,8 @@ function compactMaterialMetric(label, value) {
 }
 
 function materialFocusItems() {
-  const order = { review: 0, approved: 1, scheduled: 2, draft: 3, brief: 4, idea: 5, published: 6 };
-  return [...state.content].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  const order = { review: 0, approved: 1, handed_off: 2, scheduled: 3, changes: 4, draft: 5, brief: 6, idea: 7, published: 8 };
+  return [...state.content].sort((a, b) => (order[materialOwnerStatus(a)] ?? 9) - (order[materialOwnerStatus(b)] ?? 9));
 }
 
 function materialOwnerQueues(excludeId = "") {
@@ -1595,19 +1595,19 @@ function materialOwnerQueues(excludeId = "") {
     {
       title: text("Needs decision", "Ждёт решения"),
       note: text("Approve or return before release.", "Согласовать или вернуть перед выпуском."),
-      items: items.filter((item) => item.status === "review" && item.id !== excludeId),
+      items: items.filter((item) => materialOwnerStatus(item) === "review" && item.id !== excludeId),
       empty: text("No decisions waiting.", "Нет материалов на решении.")
     },
     {
       title: text("Ready for release", "Готово к выпуску"),
       note: text("Put into release plan or hand off.", "Поставить в план выпуска или передать."),
-      items: items.filter((item) => ["approved", "scheduled"].includes(item.status) && item.id !== excludeId),
+      items: items.filter((item) => ["approved", "scheduled", "handed_off"].includes(materialOwnerStatus(item)) && item.id !== excludeId),
       empty: text("Nothing ready for release yet.", "Пока ничего не готово к выпуску.")
     },
     {
       title: text("Needs work", "Нужно дописать"),
       note: text("Finish text before approval.", "Дописать текст перед согласованием."),
-      items: items.filter((item) => ["idea", "brief", "draft"].includes(item.status) && item.id !== excludeId),
+      items: items.filter((item) => ["idea", "brief", "draft", "changes"].includes(materialOwnerStatus(item)) && item.id !== excludeId),
       empty: text("No drafts waiting.", "Нет черновиков в ожидании.")
     }
   ];
@@ -1672,18 +1672,24 @@ function materialListCard(item) {
 }
 
 function materialQueueTitle(item) {
-  if (item.status === "review") return text(`Decide: ${item.title}`, `Решить: ${item.title}`);
-  if (item.status === "approved") return text(`Ready to publish: ${item.title}`, `Готово к выпуску: ${item.title}`);
-  if (item.status === "scheduled") return text(`Confirm release: ${item.title}`, `Подтвердить выпуск: ${item.title}`);
-  if (["idea", "brief", "draft"].includes(item.status)) return text(`Finish: ${item.title}`, `Дописать: ${item.title}`);
+  const status = materialOwnerStatus(item);
+  if (status === "review") return text(`Decision needed: ${item.title}`, `Принять решение: ${item.title}`);
+  if (status === "approved") return text(`Ready to release: ${item.title}`, `Готово к выпуску: ${item.title}`);
+  if (status === "handed_off") return text(`Confirm release: ${item.title}`, `Подтвердить выход: ${item.title}`);
+  if (status === "scheduled") return text(`Hand off: ${item.title}`, `Передать в выпуск: ${item.title}`);
+  if (status === "changes") return text(`Changes needed: ${item.title}`, `Нужны правки: ${item.title}`);
+  if (["idea", "brief", "draft"].includes(status)) return text(`Finish: ${item.title}`, `Дописать: ${item.title}`);
   return item.title;
 }
 
 function materialQueueNote(item) {
-  if (item.status === "review") return text("Owner decision is needed before release.", "Нужно решение собственника перед выпуском.");
-  if (item.status === "approved") return text("The material is approved. Put it into the publication plan or hand it off.", "Материал согласован. Поставьте его в план публикаций или передайте вручную.");
-  if (item.status === "scheduled") return text("The material is in the publication plan. Confirm when it goes live.", "Материал стоит в плане публикаций. Подтвердите, когда он выйдет.");
-  if (["idea", "brief", "draft"].includes(item.status)) return text("The material is not ready for approval yet.", "Материал ещё не готов к согласованию.");
+  const status = materialOwnerStatus(item);
+  if (status === "review") return text("Owner decision is needed before release.", "Нужно решение собственника перед выпуском.");
+  if (status === "approved") return text("The material is approved. Put it into the release plan or hand it off.", "Материал согласован. Поставьте его в план выпуска или передайте вручную.");
+  if (status === "handed_off") return text("The material was handed off. Confirm after it goes live.", "Материал передан. Подтвердите выход после публикации.");
+  if (status === "scheduled") return text("The material is in the release plan. Hand it off when the channel owner is ready.", "Материал в плане выпуска. Передайте его ответственному, когда канал готов.");
+  if (status === "changes") return text("The material was returned from approval. Update it before the next decision.", "Материал вернули с согласования. Обновите его перед новым решением.");
+  if (["idea", "brief", "draft"].includes(status)) return text("The material is not ready for approval yet.", "Материал ещё не готов к согласованию.");
   return text("Open the material to choose the next action.", "Откройте материал, чтобы выбрать следующий шаг.");
 }
 
@@ -1694,14 +1700,14 @@ function materialStagePath(item) {
     ["approved", text("Approval", "Согласование")],
     ["scheduled", text("Publication", "Публикация")]
   ];
-  const current = materialPathIndex(item.status);
+  const current = materialPathIndex(materialOwnerStatus(item));
   return stages.map(([key, label], index) => `<span class="${index < current ? "done" : index === current ? "active" : ""}">${escapeHtml(label)}</span>`).join("");
 }
 
 function materialPathIndex(status = "") {
   if (status === "review") return 1;
   if (status === "approved") return 2;
-  if (status === "scheduled" || status === "published") return 3;
+  if (status === "scheduled" || status === "handed_off" || status === "published") return 3;
   return 0;
 }
 
@@ -1926,7 +1932,7 @@ function resultNextMove(metrics) {
     const pendingApproval = state.approvals.find((item) => item.status === "pending");
     return {
       title: text("Clear pending approvals before pushing more materials", "Разберите согласования перед новым выпуском"),
-      note: text("Approval-first only works if owner decisions do not pile up.", "Approval-first работает, когда решения собственника не копятся."),
+      note: text("Approval-first works when owner decisions do not pile up.", "Выпуск через согласование работает, когда решения собственника не копятся."),
       action: "go-approvals",
       id: pendingApproval?.id || "",
       label: text("Open approvals", "Открыть согласования"),
@@ -2301,8 +2307,8 @@ function buildPreviewText(item, calendarItem, contentItem, channel) {
   }
   if (channel === "website") {
     return text(
-      "H1: AI Growth OS for B2B companies\nMeta: Build demand maps, evidence-backed materials and approval-safe publishing workflows without creating SEO spam.\nPrimary CTA: Build the first content pack",
-      "H1: AI Growth OS для B2B-компаний\nMeta: Карта спроса, доказательные материалы и безопасные approval-first публикации без SEO-спама.\nГлавный CTA: Собрать первый контент-пакет"
+      "H1: AgentResult Growth Control for B2B companies\nMeta: Turn ideas, materials and owner decisions into regular release and tracked signals.\nPrimary CTA: Start the first controlled release",
+      "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите идеи, материалы и решения собственника в регулярный выпуск и фиксируемые сигналы.\nГлавный CTA: Запустить первый управляемый выпуск"
     );
   }
   if (channel === "email") {
@@ -2337,7 +2343,7 @@ function approvalOutcome(item, channel) {
   if (item.scope === "publish") return text(`The material can be moved to the publishing plan for ${channelName}.`, `Материал можно поставить в план публикаций для ${channelName}.`);
   if (item.scope === "social_post") return text(`The ${channelName} post can move from review to the publishing plan.`, `Пост для ${channelName} сможет перейти из проверки в план публикаций.`);
   if (item.scope === "sensitive_claim") return text("The draft can keep the claim; otherwise it must be rewritten or supported with proof.", "Черновик сможет оставить утверждение; иначе его нужно переписать или подкрепить proof.");
-  return text("The linked workflow can proceed to the next status.", "Связанный workflow сможет перейти в следующий статус.");
+  return text("The linked work can proceed to the next step.", "Связанная работа сможет перейти к следующему шагу.");
 }
 
 function riskChecklist(item, flags, channel, calendarItem, contentItem) {
@@ -2623,26 +2629,55 @@ function materialWorkflowFacts(item) {
   return `<div class="material-workflow-facts">${facts.map((fact) => `<span>${escapeHtml(fact)}</span>`).join("")}</div>`;
 }
 
+function materialApprovalState(item) {
+  const approvals = state.approvals
+    .filter((entry) => entry.target_id === item.id || entry.content_item_id === item.id)
+    .sort((a, b) => new Date(b.decided_at || b.updated_at || b.created_at || 0).getTime() - new Date(a.decided_at || a.updated_at || a.created_at || 0).getTime());
+  return approvals[0] || null;
+}
+
+function materialOwnerStatus(item) {
+  const calendar = state.calendar.find((entry) => entry.content_item_id === item.id);
+  if (calendar?.status === "published") return "published";
+  if (calendar?.status === "handed_off") return "handed_off";
+  if (calendar?.status === "scheduled") return "scheduled";
+
+  const approval = materialApprovalState(item);
+  if (approval?.status === "pending") return "review";
+  if (approval?.status === "approved") return "approved";
+  if (["changes_requested", "rejected"].includes(String(approval?.status || ""))) return "changes";
+
+  if (item.status === "review") return "draft";
+  return item.status || "idea";
+}
+
 function materialOwnerStage(item) {
-  if (item.status === "review") return text("Needs decision", "Ждёт решения");
-  if (item.status === "approved") return text("Ready to plan", "Готов к плану");
-  if (item.status === "scheduled") return text("Ready for release", "Готово к выпуску");
-  if (item.status === "published") return text("Already out", "Уже вышло");
+  const status = materialOwnerStatus(item);
+  if (status === "review") return text("Needs decision", "Ждёт решения");
+  if (status === "approved") return text("Ready to plan", "Готов к плану");
+  if (status === "scheduled") return text("In release plan", "В плане выпуска");
+  if (status === "handed_off") return text("Waiting live confirmation", "Ждёт подтверждения выхода");
+  if (status === "published") return text("Already out", "Уже вышло");
+  if (status === "changes") return text("Needs changes", "Нужны правки");
   return text("Needs work", "Нужно дописать");
 }
 
 function materialOwnerOutcome(item) {
-  if (item.status === "review") return text("approve or request changes", "согласовать или запросить правки");
-  if (item.status === "approved") return text("put into publication plan", "поставить в план публикаций");
-  if (item.status === "scheduled") return text("publish or hand off", "выпустить или передать");
-  if (item.status === "published") return text("already counted in results", "уже учтено в результатах");
+  const status = materialOwnerStatus(item);
+  if (status === "review") return text("approve or request changes", "согласовать или запросить правки");
+  if (status === "approved") return text("put into release plan", "поставить в план выпуска");
+  if (status === "scheduled") return text("hand off to the channel owner", "передать ответственному за канал");
+  if (status === "handed_off") return text("confirm after publication", "подтвердить после выхода");
+  if (status === "published") return text("already counted in results", "уже учтено в результатах");
+  if (status === "changes") return text("update and send back to approval", "исправить и снова отправить на согласование");
   return text("finish and send to approval", "дописать и отправить на согласование");
 }
 
 function materialPrimaryAction(item) {
-  if (item.status === "approved") return { action: "schedule-content", label: text("Schedule material", "Запланировать") };
-  if (item.status === "review") return { action: "go-approvals", label: text("Open approvals", "Открыть согласования") };
-  if (item.status === "scheduled" || item.status === "published") return { action: "go-calendar", label: text("Open calendar", "Открыть календарь") };
+  const status = materialOwnerStatus(item);
+  if (status === "approved") return { action: "schedule-content", label: text("Schedule material", "Запланировать") };
+  if (status === "review") return { action: "go-approvals", label: text("Open approvals", "Открыть согласования") };
+  if (status === "scheduled" || status === "handed_off" || status === "published") return { action: "go-calendar", label: text("Open release plan", "Открыть план выпуска") };
   return { action: "open-content-detail", label: text("Open material", "Открыть материал") };
 }
 
@@ -2658,9 +2693,10 @@ function displayWorkOwner(value) {
 }
 
 function materialSecondaryAction(item) {
-  if (item.status === "idea" || item.status === "brief" || item.status === "draft") return { action: "send-content-approval", label: text("Send to approval", "На согласование") };
-  if (item.status === "review") return { action: "open-content-detail", label: text("Edit", "Править") };
-  if (item.status === "approved" || item.status === "scheduled") return { action: "export-content", label: text("Download text", "Скачать текст") };
+  const status = materialOwnerStatus(item);
+  if (["idea", "brief", "draft", "changes"].includes(status)) return { action: "send-content-approval", label: text("Send to approval", "На согласование") };
+  if (status === "review") return { action: "open-content-detail", label: text("Edit", "Править") };
+  if (status === "approved" || status === "scheduled" || status === "handed_off") return { action: "export-content", label: text("Download text", "Скачать текст") };
   return { action: "open-content-detail", label: text("Details", "Детали") };
 }
 
@@ -2994,7 +3030,7 @@ async function markPackAssetHandedOff(id) {
   state.calendar = mergeLocalItems(state.calendar, [item]);
   state.metrics.calendar_items = state.calendar.length;
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
-  addActivity("Publishing QA", `Marked pack asset handed off: ${asset.label}`);
+  addActivity("Контроль выпуска", `Marked pack asset handed off: ${asset.label}`);
   showToast(text("Handoff recorded in the release plan.", "Передача зафиксирована в плане выпуска."));
   openPublicationTab("calendar");
 }
@@ -3018,7 +3054,7 @@ async function createContentFromDemand(id) {
   const saved = await saveContentItem(item);
   state.content = mergeLocalItems(state.content, [saved]);
   state.metrics.content_items = state.content.length;
-  addActivity("Growth Orchestrator", `Created material from demand: ${demand.title}`);
+  addActivity("AgentResult", `Created material from demand: ${demand.title}`);
   showToast(text("Material created from strategy.", "Материал создан из стратегии."));
   setRoute("content-pipeline");
 }
@@ -3028,14 +3064,14 @@ async function createTaskFromDemand(id) {
   if (!demand) return;
   await addLocalTask({
     title: text(`Prepare demand asset: ${demand.title}`, `Подготовить материал спроса: ${demand.title}`),
-    owner: "Growth Orchestrator",
+    owner: "AgentResult",
     status: "next",
     note: demandBusinessReason(demand),
     source: "growth-plan",
     targetType: "demand_map_item",
     targetId: demand.id
   });
-  addActivity("Growth Orchestrator", `Created task from demand: ${demand.title}`);
+  addActivity("AgentResult", `Created task from demand: ${demand.title}`);
   showToast(text("Growth task created.", "Задача по росту создана."));
   setRoute("overview");
 }
@@ -3057,10 +3093,10 @@ function contentDraftFromDemand(demand, status = "brief") {
     content_type: contentType,
     channel: contentType === "telegram_post" ? "telegram" : "website",
     status,
-    owner: "Growth Orchestrator",
+    owner: "AgentResult",
     audience: demand.audience || text("B2B owner", "Собственник B2B"),
     metadata: {
-      owner: "Growth Orchestrator",
+      owner: "AgentResult",
       brief: [
         demandBusinessReason(demand),
         demandProblem(demand),
@@ -3098,7 +3134,7 @@ async function sendContentToApproval(id, options = {}) {
       target_id: item.id,
       status: "pending",
       risk_flags: approvalFlagsForContent(item),
-      requested_by: "Publishing QA",
+      requested_by: "Контроль выпуска",
       preview: item.metadata?.body || item.metadata?.brief || "",
       created_at: new Date().toISOString()
     };
@@ -3123,7 +3159,7 @@ async function sendContentToApproval(id, options = {}) {
     state.selectedApprovalId = approval.id;
   }
   state.metrics.pending_approvals = state.approvals.filter((approval) => approval.status === "pending").length;
-  addActivity("Publishing QA", `Sent material to approval: ${item.title}`);
+  addActivity("Контроль выпуска", `Sent material to approval: ${item.title}`);
   if (!options.silent) {
     showToast(text("Material sent to approval.", "Материал отправлен на согласование."));
     openPublicationTab("approvals", state.selectedApprovalId);
@@ -3240,7 +3276,7 @@ async function updateCalendarStatus(id, status) {
     await persistContentState(linkedContent);
   }
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
-  addActivity("Publishing QA", `Updated publication status: ${item.title} -> ${labelize(status)}`);
+  addActivity("Контроль выпуска", `Updated publication status: ${item.title} -> ${labelize(status)}`);
   showToast(text("Publication status updated.", "Статус публикации обновлён."));
   openPublicationTab("calendar");
 }
@@ -3261,7 +3297,7 @@ async function confirmHandedOffCalendarItems() {
   }
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   state.calendarFilter = "published";
-  addActivity("Publishing QA", `Confirmed manual handoff: ${items.length}`);
+  addActivity("Контроль выпуска", `Confirmed manual handoff: ${items.length}`);
   showToast(text("Publication confirmed.", "Выпуск подтверждён."));
   openPublicationTab("calendar");
 }
@@ -3320,17 +3356,17 @@ function packageAssets() {
   return [
     {
       id: "seo",
-      label: text("SEO page: AI Growth OS", "SEO-страница: AI Growth OS"),
+      label: text("Website page: AgentResult Growth Control", "Страница сайта: AgentResult Growth Control"),
       preview: text(
-        "H1: AI Growth OS for B2B companies\nMeta: Turn an offer into useful pages, proof-backed materials and an approval-safe publishing rhythm.\nCTA: Assemble the first weekly growth pack.",
-        "H1: AI Growth OS для B2B-компаний\nMeta: Превратите оффер в полезные страницы, доказательные материалы и безопасный ритм публикаций.\nCTA: Собрать первый недельный пакет роста."
+        "H1: AgentResult Growth Control for B2B companies\nMeta: Turn an offer into approved materials, manual handoff and tracked result signals.\nCTA: Start the first controlled release.",
+        "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите оффер в согласованные материалы, ручную передачу и фиксируемые сигналы результата.\nCTA: Запустить первый управляемый выпуск."
       )
     },
     {
       id: "telegram",
       label: text("Telegram posts: 2", "Посты Telegram: 2"),
       preview: text(
-        "Post 1: AI Growth OS is not an AI writer. It is a weekly operating loop: demand map, proof, draft, approval, publication, result.\n\nPost 2: The safest first automation is not automatic publishing. It is a clear approval queue where the owner sees what will go public and why.",
+        "Post 1: AgentResult Growth Control is not an AI writer. It is a weekly control loop: topic, proof, draft, approval, release, result.\n\nPost 2: The safest first automation is not automatic publishing. It is a clear approval queue where the owner sees what will go public and why.",
         "Пост 1: AgentResult Growth Control — не «AI-писатель». Это рабочий цикл: тема, доказательства, черновик, согласование, выпуск, результат.\n\nПост 2: Самая безопасная первая автоматизация — не автопубликация. Это понятная очередь согласований, где собственник видит, что выйдет и зачем."
       )
     },
@@ -3354,8 +3390,8 @@ function packageAssets() {
       id: "lead-magnet",
       label: text("Lead magnet: 1", "Лид-магнит: 1"),
       preview: text(
-        "AI Growth OS Readiness Checklist\n- Offer clarity\n- ICP and pains\n- Proof assets\n- Demand map coverage\n- Approval owner\n- Manual export readiness",
-        "Чеклист готовности к AI Growth OS\n- Ясность оффера\n- Кому продаём и какие боли закрываем\n- Доказательства\n- Покрытие тем привлечения\n- Кто согласует публикации\n- Готовность пакета материалов"
+        "AgentResult Growth Control Readiness Checklist\n- Offer clarity\n- ICP and pains\n- Proof assets\n- Release channel\n- Approval owner\n- Manual handoff readiness",
+        "Чеклист готовности к AgentResult Growth Control\n- Ясность оффера\n- Кому продаём и какие боли закрываем\n- Доказательства\n- Канал выпуска\n- Кто согласует публикации\n- Готовность ручной передачи"
       )
     }
   ];
@@ -3511,9 +3547,9 @@ async function submitContentForm() {
   const saved = await saveContentItem(item);
   state.content = mergeLocalItems(state.content, [saved]);
   state.metrics.content_items = state.content.length;
-  addActivity(item.owner || "Growth Orchestrator", `Created material: ${item.title}`);
+  addActivity(item.owner || "AgentResult", `Created material: ${item.title}`);
   state.formModal = null;
-  showToast(text("Material added to the workflow.", "Материал добавлен в workflow."));
+  showToast(text("Material added to the work loop.", "Материал добавлен в рабочий контур."));
   setRoute("content-pipeline");
 }
 
@@ -3539,7 +3575,7 @@ async function submitContentEditForm() {
   item.updated_at = new Date().toISOString();
   const saved = await saveContentItem(item);
   state.content = mergeLocalItems(state.content, [saved]);
-  addActivity(item.owner || "Growth Orchestrator", `Saved material: ${item.title}`);
+  addActivity(item.owner || "AgentResult", `Saved material: ${item.title}`);
   state.formModal = null;
   showToast(text("Material saved.", "Материал сохранён."));
   setRoute("content-pipeline");
@@ -3588,7 +3624,7 @@ async function submitScheduleForm() {
       target_id: savedCalendarItem.id,
       status: "pending",
       risk_flags: ["channel publishing"],
-      requested_by: "Publishing QA",
+      requested_by: "Контроль выпуска",
       created_at: new Date().toISOString()
     };
     state.localApprovals.unshift(approval);
@@ -3597,7 +3633,7 @@ async function submitScheduleForm() {
   }
   state.metrics.calendar_items = state.calendar.length;
   state.metrics.pending_approvals = state.approvals.filter((item) => item.status === "pending").length;
-  addActivity("Publishing QA", `Scheduled material: ${content.title}`);
+  addActivity("Контроль выпуска", `Scheduled material: ${content.title}`);
   state.formModal = null;
   showToast(text("Material added to publishing plan.", "Материал добавлен в план публикаций."));
   if (state.online && !String(savedCalendarItem.id || "").startsWith("local-")) await loadData();
@@ -3712,12 +3748,12 @@ async function submitTaskForm() {
   }
   await addLocalTask({
     title,
-    owner: document.querySelector("#taskOwner")?.value || "Growth Orchestrator",
+    owner: document.querySelector("#taskOwner")?.value || "AgentResult",
     status: document.querySelector("#taskStatus")?.value || "next",
     note: document.querySelector("#taskNote")?.value.trim() || "",
     source: "manual"
   });
-  addActivity("Growth Orchestrator", `Created task: ${title}`);
+  addActivity("AgentResult", `Created task: ${title}`);
   state.formModal = null;
   showToast(text("Task created.", "Задача создана."));
   setRoute("overview");
@@ -3844,7 +3880,7 @@ async function generateImprovementTasks() {
     await addLocalTask({ ...task, source: "analytics" });
   }
   state.metrics.improvement_tasks = state.tasks.filter((task) => task.source === "analytics").length;
-  addActivity("Growth Orchestrator", `Created improvement tasks: ${suggestions.length}`);
+  addActivity("AgentResult", `Created improvement tasks: ${suggestions.length}`);
   showToast(text("Improvement tasks created.", "Задачи на улучшение созданы."));
   setRoute("analytics");
 }
@@ -3975,7 +4011,7 @@ async function createSetupTasks() {
   for (const task of tasks) {
     await addLocalTask(task);
   }
-  addActivity("Growth Orchestrator", `Created company setup tasks: ${tasks.length}`);
+  addActivity("AgentResult", `Created company setup tasks: ${tasks.length}`);
   showToast(text("Company setup tasks created.", "Задачи по настройке компании созданы."));
   setRoute("overview");
 }
@@ -4110,7 +4146,7 @@ async function createCalendarItemForApprovedContent(contentItem, approval) {
 }
 
 function appendAudit(item, status, note) {
-  addActivity("Human reviewer", `${labelize(status)}${note ? `: ${note}` : ""}`, { approvalId: item.id });
+  addActivity("Собственник", `${labelize(status)}${note ? `: ${note}` : ""}`, { approvalId: item.id });
 }
 
 function addActivity(actor, event, extra = {}) {

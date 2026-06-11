@@ -207,9 +207,6 @@ function growthQueueRow(item, index) {
         <span>${escapeHtml(demandApprovalState(item))}</span>
         <small>${escapeHtml(demandNextAction(item))}</small>
       </em>
-      <div class="growth-row-actions">
-        <button class="button primary" data-action="content-from-demand" data-id="${escapeAttr(item.id)}">${text("Prepare", "Подготовить")}</button>
-      </div>
     </article>
   `;
 }
@@ -221,8 +218,6 @@ function fallbackGrowthMoves(top) {
   const note = top
     ? text("Prepare the material, approve it, then check the first signal.", "Подготовить материал, согласовать и проверить первый сигнал.")
     : text("Start with one topic that can produce release and signal.", "Начните с одной темы, которая даст выпуск и сигнал.");
-  const action = top ? "content-from-demand" : "add-demand-topic";
-  const label = top ? text("Prepare", "Подготовить") : text("Add topic", "Добавить тему");
   return `
     <article class="growth-queue-row">
       <span>1</span>
@@ -234,9 +229,6 @@ function fallbackGrowthMoves(top) {
         <span>${escapeHtml(text("Next decision", "Следующее решение"))}</span>
         <small>${escapeHtml(text("Material -> release -> signal", "Материал -> выпуск -> сигнал"))}</small>
       </em>
-      <div class="growth-row-actions">
-        <button class="button primary" data-action="${escapeAttr(action)}" data-id="${escapeAttr(top?.id || "")}">${escapeHtml(label)}</button>
-      </div>
     </article>
   `;
 }
@@ -253,7 +245,7 @@ function demandApprovalState(item) {
 
 function demandBusinessReason(item) {
   const type = labelize(item.item_type || "");
-  if (type.includes("product")) return text("Commercial page for buyers already looking for an AI-agent system.", "Коммерческая страница для тех, кто уже ищет AI-agent system.");
+  if (type.includes("product")) return text("Commercial page for buyers already looking for an AI-agent system.", "Коммерческая страница для тех, кто уже ищет систему AI-агентов.");
   if (type.includes("pain")) return text("Turns a costly operational pain into a clear first conversation.", "Превращает дорогую операционную боль в понятный первый разговор.");
   if (type.includes("comparison")) return text("Helps the owner compare AgentResult with familiar alternatives.", "Помогает собственнику сравнить AgentResult с привычными альтернативами.");
   if (type.includes("lead")) return text("Creates a low-risk handoff point before a sales call.", "Создаёт безопасную точку передачи до звонка.");
