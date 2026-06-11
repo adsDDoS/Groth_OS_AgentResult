@@ -228,6 +228,48 @@ Operational guardrails:
 - Do not run LAB/n8n/debtorpilot while working on this 3.8 GB VPS.
 - Keep the customer-facing demo on the stable Vercel URL. If moving off Vercel serverless later, replace the VPS upstream with a named Cloudflare tunnel or real API domain.
 
+## Production Telegram Owner-Control
+
+Run Telegram owner-control as a separate backend container from the read-only Vercel demo backend.
+
+Current container split:
+
+- `agentresult-os-backend`: Vercel demo API, `127.0.0.1:18830`, no Telegram polling.
+- `agentresult-os-telegram-owner-control`: Telegram polling backend, `127.0.0.1:18831`, same Postgres state, `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`.
+
+The Telegram owner-control container should use the same pilot tenant that Vercel demo opens:
+
+```text
+AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_TENANT_ID=10000000-0000-4000-8000-000000000001
+AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_USER_ID=77777777-7777-4777-8777-777777777771
+```
+
+Deploy or refresh only the Telegram owner-control container:
+
+```bash
+CONTAINER_NAME=agentresult-os-telegram-owner-control \
+HOST_PORT=18831 \
+AGENTRESULT_ENV_SOURCE=file \
+scripts/deploy-backend-vps.sh
+```
+
+Required checks:
+
+```bash
+docker ps --filter name=agentresult-os
+docker stats --no-stream agentresult-os-backend agentresult-os-telegram-owner-control agentresult-os-demo-readonly-proxy
+docker logs --since=2m agentresult-os-telegram-owner-control
+```
+
+Expected state:
+
+- both backend containers are memory-limited;
+- `agentresult-os-telegram-owner-control` logs `Telegram owner-control polling middleware is enabled`;
+- Telegram webhook URL is empty;
+- Hermes is not polling the same bot token;
+- ordinary owner phrases route through backend intent logic;
+- Vercel demo and Telegram owner-control use the same tenant state.
+
 ## Backups
 
 ```bash
