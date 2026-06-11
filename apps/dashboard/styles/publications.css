@@ -4,7 +4,14 @@
   gap: 10px;
 }
 
-.publication-state-strip article {
+.publication-pilot-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publication-state-strip article,
+.publication-pilot-strip article {
   min-height: 82px;
   padding: 12px 14px;
   border: 1px solid var(--hairline-soft);
@@ -12,7 +19,8 @@
   background: #fffdf8;
 }
 
-.publication-state-strip span {
+.publication-state-strip span,
+.publication-pilot-strip span {
   display: block;
   color: var(--muted);
   font-size: 12px;
@@ -20,15 +28,25 @@
   line-height: 1.25;
 }
 
-.publication-state-strip strong {
+.publication-state-strip strong,
+.publication-pilot-strip strong {
   display: block;
   margin-top: 5px;
   color: var(--ink);
+  line-height: 1.15;
+}
+
+.publication-state-strip strong {
   font-size: 28px;
   line-height: 1;
 }
 
-.publication-state-strip p {
+.publication-pilot-strip strong {
+  font-size: 15px;
+}
+
+.publication-state-strip p,
+.publication-pilot-strip p {
   margin: 7px 0 0;
   color: var(--muted);
   font-size: 12px;
@@ -787,6 +805,7 @@
 @media (max-width: 1220px) {
   .handoff-workspace,
   .publication-state-strip,
+  .publication-pilot-strip,
   .publication-channel-matrix,
   .publication-cockpit-stats,
   .release-queue-grid,
@@ -803,6 +822,7 @@
 @media (max-width: 780px) {
   .handoff-workspace,
   .publication-state-strip,
+  .publication-pilot-strip,
   .publication-channel-matrix,
   .approval-brief,
   .publication-cockpit-stats,

@@ -82,6 +82,8 @@ function renderOfferBrain() {
           ${textarea(text("Proof we can use", "Доказательства"), "companyProof", profile.proof || "")}
           ${textarea(text("Forbidden claims", "Запрещённые обещания"), "forbiddenClaims", profile.forbiddenClaims || "")}
           ${textarea(text("Approval rules", "Правила согласования"), "approvalOwner", profile.approvalOwner || "")}
+          ${field(text("Release owner", "Ответственный за выпуск"), "releaseOwner", profile.releaseOwner || "")}
+          ${textarea(text("First signal source", "Источник первого сигнала"), "firstSignalSource", profile.firstSignalSource || "")}
           <details class="company-advanced">
             <summary>${text("Additional context", "Дополнительный контекст")}</summary>
             <div class="form-grid company-advanced-grid">
@@ -101,7 +103,7 @@ function renderOfferBrain() {
 }
 
 function ownerSetupCompleteness(profile) {
-  const keys = ["positioning", "icp", "pains", "proof", "forbiddenClaims", "approvalOwner"];
+  const keys = ["positioning", "icp", "pains", "proof", "forbiddenClaims", "channels", "approvalOwner", "releaseOwner", "firstSignalSource"];
   const completed = keys.filter((key) => String(profile[key] || "").trim()).length;
   return Math.round((completed / keys.length) * 100);
 }
@@ -113,7 +115,10 @@ function ownerSetupGaps(profile) {
     ["pains", text("Which problems we solve", "Какие проблемы решаем")],
     ["proof", text("Proof we can use", "Доказательства")],
     ["forbiddenClaims", text("Forbidden promises", "Запрещённые обещания")],
-    ["approvalOwner", text("Approval owner rules", "Правила согласования")]
+    ["channels", text("Release channel", "Канал выпуска")],
+    ["approvalOwner", text("Approval owner rules", "Правила согласования")],
+    ["releaseOwner", text("Release owner", "Ответственный за выпуск")],
+    ["firstSignalSource", text("First signal source", "Источник первого сигнала")]
   ];
   return fields.filter(([key]) => !String(profile[key] || "").trim()).map(([, label]) => label);
 }
@@ -144,12 +149,15 @@ function companySummaryPanel(profile) {
     profile.icp && text("Buyer", "Клиент"),
     profile.pains && text("Pains", "Боли"),
     profile.proof && text("Proof", "Доказательства"),
-    profile.forbiddenClaims && text("Limits", "Ограничения")
+    profile.forbiddenClaims && text("Limits", "Ограничения"),
+    profile.channels && text("Channel", "Канал"),
+    profile.firstSignalSource && text("Signal source", "Источник сигнала")
   ].filter(Boolean);
   const guardrails = [
     profile.forbiddenClaims ? text("Risky claims are bounded", "Рискованные обещания ограничены") : text("Add forbidden claims", "Добавьте запрещённые обещания"),
     profile.approvalOwner ? text("Decision rule is clear", "Правило решения понятно") : text("Set approval rules", "Задайте правила согласования"),
-    profile.proof ? text("Proof is ready for materials", "Доказательства готовы для материалов") : text("Add proof", "Добавьте доказательства")
+    profile.releaseOwner ? text("Release owner is assigned", "Ответственный за выпуск назначен") : text("Assign release owner", "Назначьте ответственного за выпуск"),
+    profile.firstSignalSource ? text("First signal source is clear", "Источник первого сигнала понятен") : text("Set first signal source", "Задайте источник первого сигнала")
   ];
   return `
     <article class="panel company-summary-panel">

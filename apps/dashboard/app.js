@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-90";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-90";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-90";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-91";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-91";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-91";
 
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
@@ -427,7 +427,9 @@ const demo = {
         "AgentResult Growth Control — контур решений, выпуска и результата\nAgentResult Sales OS — AI-agent sales system / CRM automation\nAgentResult Collect — отдельный контур денежных сигналов",
       domains: "agentresult-crm.vercel.app\nagentresult.ru\napp.agentresult.ru\napi.agentresult.ru\nagentresult.online",
       channels: "Telegram-контур управления, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
-      approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and money-sensitive actions."
+      approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and money-sensitive actions.",
+      releaseOwner: "Контент-ответственный получает согласованный текст и подтверждает выход.",
+      firstSignalSource: "Заявки формы, ответы в Telegram, CRM-сигнал или ручная отметка собственника."
     }
   },
   demand: [
@@ -706,6 +708,7 @@ async function loadData() {
   state.calendar = mergeLocalItems(state.calendar, state.localCalendar);
   state.approvals = mergeLocalItems(state.approvals, state.localApprovals);
   state.tasks = mergeLocalItems(state.tasks, state.localTasks).map(normalizeVisibleTask);
+  normalizePilotProfileDefaults();
   normalizeAgentResultLanguageArtifacts();
   state.exportAssembled = state.workspaceState.exportAssembled === true || state.exportAssembled === true;
   if (Array.isArray(state.workspaceState.activity) && state.workspaceState.activity.length) {
@@ -769,6 +772,17 @@ async function reconcileWorkflowConsistency() {
       await persistCalendarState(linkedCalendar);
     }
   }
+}
+
+function normalizePilotProfileDefaults() {
+  if (!IS_PRODUCTION_DEMO) return;
+  state.offer = {
+    ...state.offer,
+    profile: {
+      ...(demo.offer?.profile || {}),
+      ...(state.offer?.profile || {})
+    }
+  };
 }
 
 function normalizeAgentResultLanguageArtifacts() {
@@ -2050,8 +2064,14 @@ function pluralRu(count, one, few, many) {
 
 function renderTechnicalSettings() {
   const pendingApprovals = state.approvals.filter((item) => item.status === "pending").length;
-  const readyMaterials = state.content.filter((item) => ["approved", "scheduled", "published"].includes(item.status)).length;
+  const profile = state.offer?.profile || {};
+  const pilotGaps = pilotIntakeGaps(profile);
   const launchItems = [
+    {
+      label: text("Pilot intake", "Контекст пилота"),
+      value: pilotGaps.length ? text(`${pilotGaps.length} missing`, `${pilotGaps.length} не хватает`) : text("Ready", "Готов"),
+      note: pilotGaps[0] || text("Enough for the first controlled loop.", "Достаточно для первого управляемого цикла.")
+    },
     {
       label: text("Control loop", "Контур контроля"),
       value: pendingApprovals ? text("Needs decisions", "Есть решения") : text("Clear", "Чисто"),
@@ -2060,16 +2080,14 @@ function renderTechnicalSettings() {
         : text("No public action is waiting on the owner.", "Публичные действия не ждут собственника.")
     },
     {
-      label: text("Materials", "Материалы"),
-      value: String(readyMaterials),
-      note: text("Approved, planned or already published.", "Согласовано, запланировано или уже вышло.")
+      label: text("Release owner", "Ответственный за выпуск"),
+      value: profile.releaseOwner ? text("Assigned", "Назначен") : text("Missing", "Не назначен"),
+      note: profile.releaseOwner || text("Who receives the approved material and confirms release.", "Кто получает материал и подтверждает выход.")
     },
     {
-      label: text("Result data", "Данные результата"),
-      value: state.online ? text("Connected", "Подключены") : text("Demo surface", "Демо-контур"),
-      note: state.online
-        ? text("Tasks, approvals and materials are saved in the workspace.", "Задачи, согласования и материалы сохраняются в контуре.")
-        : text("Shows the first controlled loop without local services.", "Показывает первый управляемый цикл без локальных сервисов.")
+      label: text("First signal", "Первый сигнал"),
+      value: profile.firstSignalSource ? text("Source set", "Источник задан") : text("Missing", "Не задан"),
+      note: profile.firstSignalSource || text("Form, reply, CRM signal, table or owner confirmation.", "Форма, ответ, CRM, таблица или отметка собственника.")
     }
   ];
   const detailItems = [
@@ -2121,6 +2139,20 @@ function renderTechnicalSettings() {
       </details>
     </article>
   `;
+}
+
+function pilotIntakeGaps(profile = {}) {
+  const fields = [
+    ["positioning", text("Offer", "Оффер")],
+    ["icp", "ICP"],
+    ["pains", text("Pains", "Боли")],
+    ["proof", text("Proof", "Доказательства")],
+    ["forbiddenClaims", text("Limits", "Ограничения")],
+    ["channels", text("Release channel", "Канал выпуска")],
+    ["releaseOwner", text("Release owner", "Ответственный за выпуск")],
+    ["firstSignalSource", text("First signal source", "Источник первого сигнала")]
+  ];
+  return fields.filter(([key]) => !String(profile[key] || "").trim()).map(([, label]) => label);
 }
 
 function renderAutopilotSettings() {
@@ -3895,7 +3927,9 @@ async function saveOffer() {
       competitors: document.querySelector("#companyCompetitors")?.value.trim() || "",
       domains: document.querySelector("#companyDomains")?.value.trim() || "",
       channels: document.querySelector("#companyChannels")?.value.trim() || "",
-      approvalOwner: document.querySelector("#approvalOwner")?.value.trim() || ""
+      approvalOwner: document.querySelector("#approvalOwner")?.value.trim() || "",
+      releaseOwner: document.querySelector("#releaseOwner")?.value.trim() || "",
+      firstSignalSource: document.querySelector("#firstSignalSource")?.value.trim() || ""
     }
   };
 

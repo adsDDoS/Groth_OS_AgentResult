@@ -37,6 +37,7 @@ function renderPublications() {
       ${tab === "approvals" ? "" : `<div class="tab-context">${publicationTabContext(tab)}</div>`}
     </section>
     ${publicationStateStrip()}
+    ${publicationPilotStrip()}
     ${tabRenderers[tab]()}
   `;
 }
@@ -57,6 +58,49 @@ function publicationStateStrip() {
         <article>
           <span>${escapeHtml(label)}</span>
           <strong>${escapeHtml(String(value))}</strong>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function publicationPilotStrip() {
+  const profile = state.offer?.profile || {};
+  const pending = state.approvals.filter((item) => item.status === "pending").length;
+  const handedOff = state.calendar.filter((item) => item.status === "handed_off").length;
+  const scheduled = state.calendar.filter((item) => item.status === "scheduled").length;
+  const nextStep = pending
+    ? text("Close the owner decision.", "Закрыть решение собственника.")
+    : handedOff
+      ? text("Confirm live status.", "Подтвердить выход.")
+      : scheduled
+        ? text("Hand off the approved material.", "Передать согласованный материал.")
+        : text("Prepare the first material.", "Подготовить первый материал.");
+  const items = [
+    [
+      text("Release owner", "Ответственный за выпуск"),
+      profile.releaseOwner || text("Not assigned", "Не назначен"),
+      text("who receives the approved material", "кто получает согласованный материал")
+    ],
+    [
+      text("First signal", "Первый сигнал"),
+      profile.firstSignalSource || text("Not set", "Не задан"),
+      text("where we check the result", "где проверяем результат")
+    ],
+    [
+      text("Next step", "Следующий шаг"),
+      nextStep,
+      text("keeps the pilot moving", "двигает пилот дальше")
+    ]
+  ];
+
+  return `
+    <section class="publication-pilot-strip" aria-label="${escapeAttr(text("Pilot release context", "Контекст выпуска пилота"))}">
+      ${items.map(([label, value, note]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
           <p>${escapeHtml(note)}</p>
         </article>
       `).join("")}
