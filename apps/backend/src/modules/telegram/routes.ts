@@ -39,7 +39,7 @@ type TelegramExecutionContext = {
   userId?: string;
 };
 type BriefData = Awaited<ReturnType<typeof loadOwnerBriefData>>;
-type OnboardingStep = "offer" | "client" | "channel" | "approval_rules" | "first_material" | "done";
+type OnboardingStep = "offer" | "client" | "channel" | "release_owner" | "first_signal_source" | "approval_rules" | "first_material" | "done";
 type OnboardingState = {
   answers: Record<string, string>;
   completedAt?: string;
@@ -83,7 +83,7 @@ const telegramMaterialSchema = z.object({
 const onboardingStateSchema = z.object({
   answers: z.record(z.string()).default({}),
   completedAt: z.string().optional(),
-  step: z.enum(["offer", "client", "channel", "approval_rules", "first_material", "done"]).default("offer"),
+  step: z.enum(["offer", "client", "channel", "release_owner", "first_signal_source", "approval_rules", "first_material", "done"]).default("offer"),
   updatedAt: z.string().optional()
 });
 
@@ -616,34 +616,48 @@ function onboardingPrompt(step: OnboardingStep) {
     return [
       "Настроим Growth Control.",
       "",
-      "Шаг 1/5 — оффер.",
+      "Шаг 1/7 — оффер.",
       "Что продаёте и какой результат должен увидеть клиент?"
     ].join("\n");
   }
 
   if (step === "client") {
     return [
-      "Шаг 2/5 — клиент.",
+      "Шаг 2/7 — клиент.",
       "Кому продаёте: сегмент, роль ЛПР, главная боль?"
     ].join("\n");
   }
 
   if (step === "channel") {
     return [
-      "Шаг 3/5 — канал выпуска.",
+      "Шаг 3/7 — канал выпуска.",
       "Куда в первую очередь выпускаем материалы: Telegram, сайт, email, VC/Habr или ручная передача ответственному?"
+    ].join("\n");
+  }
+
+  if (step === "release_owner") {
+    return [
+      "Шаг 4/7 — ответственный за выпуск.",
+      "Кто получает согласованный материал и подтверждает, что он вышел?"
+    ].join("\n");
+  }
+
+  if (step === "first_signal_source") {
+    return [
+      "Шаг 5/7 — первый сигнал.",
+      "Где проверяем результат: заявки, CRM, ответы, форма, канал или ручная отметка?"
     ].join("\n");
   }
 
   if (step === "approval_rules") {
     return [
-      "Шаг 4/5 — правила согласования.",
+      "Шаг 6/7 — правила согласования.",
       "Что обязательно должно ждать вашего решения перед выпуском?"
     ].join("\n");
   }
 
   return [
-    "Шаг 5/5 — первый материал.",
+    "Шаг 7/7 — первый материал.",
     "Какую тему или задачу подготовить первой?"
   ].join("\n");
 }
@@ -655,7 +669,9 @@ function onboardingProgressLine(state: OnboardingState) {
     client: "клиент",
     done: "готово",
     first_material: "первый материал",
-    offer: "оффер"
+    first_signal_source: "первый сигнал",
+    offer: "оффер",
+    release_owner: "ответственный за выпуск"
   };
 
   return `Текущий шаг: ${labels[state.step]}.`;
@@ -675,7 +691,7 @@ function renderOnboardingMessage(state?: OnboardingState) {
     "AgentResult Growth Control — настройка",
     "",
     "Зафиксируем минимум для первого рабочего цикла:",
-    "оффер, клиент, канал выпуска, правила согласования и первый материал.",
+    "оффер, клиент, канал выпуска, ответственный, первый сигнал, правила и первый материал.",
     "",
     onboardingPrompt("offer")
   ].join("\n");
@@ -684,7 +700,9 @@ function renderOnboardingMessage(state?: OnboardingState) {
 function nextOnboardingStep(step: OnboardingStep): OnboardingStep {
   if (step === "offer") return "client";
   if (step === "client") return "channel";
-  if (step === "channel") return "approval_rules";
+  if (step === "channel") return "release_owner";
+  if (step === "release_owner") return "first_signal_source";
+  if (step === "first_signal_source") return "approval_rules";
   if (step === "approval_rules") return "first_material";
   return "done";
 }
@@ -696,7 +714,9 @@ function onboardingAnswerKey(step: OnboardingStep) {
     client: "client",
     done: "done",
     first_material: "firstMaterial",
-    offer: "offer"
+    first_signal_source: "firstSignalSource",
+    offer: "offer",
+    release_owner: "releaseOwner"
   };
 
   return keys[step];
@@ -715,14 +735,18 @@ async function updateCompanyFromOnboarding(tenantId: string, answers: Record<str
     ...profile,
     approvalOwner: textValue(answers.approvalRules, textValue(profile.approvalOwner, "")),
     channels: channelLabel(normalizeChannel(textValue(answers.channel, textValue(profile.channels, "manual")))),
+    firstSignalSource: textValue(answers.firstSignalSource, textValue(profile.firstSignalSource, "")),
     icp: textValue(answers.client, textValue(profile.icp, "")),
     onboarding: {
       channel: normalizeChannel(textValue(answers.channel, "manual")),
       completedAt: new Date().toISOString(),
       firstMaterial: textValue(answers.firstMaterial, ""),
+      firstSignalSource: textValue(answers.firstSignalSource, ""),
+      releaseOwner: textValue(answers.releaseOwner, ""),
       source: "telegram_owner_control"
     },
-    positioning: textValue(answers.offer, textValue(profile.positioning, ""))
+    positioning: textValue(answers.offer, textValue(profile.positioning, "")),
+    releaseOwner: textValue(answers.releaseOwner, textValue(profile.releaseOwner, ""))
   };
 
   if (current?.id) {
@@ -755,7 +779,9 @@ async function createOnboardingHermesDraftTask(context: { tenantId: string; user
       client: textValue(answers.client, ""),
       contentType: channel === "email" ? "email" : "telegram_post",
       expectedArtifact: "draft",
+      firstSignalSource: textValue(answers.firstSignalSource, ""),
       offer: textValue(answers.offer, ""),
+      releaseOwner: textValue(answers.releaseOwner, ""),
       source: "telegram_onboarding",
       title
     },
@@ -921,6 +947,8 @@ async function continueOnboarding(input: TelegramIntentInput, context: TelegramE
       `Оффер: ${textValue(answers.offer, "не указан")}`,
       `Клиент: ${textValue(answers.client, "не указан")}`,
       `Канал выпуска: ${channelLabel(normalizeChannel(textValue(answers.channel, "manual")))}`,
+      `Ответственный за выпуск: ${textValue(answers.releaseOwner, "не указан")}`,
+      `Первый сигнал: ${textValue(answers.firstSignalSource, "не указан")}`,
       `Согласование: ${textValue(answers.approvalRules, "публичные материалы ждут решения собственника")}`,
       "",
       `AgentResult взял задачу: ${title}`,

@@ -228,13 +228,13 @@ Supported commands:
 - `/prepare ...`: creates the next material task and starts the backend task -> Hermes run -> draft -> approval loop;
 - `/reset`: restarts the Telegram owner-control dialogue without deleting AgentResult OS data;
 - `/demo_reset`: explicitly resets local demo state;
-- `/onboarding`: starts the Telegram setup flow: offer, client, release channel, approval rules, first material.
+- `/onboarding`: starts the Telegram setup flow: offer, client, release channel, release owner, first signal source, approval rules, first material.
 
 Onboarding flow:
 
 - state is stored in `integrations` with provider `telegram_onboarding`;
 - each ordinary owner reply fills the current setup step while onboarding is active;
-- collected offer/client/channel/rules are written into the company profile;
+- collected offer/client/channel/release owner/first signal/rules are written into the company profile;
 - the final answer creates a Hermes `content_writer` task for the first material;
 - Hermes returns a `draft` artifact through `POST /hermes/tasks/:id/result`;
 - backend saves that draft as a content item in `review` and opens approval;

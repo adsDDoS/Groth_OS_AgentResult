@@ -240,10 +240,11 @@ If the phrase names a material and no match is found, do not silently apply the 
 Current Telegram onboarding flow:
 
 - starts with `/onboarding` or natural setup intent;
-- asks for offer, client, release channel, approval rules, and first material;
+- asks for offer, client, release channel, release owner, first signal source, approval rules, and first material;
 - stores active state in backend, not in the model prompt;
 - while onboarding is active, ordinary owner replies fill the current setup step and must not be treated as approval/handoff/result commands;
 - writes collected context into the company profile;
+- saves `releaseOwner` and `firstSignalSource` into the company profile so the first pilot cycle has a clear handoff owner and result source;
 - creates a Hermes `content_writer` task for the first material;
 - starts a backend background job for Hermes dispatch;
 - immediately tells the owner that the task is in work;

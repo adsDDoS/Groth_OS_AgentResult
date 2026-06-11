@@ -43,6 +43,15 @@ async function request(path, body) {
   return payload.data;
 }
 
+async function get(path) {
+  const response = await fetch(`http://127.0.0.1:${port}${path}`);
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(`${path} returned ${response.status}: ${JSON.stringify(payload)}`);
+  }
+  return payload.data;
+}
+
 async function waitForBackend() {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -102,6 +111,44 @@ async function main() {
   });
 
   await waitForBackend();
+
+  const onboardingStart = await request("/telegram/commands", { command: "/onboarding" });
+  expectIncludes(onboardingStart.text, "Шаг 1/7", "onboarding start");
+
+  const onboardingClient = await request("/telegram/intent", {
+    text: "AgentResult Growth Control для B2B-компаний: регулярный выпуск материалов через согласование собственника"
+  });
+  expectIncludes(onboardingClient.text, "Шаг 2/7", "onboarding client step");
+
+  const onboardingChannel = await request("/telegram/intent", {
+    text: "Собственники B2B-компаний, которым нужен контроль выпуска и результата"
+  });
+  expectIncludes(onboardingChannel.text, "Шаг 3/7", "onboarding channel step");
+
+  const onboardingReleaseOwner = await request("/telegram/intent", { text: "Telegram и сайт" });
+  expectIncludes(onboardingReleaseOwner.text, "Шаг 4/7", "onboarding release owner step");
+
+  const onboardingFirstSignal = await request("/telegram/intent", { text: "Егор, собственник" });
+  expectIncludes(onboardingFirstSignal.text, "Шаг 5/7", "onboarding first signal step");
+
+  const onboardingRules = await request("/telegram/intent", { text: "Заявки формы, ответы в Telegram и ручная отметка собственника" });
+  expectIncludes(onboardingRules.text, "Шаг 6/7", "onboarding approval rules step");
+
+  const onboardingFirstMaterial = await request("/telegram/intent", { text: "Публичные утверждения и выпуск от имени компании" });
+  expectIncludes(onboardingFirstMaterial.text, "Шаг 7/7", "onboarding first material step");
+
+  const onboardingComplete = await request("/telegram/intent", { text: "Пост про контроль выпуска без автопубликации" });
+  expectEquals(onboardingComplete.intent, "onboarding_complete", "onboarding complete intent");
+  expectIncludes(onboardingComplete.text, "Ответственный за выпуск: Егор, собственник", "onboarding release owner summary");
+  expectIncludes(onboardingComplete.text, "Первый сигнал: Заявки формы, ответы в Telegram", "onboarding first signal summary");
+  if (!onboardingComplete.hermesJob?.taskId) {
+    throw new Error("onboarding did not create the first material task");
+  }
+
+  const offer = await get("/offer");
+  expectEquals(offer.profile.releaseOwner, "Егор, собственник", "company release owner");
+  expectEquals(offer.profile.firstSignalSource, "Заявки формы, ответы в Telegram и ручная отметка собственника", "company first signal source");
+  expectEquals(offer.profile.onboarding.firstMaterial, "Пост про контроль выпуска без автопубликации", "company onboarding first material");
 
   await createMaterial(
     "Второй тестовый материал",
