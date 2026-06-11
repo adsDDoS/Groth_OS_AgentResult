@@ -1229,7 +1229,7 @@ function renderMaterialCreatedMessage(input: { approval: Row; contentItem: Row }
     `Решение: ${ownerFacingText(input.approval.summary, "Согласовать материал")}`,
     `Канал: ${channelLabel(input.contentItem.channel)}`,
     "",
-    "Следующий шаг: посмотреть материал, согласовать или запросить правки."
+    "Следующий шаг: посмотреть материал, согласовать или вернуть на правки."
   ].join("\n");
 }
 
@@ -1275,8 +1275,7 @@ function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
     `Материал: ${textValue(input.item.title, "Материал")}`,
     `Канал: ${channelLabel(input.item.channel)}`,
     "",
-    "Следующий шаг: после выхода подтвердить публикацию.",
-    "Если материал уже опубликован, подтвердите выход."
+    "Следующий шаг: после выхода подтвердить, что материал опубликован."
   ].join("\n");
 }
 
@@ -1372,7 +1371,7 @@ function renderUnknownIntentMessage(brief?: OwnerBrief) {
   const lines = [
     "Не зафиксировал действие.",
     "",
-    "Можно написать обычным языком: что сегодня, показать материал, согласовать, нужны правки, передал в выпуск, вышло, что по результату."
+    "Напишите действие: посмотреть материал, согласовать, вернуть на правки, передать в выпуск, подтвердить выход или проверить результат."
   ];
 
   if (brief && priority?.type === "confirm_publication") {
@@ -1384,6 +1383,40 @@ function renderUnknownIntentMessage(brief?: OwnerBrief) {
   } else if (brief && priority?.type === "preparing") {
     lines.push("");
     lines.push(`AgentResult готовит черновик: ${textValue(priority.preparingTask.title, "материал")}.`);
+  }
+
+  return lines.join("\n");
+}
+
+function renderApprovalRecordedMessage(brief: OwnerBrief) {
+  const lines = [
+    "Решение зафиксировано: согласовано."
+  ];
+
+  if (brief.handoffs.length) {
+    lines.push("");
+    lines.push("Следующий шаг: подтвердить выход переданного материала.");
+  } else {
+    lines.push("");
+    lines.push("Следующий шаг: передать материал в выпуск.");
+  }
+
+  return lines.join("\n");
+}
+
+function renderChangesRecordedMessage(brief: OwnerBrief) {
+  const lines = [
+    "Решение зафиксировано: нужны правки.",
+    "",
+    "Материал снят с согласования и вернётся в работу."
+  ];
+
+  if (brief.decisions.length) {
+    lines.push("");
+    lines.push("Следующий шаг: закрыть следующий материал в очереди.");
+  } else if (brief.preparing.length) {
+    lines.push("");
+    lines.push("Следующий шаг: дождаться обновлённого черновика.");
   }
 
   return lines.join("\n");
@@ -1429,21 +1462,25 @@ function primaryDecisionIdFromBrief(brief: OwnerBrief) {
 
 function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   const targetId = primaryDecisionIdFromBrief(brief);
-  const buttons = [
-    commandButton("post", "Показать материал", targetId),
-    commandButton("onboarding", "Настройка")
-  ];
+  if (targetId) {
+    return [
+      commandButton("post", "Материал", targetId),
+      commandButton("osapprove", "Согласовать", targetId),
+      commandButton("changes", "Правки", targetId)
+    ];
+  }
 
   if (brief.counts.preparing > 0) {
-    buttons.splice(1, 0, commandButton("preparing", "Что готовится"));
+    return [
+      commandButton("preparing", "Что готовится"),
+      commandButton("brief", "Сводка")
+    ];
   }
 
-  if (targetId) {
-    buttons.splice(1, 0, commandButton("osapprove", "Согласовать", targetId));
-    buttons.splice(2, 0, commandButton("changes", "Нужны правки", targetId));
-  }
-
-  return buttons;
+  return [
+    commandButton("prepare", "Поставить тему"),
+    commandButton("onboarding", "Настройка")
+  ];
 }
 
 function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): TelegramCommandButton[] {
@@ -1452,7 +1489,7 @@ function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): T
   const buttons = [commandButton("brief", "Сводка")];
 
   if (targetId) {
-    buttons.unshift(commandButton("changes", "Нужны правки", targetId));
+    buttons.unshift(commandButton("changes", "Правки", targetId));
     buttons.unshift(commandButton("osapprove", "Согласовать", targetId));
   }
 
@@ -1461,8 +1498,7 @@ function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): T
 
 function onboardingCommandButtons(): TelegramCommandButton[] {
   return [
-    commandButton("brief", "Сводка"),
-    commandButton("post", "Показать материал")
+    commandButton("brief", "Сводка")
   ];
 }
 
@@ -1507,13 +1543,13 @@ function ownerControlButtons(brief: OwnerBrief): TelegramCommandButton[] {
   if (brief.counts.handedOff > 0) {
     const buttons = handoffButtonsForBrief(brief);
     const decisionId = typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
-    if (decisionId) buttons.push(commandButton("post", "Показать материал", decisionId));
+    if (decisionId) buttons.push(commandButton("post", "Материал", decisionId));
     if (brief.counts.preparing > 0) buttons.push(commandButton("preparing", "Что готовится"));
     return buttons;
   }
   if (brief.counts.decisions > 0) return briefCommandButtons(brief);
-  if (brief.counts.preparing > 0) return [commandButton("preparing", "Что готовится"), commandButton("onboarding", "Настройка")];
-  return [commandButton("result", "Результат"), commandButton("onboarding", "Настройка")];
+  if (brief.counts.preparing > 0) return [commandButton("preparing", "Что готовится"), commandButton("brief", "Сводка")];
+  return [commandButton("prepare", "Поставить тему"), commandButton("result", "Результат")];
 }
 
 async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
@@ -1619,9 +1655,13 @@ function nextMaterialTopicFromText(value: string) {
     .replace(/^подготовь\s+(материал|пост|черновик)\s*/i, "")
     .replace(/^сделай\s+(материал|пост|черновик)\s*/i, "")
     .replace(/^напиши\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^поставь\s+следующ(ую|ий|ее)\s+(тему|материал|пост|черновик)\s+в\s+работу\s*/i, "")
+    .replace(/^поставь\s+следующ(ую|ий|ее)\s+(тему|материал|пост|черновик)\s*/i, "")
     .replace(/^поставь\s+(тему|материал|пост|черновик)\s+в\s+работу\s*/i, "")
     .replace(/^в\s+работу\s*/i, "")
+    .replace(/^следующ(ая|ую|ий|ее)\s+(тема|тему|материал|пост|черновик)\s*/i, "")
     .replace(/^следующий\s+(материал|пост|черновик)\s*/i, "")
+    .replace(/^нов(ая|ую|ый|ое)\s+(тема|тему|материал|пост|черновик)\s*/i, "")
     .replace(/^(про|о)\s+/i, "")
     .replace(/^:\s*/, "")
     .trim();
@@ -1804,7 +1844,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
     return {
       command,
-      text: "Решение зафиксировано: согласовано.",
+      text: renderApprovalRecordedMessage(actionResult.ownerBrief),
       buttons: briefCommandButtons(actionResult.ownerBrief),
       ownerBrief: actionResult.ownerBrief,
       actionResult
@@ -1833,7 +1873,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
     return {
       command,
-      text: "Решение зафиксировано: нужны правки.",
+      text: renderChangesRecordedMessage(actionResult.ownerBrief),
       buttons: briefCommandButtons(actionResult.ownerBrief),
       ownerBrief: actionResult.ownerBrief,
       actionResult
@@ -1938,10 +1978,14 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     "напиши материал",
     "напиши пост",
     "поставь тему в работу",
+    "поставь следующую тему",
+    "поставь следующую тему в работу",
     "поставь материал в работу",
     "поставь пост в работу",
+    "следующая тема",
     "следующий материал",
     "следующий пост",
+    "новая тема",
     "новый материал",
     "новый пост"
   ])) {

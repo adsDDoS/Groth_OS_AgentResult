@@ -99,6 +99,14 @@ Then deploy only the backend container:
 scripts/deploy-backend-vps.sh
 ```
 
+For the read-only Vercel demo backend, strip Telegram owner-control env while reusing the current container env:
+
+```bash
+STRIP_TELEGRAM_ENV=1 scripts/deploy-backend-vps.sh
+```
+
+This keeps the demo API separate from the Telegram owner-control container. The demo backend should not keep `TELEGRAM_*`, `HERMES_TELEGRAM_*`, or `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_*` values in its runtime env.
+
 For a local-storage to Postgres cutover on VPS:
 
 1. Create or update `/opt/agentresult-os/app/.env` with `AI_GROWTH_OS_STORAGE=postgres` and `DATABASE_URL`.
