@@ -14,6 +14,12 @@ AgentResult готовит -> собственник принимает реше
 https://dashboard-orpin-mu-26.vercel.app/?demo=pilot#/overview
 ```
 
+Next step after demo:
+
+```text
+docs/demo-to-pilot-onboarding.md
+```
+
 Demo tenant:
 
 ```text

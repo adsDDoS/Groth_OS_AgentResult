@@ -37,6 +37,8 @@ Goal: support 2-5 companies manually with high trust and low automation risk.
 Must be true:
 
 - Onboarding creates a company workspace from a structured intake.
+- Demo-to-pilot onboarding is repeatable: offer, ICP, pains, proof, restrictions, channels, release owner, approval rules, and first signal source.
+- The first 7-14 day pilot proves one loop: setup -> first material -> approval -> manual handoff -> confirmed release -> first signal.
 - Every public action has human approval.
 - Tools screen captures what the client already uses and what can be connected next.
 - Proof Engine distinguishes internal proof, client-approved proof, and public proof.

@@ -1,87 +1,91 @@
 # Customer Onboarding
 
-This guide helps any B2B company configure AI Growth OS.
-
-## 1. Fill Offer Brain
-
-Copy:
+Current AgentResult Growth Control onboarding starts from the demo-to-pilot flow:
 
 ```text
-templates/company-profile/offer-brain.example.yaml
+docs/demo-to-pilot-onboarding.md
 ```
 
-Create a customer-specific file and fill:
-- company profile
-- products
-- ICP profiles
-- personas
-- pains
-- use cases
-- objections
-- proof points
-- case studies
-- competitors
-- forbidden claims
-- tone rules
-- regions
-- industries
+The customer-facing promise:
 
-## 2. Define Approval Owners
-
-At minimum:
-- content owner
-- product/offer owner
-- legal/compliance reviewer if needed
-- publishing owner
-
-## 3. Create Demand Map
-
-Start with 20-50 high-quality opportunities:
-- product pages
-- pain pages
-- comparison pages
-- industry pages
-- integration pages
-- case pages
-- FAQ pages
-- calculator or audit pages
-
-Do not create broad region batches until there is real local substance.
-
-## 4. Build First Content Pack
-
-Choose one weekly theme.
-
-Generate:
-- 1 SEO page or brief
-- 2 Telegram posts
-- 1 VC.ru or Habr-style article draft
-- 1 email
-- 1 lead magnet or checklist
-- publishing calendar CSV
-
-Use:
-
-```bash
-bash scripts/export-content-pack.sh 2026-05-week-1
+```text
+За 7-14 дней запускаем первый контур AgentResult: контекст компании, первый материал, согласование, ручная передача, подтверждение выхода и первый сигнал.
 ```
 
-## 5. Review And Approve
+## Owner Intake
 
-Before publication:
-- verify proof
-- remove unsupported claims
-- confirm client names and competitor mentions
-- check channel format
-- approve in the backend
+Collect only what is needed for the first controlled loop:
 
-## 6. Add Integrations Gradually
+- offer;
+- ICP;
+- customer pains;
+- proof;
+- forbidden claims;
+- release channels;
+- publishing owner;
+- approval rules;
+- first signal source.
 
-Recommended order:
-1. Telegram approval notifications.
-2. Analytics import.
-3. Website CMS export or API.
-4. Email provider.
-5. Social/community APIs where available.
+Do not ask for broad access before the first loop is clear.
 
-Manual-first mode should remain available as the fallback.
+## Dashboard Setup
+
+Use the dashboard sections in this order:
+
+1. `Компания`
+
+Fill offer, ICP, pains, proof, forbidden claims, tone, competitors, domains, channels, approval owner.
+
+2. `Настройки`
+
+Set approval rules, access readiness, connected tools, and what remains manual.
+
+3. `Публикации`
+
+Run the first material through:
+
+```text
+на согласование -> ручная передача -> вышло
+```
+
+4. `Результаты`
+
+Record the first lead, reply, form signal, CRM signal, or owner-confirmed signal.
+
+## 7-14 Day Pilot
+
+The first pilot should prove one loop, not every future integration:
+
+```text
+настройка -> первый материал -> согласование -> ручная передача -> подтверждение выхода -> первый сигнал
+```
+
+## Access Order
+
+Needed immediately:
+
+- рабочее пространство AgentResult;
+- owner approval contact;
+- release owner contact;
+- first channel for manual handoff;
+- first signal source.
+
+Defer:
+
+- automatic publishing;
+- CMS write access;
+- CRM write access;
+- email sending;
+- WhatsApp;
+- deep analytics;
+- complex permissions.
+
+Manual-first mode remains the default fallback.
+
+## Guardrails
+
+- No public action without approval.
+- No guaranteed growth claims.
+- No empty money metrics in Growth Control.
+- No owner-facing Hermes language.
+- No backend-admin wording in customer onboarding.
