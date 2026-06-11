@@ -1,5 +1,11 @@
 # AgentResult Growth Control Pilot Demo
 
+Current repeatable web demo contract:
+
+```text
+docs/customer-demo-contract.md
+```
+
 Цель показа: за 5-7 минут показать собственнику рабочий контур:
 
 ```text

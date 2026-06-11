@@ -2,6 +2,12 @@
 
 Use before a client pilot-demo of AgentResult Growth Control.
 
+Canonical web demo contract:
+
+```text
+docs/customer-demo-contract.md
+```
+
 ## Ready
 
 - Demo tenant reset is complete.

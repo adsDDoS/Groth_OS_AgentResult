@@ -7,8 +7,10 @@ AgentResult OS dashboard is the current demo and private-beta control surface.
 Baseline version:
 
 - production dashboard: `https://dashboard-orpin-mu-26.vercel.app`
-- latest asset version: `agentresult-working-os-87`
-- CI gate: `Dashboard smoke #14` passed on commit `1e6a7ee`
+- demo link: `https://dashboard-orpin-mu-26.vercel.app/?demo=pilot#/overview`
+- latest asset version: `agentresult-working-os-90`
+- customer demo contract: `docs/customer-demo-contract.md`
+- current demo-flow hardening commit: `1594d7c`
 
 ## What Is Stable
 
