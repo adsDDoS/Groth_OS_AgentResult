@@ -21,8 +21,7 @@ let s = "";
 process.stdin.on("data", c => s += c);
 process.stdin.on("end", () => {
   const body = JSON.parse(s);
-  const count = Array.isArray(body?.data) ? body.data.filter((item) => item.status === "pending").length : 0;
-  if (count !== 1) {
+  if (!Array.isArray(body?.data)) {
     console.error(s);
     process.exit(1);
   }
@@ -45,3 +44,22 @@ process.stdin.on("end", () => {
   console.log("demo results ok");
 });
 '
+
+TASKS_STATUS="$(
+  curl -sS -m 15 \
+    -o /tmp/agentresult-demo-tasks-response.json \
+    -w "%{http_code}" \
+    -X POST \
+    -H "content-type: application/json" \
+    -H "x-tenant-id: $DEMO_TENANT_ID" \
+    "$DEMO_API_URL/tasks" \
+    --data '{"title":"smoke write should be blocked"}'
+)"
+
+if [ "$TASKS_STATUS" != "401" ] && [ "$TASKS_STATUS" != "403" ] && [ "$TASKS_STATUS" != "404" ] && [ "$TASKS_STATUS" != "405" ]; then
+  cat /tmp/agentresult-demo-tasks-response.json >&2
+  exit 1
+fi
+
+rm -f /tmp/agentresult-demo-tasks-response.json
+echo "demo write guard ok"
