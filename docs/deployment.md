@@ -275,8 +275,21 @@ Expected state:
 - `agentresult-os-telegram-owner-control` logs `Telegram owner-control polling middleware is enabled`;
 - Telegram webhook URL is empty;
 - Hermes is not polling the same bot token;
+- classic Hermes Telegram gateway containers (`agentresult-agent-*`) are stopped or rebuilt without `TELEGRAM_BOT_TOKEN` for this owner-control bot;
 - ordinary owner phrases route through backend intent logic;
 - Vercel demo and Telegram owner-control use the same tenant state.
+
+Do not start the classic `agentresult-agent-*` Telegram gateway containers against the owner-control bot token during Growth Control production cutover. They run Hermes `gateway run` and will compete for Telegram `getUpdates`, causing missed updates, noisy errors, and possible owner-facing tool/terminal leakage. If the classic agents are needed again, recreate them without this bot token or assign them a separate bot token and allowlist.
+
+Quick cutover verification:
+
+```bash
+docker ps --format '{{.Names}}' | grep -E '^agentresult-agent-' || true
+docker logs --since=2m agentresult-os-telegram-owner-control
+curl -s -H 'content-type: application/json' \
+  -d '{"text":"что дальше"}' \
+  http://127.0.0.1:18831/telegram/intent
+```
 
 ## Backups
 

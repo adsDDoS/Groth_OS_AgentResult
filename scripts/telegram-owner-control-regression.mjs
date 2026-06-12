@@ -93,6 +93,25 @@ function expectNoCommandUx(result, label) {
   }
 }
 
+function expectNoOwnerNoise(result, label) {
+  const text = String(result.text ?? "");
+  const forbidden = [
+    "💻",
+    "terminal:",
+    "tool:",
+    "skill_view",
+    "Approved permanently",
+    "curl ",
+    "DEBUG",
+    "stack trace",
+    "Деньги: 0"
+  ];
+  const leaked = forbidden.find((fragment) => text.includes(fragment));
+  if (leaked) {
+    throw new Error(`${label}: leaked implementation noise "${leaked}" in text:\n${text}`);
+  }
+}
+
 function expectButtonLabels(result, expectedLabels, label) {
   const labels = (result.buttons ?? []).map((button) => button.label);
   const missing = expectedLabels.filter((expected) => !labels.includes(expected));
@@ -108,6 +127,14 @@ async function createMaterial(title, bodyMd) {
     channel: "telegram",
     contentType: "telegram_post"
   });
+}
+
+async function calendarStatusCounts() {
+  const rows = await get("/publishing/calendar");
+  return rows.reduce((acc, row) => {
+    acc[row.status] = (acc[row.status] ?? 0) + 1;
+    return acc;
+  }, {});
 }
 
 async function main() {
@@ -218,9 +245,47 @@ async function main() {
   expectIncludes(approved.text, "согласовано", "approve by topic");
   expectIncludes(approved.text, "передать материал в выпуск", "approve next action");
   expectNoCommandUx(approved, "approve by topic");
+  expectNoOwnerNoise(approved, "approve by topic");
   if (approved.ownerBrief.decisions.some((decision) => decision.contentTitle === "Контроль выпуска материалов")) {
     throw new Error("approve by topic did not remove the selected material from pending decisions");
   }
+
+  const handoff = await request("/telegram/intent", { text: "передал в выпуск" });
+  expectEquals(handoff.intent, "manual_handoff", "manual handoff intent");
+  expectIncludes(handoff.text, "Передано в выпуск вручную.", "manual handoff");
+  expectIncludes(handoff.text, "подтвердить", "manual handoff next action");
+  expectNoCommandUx(handoff, "manual handoff");
+  expectNoOwnerNoise(handoff, "manual handoff");
+  expectEquals(handoff.ownerBrief.counts.handedOff, 1, "owner brief handed off count");
+
+  const handoffCounts = await calendarStatusCounts();
+  expectEquals(handoffCounts.handed_off, 1, "calendar handed_off count");
+  const publishedBeforeConfirm = handoffCounts.published ?? 0;
+
+  const resultAfterHandoff = await request("/telegram/intent", { text: "что по результату" });
+  expectEquals(resultAfterHandoff.intent, "result", "result after handoff intent");
+  expectIncludes(resultAfterHandoff.text, "Передано вручную: 1", "result after handoff");
+  expectIncludes(resultAfterHandoff.text, "Следующий шаг: подтвердить выход", "result after handoff next action");
+  expectNoCommandUx(resultAfterHandoff, "result after handoff");
+  expectNoOwnerNoise(resultAfterHandoff, "result after handoff");
+
+  const confirmed = await request("/telegram/intent", { text: "вышло" });
+  expectEquals(confirmed.intent, "confirm_published", "confirm published intent");
+  expectIncludes(confirmed.text, "Выход подтверждён", "confirm published");
+  expectNoCommandUx(confirmed, "confirm published");
+  expectNoOwnerNoise(confirmed, "confirm published");
+  expectEquals(confirmed.ownerBrief.counts.handedOff, 0, "owner brief handed off after publish");
+  expectEquals(confirmed.ownerBrief.counts.published, publishedBeforeConfirm + 1, "owner brief published after publish");
+
+  const publishedCounts = await calendarStatusCounts();
+  expectEquals(publishedCounts.handed_off ?? 0, 0, "calendar handed_off after publish");
+  expectEquals(publishedCounts.published, publishedBeforeConfirm + 1, "calendar published count");
+
+  const resultAfterPublished = await request("/telegram/intent", { text: "что по результату" });
+  expectEquals(resultAfterPublished.intent, "result", "result after published intent");
+  expectIncludes(resultAfterPublished.text, `Вышло: ${publishedBeforeConfirm + 1}`, "result after published");
+  expectNoCommandUx(resultAfterPublished, "result after published");
+  expectNoOwnerNoise(resultAfterPublished, "result after published");
 
   const nextTopic = await request("/telegram/intent", { text: "поставь следующую тему в работу про контроль результата" });
   expectEquals(nextTopic.intent, "prepare_next_material", "prepare next material intent");
