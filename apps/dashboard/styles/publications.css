@@ -129,7 +129,7 @@
   padding: 10px 12px;
   border-right: 1px solid var(--hairline-soft);
   border-bottom: 1px solid var(--hairline-soft);
-  background: #fffdf8;
+  background: #ffffff;
   color: var(--body);
   font-size: 13px;
 }
@@ -149,8 +149,8 @@
   min-height: 24px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(212, 160, 23, 0.14);
-  color: #7a5811;
+  background: rgba(183, 121, 31, 0.14);
+  color: #7a4f12;
   font-size: 12px;
   font-weight: 750;
 }
@@ -239,20 +239,20 @@
   padding: 11px 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
   cursor: pointer;
   text-align: left;
 }
 
 .approval-item:hover,
 .approval-item:focus-visible {
-  border-color: rgba(204, 120, 92, 0.45);
+  border-color: rgba(37, 99, 235, 0.45);
   outline: 0;
 }
 
 .approval-item.selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .approval-brief {
@@ -333,7 +333,7 @@
   padding: 0 10px;
   border: 1px solid var(--hairline-soft);
   border-radius: 999px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .approval-risk-summary {
@@ -370,7 +370,7 @@
   padding: 0 12px;
   border-radius: 999px;
   background: rgba(93, 184, 114, 0.14);
-  color: #2d6d3f;
+  color: #17633a;
   font-size: 13px;
   font-weight: 850;
 }
@@ -409,13 +409,13 @@
   padding: 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
   text-align: left;
 }
 
 .handoff-asset-row.selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .handoff-asset-row strong,
@@ -452,7 +452,7 @@
   padding: 11px 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #f7f3ec;
+  background: #eef2f7;
 }
 
 .handoff-status-strip span {
@@ -471,7 +471,7 @@
   padding: 13px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fff7ef;
+  background: #f8fafc;
 }
 
 .handoff-instruction span {
@@ -504,12 +504,12 @@
   padding: 11px 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .pack-row.selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .pack-detail {
@@ -517,7 +517,7 @@
   padding: 14px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .handoff-plan-link {
@@ -532,7 +532,7 @@
   padding: 15px;
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .calendar-note-block span,
@@ -568,7 +568,7 @@
   padding: 16px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .publication-cockpit-main .eyebrow {
@@ -607,9 +607,9 @@
   gap: 6px;
   margin-bottom: 18px;
   padding: 14px 16px;
-  border: 1px solid rgba(204, 120, 92, 0.22);
+  border: 1px solid rgba(37, 99, 235, 0.22);
   border-radius: 8px;
-  background: rgba(204, 120, 92, 0.08);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .approval-gate-banner strong {
@@ -638,7 +638,7 @@
   padding: 13px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .publication-channel-matrix strong {
@@ -681,7 +681,7 @@
   padding: 12px 14px;
   border: 1px solid rgba(23, 50, 48, 0.18);
   border-radius: 8px;
-  background: #fff7ef;
+  background: #f8fafc;
 }
 
 .calendar-bulk-control div {
@@ -905,7 +905,7 @@
   padding: 0 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
   color: var(--body-strong);
   font: inherit;
   font-size: 12px;
@@ -927,12 +927,12 @@
 .calendar-filter-button.active {
   border-color: rgba(23, 50, 48, 0.34);
   background: var(--ink);
-  color: #fffdf8;
+  color: #ffffff;
 }
 
 .calendar-filter-button.active strong {
   background: rgba(255, 253, 248, 0.14);
-  color: #fffdf8;
+  color: #ffffff;
 }
 
 .week-calendar {
@@ -969,7 +969,7 @@
   min-width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: #fffdf8;
+  background: #ffffff;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -984,7 +984,7 @@
   padding: 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .calendar-card-top {
@@ -1027,7 +1027,7 @@
 }
 
 .calendar-note-block.filled {
-  background: #fff7ef;
+  background: #f8fafc;
 }
 
 .calendar-note-block:focus-visible {

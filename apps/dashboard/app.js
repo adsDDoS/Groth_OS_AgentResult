@@ -33,7 +33,7 @@ const LANG_KEY = "aiGrowthOsLang";
 let currentLang = localStorage.getItem(LANG_KEY) || "ru";
 
 const RU = {
-  "Growth Control": "Рост компании",
+  "Growth Control": "GrothOS",
   "Home": "Сегодня",
   "Today": "Сегодня",
   "Strategy": "Стратегия",
@@ -48,20 +48,20 @@ const RU = {
   "Preparation rules": "Правила подготовки",
   "Results": "Результаты",
   "Settings": "Настройки",
-  "Command Center": "Командный центр",
-  "Content Pipeline": "Контент-пайплайн",
-  "Publication Desk": "Публикационный стол",
-  "Results Desk": "Стол результатов",
-  "Knowledge Base": "База знаний",
+  "Command Center": "Сегодня",
+  "Content Pipeline": "Материалы",
+  "Publication Desk": "Публикации",
+  "Results Desk": "Результаты",
+  "Knowledge Base": "База",
   "Waiting Live Check": "Проверка выхода",
   "Published": "Опубликовано",
-  "Operate": "Работа",
-  "Control": "Контроль",
+  "Operate": "Операции",
+  "Control": "Система",
   "Planning archive": "Архив планирования",
   "Offer, proof, author voice": "Оффер, доказательства, голос автора",
   "Materials in production": "Материалы в производстве",
-  "Release queue and live check": "Очередь выпуска и проверка выхода",
-  "Publication results and next steps": "Результаты публикаций и следующие шаги",
+  "Release queue and live check": "Выпуск и проверка",
+  "Publication results and next steps": "Итоги публикаций",
   "Tools": "Инструменты",
   "Access": "Доступы",
   "Launch readiness": "Готовность запуска",
@@ -80,7 +80,7 @@ const RU = {
   "Topics, QA, release": "Темы, QA, выпуск",
   "Business signals": "Бизнес-сигналы",
   "Publication signals": "Сигналы публикаций",
-  "Summary": "Пульт собственника",
+  "Summary": "Сегодня",
   "Client acquisition workflow": "Цикл привлечения клиентов",
   "What moves from topic to result": "Что движется от темы к результату",
   "30-day client acquisition plan": "30-дневный план привлечения",
@@ -1508,6 +1508,7 @@ function renderNav() {
   elements.navList.querySelectorAll("[data-route]").forEach((link) => {
     link.classList.toggle("active", link.dataset.route === activeRoute);
   });
+  elements.navList.querySelector(".nav-link.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function renderActions() {
@@ -2021,8 +2022,8 @@ function growthBlockers(pending) {
   }
   if (!state.metrics.leads) {
     blockers.push({
-      title: text("No lead signal is imported", "Не загружен сигнал по заявкам"),
-      meta: text("The growth loop cannot see market response yet.", "Цикл роста пока не видит реакцию рынка."),
+      title: text("No publication reaction is recorded", "Не зафиксирована реакция публикации"),
+      meta: text("The content loop needs a URL, reaction, comment, repost, save, or reuse mark.", "Контент-контуру нужен URL, реакция, комментарий, репост, сохранение или отметка переиспользования."),
       label: text("Import", "Загрузить"),
       action: "import-metrics",
       id: "lead-signal"

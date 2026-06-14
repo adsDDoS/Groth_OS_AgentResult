@@ -155,7 +155,7 @@ function publicationNextAction() {
   if (published) {
     return {
       title: text("Check the result signal.", "Проверить сигнал результата."),
-      note: text("Confirmed releases should lead to a lead, reply, CRM event, or task.", "Подтверждённый выпуск должен привести к заявке, ответу, CRM-событию или задаче."),
+      note: text("Confirmed releases should have a URL, channel reaction, reuse mark, or next content step.", "У подтверждённого выпуска должен быть URL, реакция канала, отметка переиспользования или следующий контент-шаг."),
       audience: text("Next workspace check", "Следующая проверка контура"),
       action: "go-analytics",
       id: "",

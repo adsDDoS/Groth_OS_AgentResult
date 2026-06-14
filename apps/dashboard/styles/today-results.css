@@ -18,8 +18,8 @@
 }
 
 .owner-command-statuses article.active {
-  border-color: rgba(212, 160, 23, 0.34);
-  background: rgba(212, 160, 23, 0.08);
+  border-color: rgba(183, 121, 31, 0.34);
+  background: rgba(183, 121, 31, 0.08);
 }
 
 .owner-command-statuses article.done {
@@ -159,7 +159,7 @@
   padding: 18px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .result-confirmation-clarity h3 {
@@ -290,7 +290,7 @@
   padding: 10px;
   border-right: 1px solid var(--hairline-soft);
   border-bottom: 1px solid var(--hairline-soft);
-  background: #fffdf8;
+  background: #ffffff;
   color: var(--body);
   font-size: 13px;
 }
@@ -354,8 +354,8 @@
   min-height: 24px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(212, 160, 23, 0.14);
-  color: #7a5811;
+  background: rgba(183, 121, 31, 0.14);
+  color: #7a4f12;
   font-size: 12px;
   font-weight: 750;
 }
@@ -510,7 +510,7 @@
   padding: 13px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .result-action-row span {
@@ -542,7 +542,7 @@
   padding: 16px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .result-empty-action strong {
@@ -614,7 +614,7 @@
   color: var(--muted);
   font-size: 11px;
   font-weight: 850;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .today-detail-row strong {
@@ -640,7 +640,7 @@
   padding: 18px;
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .result-path-head {

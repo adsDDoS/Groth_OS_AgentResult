@@ -15,7 +15,7 @@
   padding: 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .growth-queue-row > span {
@@ -81,7 +81,7 @@
   padding: 15px;
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .owner-setup-card span {
@@ -128,7 +128,7 @@
   grid-column: 1 / -1;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .company-advanced summary {
@@ -159,7 +159,7 @@
   padding: 12px;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: #fffdf8;
+  background: #ffffff;
 }
 
 .company-signal-row span {
@@ -191,7 +191,7 @@
   padding: 8px 10px;
   border: 1px solid var(--hairline-soft);
   border-radius: 999px;
-  background: #fffdf8;
+  background: #ffffff;
   color: var(--body-strong);
   font-size: 12px;
   font-weight: 700;
