@@ -92,6 +92,11 @@ process.stdin.on("end", () => {
   [ -n "$tenant_id" ] || fail "$OWNER_CONTAINER is missing AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_TENANT_ID"
   bot_token="$(printf '%s\n' "$owner_env" | sed -n 's/^TELEGRAM_BOT_TOKEN=//p' | tail -1)"
   [ -n "$bot_token" ] || fail "$OWNER_CONTAINER is missing TELEGRAM_BOT_TOKEN"
+  api_key="$(printf '%s\n' "$owner_env" | sed -n 's/^AGENTRESULT_API_KEY=//p' | tail -1)"
+  require_api_key="$(printf '%s\n' "$owner_env" | sed -n 's/^AGENTRESULT_REQUIRE_API_KEY=//p' | tail -1)"
+  if [ "$require_api_key" = "1" ] && [ -z "$api_key" ]; then
+    fail "$OWNER_CONTAINER requires API key but AGENTRESULT_API_KEY is missing"
+  fi
   echo "owner polling env ok"
 
   same_token_containers="$(
@@ -145,9 +150,15 @@ process.stdin.on("end", () => {
   assert_health "$BACKEND_URL"
   assert_health "$OWNER_URL"
 
+  auth_header_args=()
+  if [ -n "$api_key" ]; then
+    auth_header_args=(-H "x-agentresult-api-key: $api_key")
+  fi
+
   curl -fsS -m 15 \
     -H "content-type: application/json" \
     -H "x-tenant-id: $tenant_id" \
+    "${auth_header_args[@]}" \
     -d '{"text":"что по результату"}' \
     "$OWNER_URL/telegram/intent" | node -e '
 let input = "";

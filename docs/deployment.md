@@ -458,6 +458,16 @@ BACKUP_FILE=./backups/<backup>.sql npm run db:restore-drill
 The restore drill starts a disposable Postgres container, restores the SQL file,
 verifies that public tables exist, and removes the container on exit.
 
+For the AgentResult VPS, create and drill a fresh backup in-place:
+
+```bash
+backup_file="$(npm run --silent vps:backup-postgres)"
+BACKUP_FILE="$backup_file" npm run vps:restore-drill
+```
+
+The VPS drill uses a disposable Postgres container on the VPS and removes it on
+exit.
+
 ## Production Notes
 
 - Replace dev tenant auth with proper authentication before customer use.

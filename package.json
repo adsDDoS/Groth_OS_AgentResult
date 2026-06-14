@@ -36,6 +36,8 @@
     "db:migrate": "npm run db:migrate -w apps/backend",
     "db:import-local-json": "node apps/backend/dist/db/import-local-json.js",
     "db:restore-drill": "bash scripts/restore-postgres-drill.sh",
+    "vps:backup-postgres": "bash scripts/backup-postgres-vps.sh",
+    "vps:restore-drill": "bash scripts/restore-postgres-drill-vps.sh",
     "demo:reset-pilot": "node apps/backend/dist/db/reset-pilot-demo.js",
     "lint": "npm run lint -w apps/backend",
     "seed:demo": "bash scripts/seed-demo-company.sh"

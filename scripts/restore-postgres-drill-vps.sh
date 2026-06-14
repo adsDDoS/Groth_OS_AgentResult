@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VPS_HOST="${VPS_HOST:-root@91.103.140.101}"
+BACKUP_FILE="${BACKUP_FILE:-${1:-}}"
+CONTAINER_NAME="${CONTAINER_NAME:-agentresult-restore-drill}"
+POSTGRES_IMAGE="${POSTGRES_IMAGE:-postgres:16}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-restore_drill_password}"
+
+if [ -z "$BACKUP_FILE" ]; then
+  echo "BACKUP_FILE is required" >&2
+  exit 1
+fi
+
+ssh "$VPS_HOST" \
+  "BACKUP_FILE='$BACKUP_FILE' CONTAINER_NAME='$CONTAINER_NAME' POSTGRES_IMAGE='$POSTGRES_IMAGE' POSTGRES_PASSWORD='$POSTGRES_PASSWORD' bash -s" <<'REMOTE'
+set -euo pipefail
+
+if [ ! -f "$BACKUP_FILE" ]; then
+  echo "Backup file not found: $BACKUP_FILE" >&2
+  exit 1
+fi
+
+cleanup() {
+  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+cleanup
+docker run -d \
+  --name "$CONTAINER_NAME" \
+  -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  "$POSTGRES_IMAGE" >/dev/null
+
+for _ in $(seq 1 30); do
+  if docker exec "$CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+docker exec "$CONTAINER_NAME" pg_isready -U postgres >/dev/null
+docker exec -i "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$BACKUP_FILE" >/dev/null
+
+table_count="$(docker exec "$CONTAINER_NAME" psql -At -U postgres -d postgres -c "select count(*) from information_schema.tables where table_schema = 'public';")"
+if [ "${table_count:-0}" -le 0 ]; then
+  echo "Restore drill failed: no public tables found after restore" >&2
+  exit 1
+fi
+
+echo "VPS restore drill passed: restored $table_count public tables from $BACKUP_FILE"
+REMOTE

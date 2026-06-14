@@ -44,6 +44,11 @@ echo "polling env ok"
 
 bot_token="$(printf '%s\n' "$env_output" | sed -n 's/^TELEGRAM_BOT_TOKEN=//p' | tail -1)"
 [ -n "$bot_token" ] || fail "TELEGRAM_BOT_TOKEN is missing"
+api_key="$(printf '%s\n' "$env_output" | sed -n 's/^AGENTRESULT_API_KEY=//p' | tail -1)"
+require_api_key="$(printf '%s\n' "$env_output" | sed -n 's/^AGENTRESULT_REQUIRE_API_KEY=//p' | tail -1)"
+if [ "$require_api_key" = "1" ] && [ -z "$api_key" ]; then
+  fail "$CONTAINER_NAME requires API key but AGENTRESULT_API_KEY is missing"
+fi
 same_token_containers="$(
   for container in $(docker ps --format '{{.Names}}'); do
     if docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
@@ -104,9 +109,15 @@ process.stdin.on("end", () => {
 });
 ' || fail "health check failed"
 
+auth_header_args=()
+if [ -n "$api_key" ]; then
+  auth_header_args=(-H "x-agentresult-api-key: $api_key")
+fi
+
 curl -fsS -m 15 \
   -H "content-type: application/json" \
   -H "x-tenant-id: $tenant_id" \
+  "${auth_header_args[@]}" \
   -d '{"text":"что по результату"}' \
   "$HOST_URL/telegram/intent" | node -e '
 let input = "";

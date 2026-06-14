@@ -50,6 +50,13 @@ bash scripts/backup-postgres.sh
 BACKUP_FILE=./backups/<backup>.sql npm run db:restore-drill
 ```
 
+VPS backup restore:
+
+```bash
+backup_file="$(npm run --silent vps:backup-postgres)"
+BACKUP_FILE="$backup_file" npm run vps:restore-drill
+```
+
 ## Pilot Auth Env
 
 ```text
