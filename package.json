@@ -21,7 +21,7 @@
     "publishing-commands:check": "npm run build && node scripts/publishing-commands-check.mjs",
     "auth:tenant-guard:check": "npm run build && node scripts/auth-tenant-guard-check.mjs",
     "content-factory:check": "bash scripts/content-factory-core-check.sh",
-    "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --cwd apps/dashboard",
+    "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --scope adsddosss-4657s-projects",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
     "telegram:polling-invariant": "node scripts/telegram-polling-invariant-check.mjs",
     "telegram:production-smoke": "bash scripts/smoke-telegram-publication-result-vps.sh",
