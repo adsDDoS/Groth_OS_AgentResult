@@ -99,6 +99,20 @@ Manual GitHub workflow:
 - Leave `expected_owner_image_tag` empty for a general invariant check; set it
   to a git short SHA when verifying a specific owner-control deploy.
 
+Recommended GitHub secret setup:
+
+- Use a dedicated Ed25519 key for this workflow. Do not reuse a personal SSH key.
+- Store the private key as repository secret `AGENTRESULT_VPS_SSH_KEY`.
+- Add the public key to `/root/.ssh/authorized_keys` on the VPS as a restricted
+  forced-command key:
+
+```text
+restrict,command="cd /opt/agentresult-os/app && AGENTRESULT_VPS_HEALTH_LOCAL=1 npm run vps:agentresult-health" ssh-ed25519 <public-key> agentresult-vps-health-github-actions-forced-command
+```
+
+This makes the GitHub workflow useful as an external health control without
+granting a general-purpose root shell to GitHub Actions.
+
 ## Recovery
 
 If the owner-control container is missing, redeploy it:
