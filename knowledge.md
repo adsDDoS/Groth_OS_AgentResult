@@ -2,6 +2,10 @@
 
 This file is the working memory for AgentResult OS. Read it before making product, UX, backend, agent, demo, copy, or documentation changes.
 
+The concise durable course for every new chat is `docs/product-course.md`.
+Read it together with this file before choosing product direction or proposing
+the next weighted goal.
+
 ## Product Identity
 
 AgentResult OS is an owner-facing operating system for B2B companies in the Russian market.
