@@ -327,6 +327,10 @@ function publicationResults() {
   });
 }
 
+function ownerActionAudit() {
+  return [];
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return send(res, 204, {});
 
@@ -352,6 +356,7 @@ export default async function handler(req, res) {
   if (route === "publication-results") return send(res, 200, { data: publicationResults() });
   if (route === "distribution-signals") return send(res, 200, { data: distributionSignals() });
   if (route === "result-signals") return send(res, 200, { data: distributionSignals() });
+  if (route === "owner-action-audit") return send(res, 200, { data: ownerActionAudit() });
   if (route === "content/items") return send(res, 200, { data: content });
   if (route === "publishing/calendar") return send(res, 200, { data: calendar });
   if (route === "tasks") return send(res, 200, { data: [] });
