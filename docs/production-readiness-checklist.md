@@ -76,6 +76,8 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 - Dashboard can run as a stable sales/demo and private-beta control surface.
 - Static Vercel demo has a guarded API proxy and write guard.
 - VPS health has both systemd timer and GitHub manual workflow coverage.
+- GitHub Actions VPS health also runs every 30 minutes.
+- API-key and tenant whitelist guard exists for pilot deployments.
 
 ## Demo / Private-Beta Only
 
@@ -106,12 +108,13 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 
 1. Rotate the leaked Telegram owner-control bot token through BotFather and run
    `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`.
-2. Add real authentication and access control for customer tenants.
+2. Deploy pilot backend with `AGENTRESULT_REQUIRE_API_KEY=1`,
+   `AGENTRESULT_API_KEY`, and `AGENTRESULT_ALLOWED_TENANT_IDS`.
 3. Define tenant provisioning and reset policy outside demo-only flows.
-4. Run and document a backup restore drill.
+4. Run a fresh backup restore drill with `npm run db:restore-drill`.
 5. Lock down production secrets and rotate anything pasted into chat, logs, or
    screenshots.
-6. Add scheduled GitHub Actions health checks, not only manual workflow runs.
+6. Keep scheduled GitHub Actions health checks green.
 7. Decide which external channels are manual-only and which will become native
    integrations.
 
@@ -133,6 +136,7 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 Before any production or private-pilot claim, these must be true:
 
 - `npm run content-factory:check` passes.
+- `npm run auth:tenant-guard:check` passes.
 - `npm run telegram:production-smoke` passes.
 - `npm run vps:agentresult-health` passes.
 - The latest `AgentResult VPS health` GitHub Actions run is green.

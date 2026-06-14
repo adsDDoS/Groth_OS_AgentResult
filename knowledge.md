@@ -51,6 +51,7 @@ visual hierarchy.
 The current production-readiness boundary is documented in
 `docs/production-readiness-checklist.md`. Use it before making customer,
 pilot, deploy, Telegram owner-control, demo, or dashboard-readiness claims.
+The active pre-production milestone is `docs/pre-production-milestone.md`.
 
 The product language is:
 

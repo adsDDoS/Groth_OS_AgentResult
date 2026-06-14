@@ -33,6 +33,28 @@ npm run dashboard:smoke
 
 The GitHub Actions workflow `.github/workflows/dashboard-smoke.yml` runs the same smoke suite on pull requests and pushes to `main`.
 
+## Backend Access Guard
+
+Local development and disposable demos may keep the default header-based tenant
+selection. Customer pilot and production deployments must enable the API-key and
+tenant whitelist guard:
+
+```text
+AGENTRESULT_REQUIRE_API_KEY=1
+AGENTRESULT_API_KEY=<generated-secret>
+AGENTRESULT_ALLOWED_TENANT_IDS=00000000-0000-0000-0000-000000000001,10000000-0000-4000-8000-000000000001
+```
+
+When enabled, `/health` stays public for uptime checks. Other backend routes
+require `x-agentresult-api-key` and the request tenant must be listed in
+`AGENTRESULT_ALLOWED_TENANT_IDS`.
+
+Check the guard locally:
+
+```bash
+npm run auth:tenant-guard:check
+```
+
 ## VPS
 
 1. Create a Linux VPS.
@@ -328,10 +350,11 @@ failure marker and dry-run alert marker, and then runs the real health guard.
 It does not stop containers, disable systemd units, change webhooks, or send a
 real Telegram message.
 
-There is also a manual GitHub Actions workflow named `AgentResult VPS health`.
-Configure repository secret `AGENTRESULT_VPS_SSH_KEY` with a private key that can
-SSH into the VPS, then run the workflow manually from Actions. The optional
-`expected_owner_image_tag` input turns on strict image-tag checking.
+There is also a GitHub Actions workflow named `AgentResult VPS health`. It runs
+every 30 minutes and can be run manually from Actions. Configure repository
+secret `AGENTRESULT_VPS_SSH_KEY` with a private key that can SSH into the VPS.
+The optional `expected_owner_image_tag` input turns on strict image-tag checking
+for manual runs.
 
 Expected state:
 
@@ -425,6 +448,15 @@ bash scripts/backup-postgres.sh
 ```
 
 Store backups outside the VPS as well.
+
+Run a restore drill before customer pilot and after backup changes:
+
+```bash
+BACKUP_FILE=./backups/<backup>.sql npm run db:restore-drill
+```
+
+The restore drill starts a disposable Postgres container, restores the SQL file,
+verifies that public tables exist, and removes the container on exit.
 
 ## Production Notes
 

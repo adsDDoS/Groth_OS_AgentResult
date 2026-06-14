@@ -19,6 +19,7 @@
     "domain:check": "npm run build -w packages/shared && node scripts/domain-state-machine-check.mjs",
     "approval-side-effects:check": "npm run build && node scripts/approval-side-effects-check.mjs",
     "publishing-commands:check": "npm run build && node scripts/publishing-commands-check.mjs",
+    "auth:tenant-guard:check": "npm run build && node scripts/auth-tenant-guard-check.mjs",
     "content-factory:check": "bash scripts/content-factory-core-check.sh",
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --cwd apps/dashboard",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
@@ -34,6 +35,7 @@
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",
     "db:import-local-json": "node apps/backend/dist/db/import-local-json.js",
+    "db:restore-drill": "bash scripts/restore-postgres-drill.sh",
     "demo:reset-pilot": "node apps/backend/dist/db/reset-pilot-demo.js",
     "lint": "npm run lint -w apps/backend",
     "seed:demo": "bash scripts/seed-demo-company.sh"

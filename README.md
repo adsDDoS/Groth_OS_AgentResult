@@ -149,6 +149,7 @@ They cannot publish, update live website content, send newsletters, post to soci
 - [Dev Agent System](docs/dev-agent-system.md)
 - [Approval Flow](docs/approval-flow.md)
 - [Production Readiness Checklist](docs/production-readiness-checklist.md)
+- [Pre-Production Milestone](docs/pre-production-milestone.md)
 - [SEO/GEO Playbook](docs/seo-geo-playbook.md)
 - [Content Policy](docs/content-policy.md)
 - [Deployment](docs/deployment.md)

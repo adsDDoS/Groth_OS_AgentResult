@@ -1,6 +1,8 @@
 name: AgentResult VPS health
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       vps_host:
@@ -43,6 +45,7 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$AGENTRESULT_VPS_SSH_KEY" > ~/.ssh/agentresult_vps
           chmod 600 ~/.ssh/agentresult_vps
+          VPS_HOST_INPUT="${VPS_HOST_INPUT:-root@91.103.140.101}"
           host="${VPS_HOST_INPUT#*@}"
           ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
           {
@@ -57,6 +60,7 @@ jobs:
           VPS_HOST: ${{ inputs.vps_host }}
           EXPECTED_OWNER_IMAGE_TAG: ${{ inputs.expected_owner_image_tag }}
         run: |
+          VPS_HOST="${VPS_HOST:-root@91.103.140.101}"
           if [ -n "$EXPECTED_OWNER_IMAGE_TAG" ]; then
             ssh "$VPS_HOST" "EXPECTED_OWNER_IMAGE_TAG=$EXPECTED_OWNER_IMAGE_TAG"
           else
