@@ -20,32 +20,33 @@ ssh "$VPS_HOST" \
 set -euo pipefail
 
 cd "$APP_DIR"
+ENV_FILE="/tmp/agentresult-backend-${CONTAINER_NAME}-$$.env"
 
 if [ "$ENV_SOURCE" = "file" ]; then
   if [ ! -f .env ]; then
     echo "AGENTRESULT_ENV_SOURCE=file but .env was not found in $APP_DIR" >&2
     exit 1
   fi
-  cp .env /tmp/agentresult-backend.env
+  cp .env "$ENV_FILE"
 elif docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-  docker inspect "$CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' > /tmp/agentresult-backend.env
+  docker inspect "$CONTAINER_NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' > "$ENV_FILE"
 else
   if [ ! -f .env ]; then
     echo "No running backend container and no .env found in $APP_DIR" >&2
     exit 1
   fi
-  cp .env /tmp/agentresult-backend.env
+  cp .env "$ENV_FILE"
 fi
 
 if [ "$STRIP_TELEGRAM_ENV" = "1" ]; then
-  sed -i '/^\(TELEGRAM_\|HERMES_TELEGRAM_\|AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_\)/d' /tmp/agentresult-backend.env
+  sed -i '/^\(TELEGRAM_\|HERMES_TELEGRAM_\|AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_\)/d' "$ENV_FILE"
 fi
 
-STORAGE_MODE="$(grep -E '^AI_GROWTH_OS_STORAGE=' /tmp/agentresult-backend.env | tail -1 | cut -d= -f2- || true)"
+STORAGE_MODE="$(grep -E '^AI_GROWTH_OS_STORAGE=' "$ENV_FILE" | tail -1 | cut -d= -f2- || true)"
 if [ "${STORAGE_MODE:-auto}" = "local" ] && [ "$ALLOW_LOCAL_STORAGE" != "1" ]; then
   echo "Refusing deploy: backend is configured with AI_GROWTH_OS_STORAGE=local." >&2
   echo "For private pilot use Postgres storage. For an explicit demo deploy, rerun with AGENTRESULT_ALLOW_LOCAL_STORAGE=1." >&2
-  rm -f /tmp/agentresult-backend.env
+  rm -f "$ENV_FILE"
   exit 2
 fi
 
@@ -63,7 +64,7 @@ if [ "${STORAGE_MODE:-auto}" != "local" ]; then
   docker run --rm \
     --network "$NETWORK_NAME" \
     -v "$RUNTIME_DIR:/runtime" \
-    --env-file /tmp/agentresult-backend.env \
+    --env-file "$ENV_FILE" \
     "$IMAGE" \
     node apps/backend/dist/db/migrate.js
 fi
@@ -81,9 +82,9 @@ docker run -d \
   --memory-swap "$MEMORY_SWAP" \
   -p "$HOST_BIND:$HOST_PORT:$CONTAINER_PORT" \
   -v "$RUNTIME_DIR:/runtime" \
-  --env-file /tmp/agentresult-backend.env \
+  --env-file "$ENV_FILE" \
   "$IMAGE"
 
-rm -f /tmp/agentresult-backend.env
+rm -f "$ENV_FILE"
 docker ps --filter "name=$CONTAINER_NAME" --format '{{.Names}} {{.Image}} {{.Status}}'
 REMOTE
