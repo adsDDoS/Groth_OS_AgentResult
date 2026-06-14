@@ -33,7 +33,7 @@ const offer = {
     approvalOwner:
       "Собственник согласует публичные публикации, рискованные утверждения, имена клиентов, сравнения с конкурентами и действия по дебиторке.",
     releaseOwner: "Менеджер контента проверяет фактологию, стиль автора и иишность перед выпуском.",
-    firstSignalSource: "Ответы в Telegram, заявки формы, комментарии в канале или ручная отметка собственника."
+    firstSignalSource: "URL публикации, реакции канала, комментарии, репосты, сохранения или ручная отметка собственника."
   },
   tone_of_voice: "Практично, прямо, уверенно, без хайпа.",
   created_at: "2026-06-03T23:48:07.016Z",
@@ -286,6 +286,47 @@ function distributionSignals() {
     }));
 }
 
+function publicationResults() {
+  return distributionSignals().map((signal) => {
+    const item = calendar.find((entry) => entry.id === signal.calendar_item_id) || {};
+    const contentItem = content.find((entry) => entry.id === signal.content_item_id) || {};
+    const result = item.metadata?.publication_result || {};
+    const reactions = result.reactions || {
+      comments: 2,
+      reposts: 1,
+      saves: 3,
+      reactions: 8
+    };
+    return {
+      id: `publication-result-${signal.id}`,
+      tenant_id: tenantId,
+      distribution_signal_id: signal.id,
+      calendar_item_id: signal.calendar_item_id,
+      content_item_id: signal.content_item_id,
+      title: signal.title,
+      channel: item.channel || signal.source || "manual",
+      format: contentItem.content_type || "publication",
+      publication_url: result.publication_url || "https://t.me/agentresult/1",
+      status: "confirmed",
+      confirmed_at: signal.occurred_at,
+      confirmed_by: signal.confirmed_by,
+      primary_reactions: reactions,
+      next_step: result.next_step || "reuse",
+      next_step_note: result.next_step_note || "Переиспользовать тезисы в следующем посте и короткой статье.",
+      evidence: {
+        has_url: true,
+        has_reactions: true,
+        source: item.channel || signal.source || "manual"
+      },
+      metadata: {
+        signal: signal.metadata,
+        calendar: item.metadata || {},
+        content: contentItem.metadata || {}
+      }
+    };
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return send(res, 204, {});
 
@@ -308,6 +349,7 @@ export default async function handler(req, res) {
   if (route === "approvals") return send(res, 200, { data: approvals });
   if (route === "agents") return send(res, 200, { data: agents });
   if (route === "analytics/overview") return send(res, 200, { data: metrics() });
+  if (route === "publication-results") return send(res, 200, { data: publicationResults() });
   if (route === "distribution-signals") return send(res, 200, { data: distributionSignals() });
   if (route === "result-signals") return send(res, 200, { data: distributionSignals() });
   if (route === "content/items") return send(res, 200, { data: content });

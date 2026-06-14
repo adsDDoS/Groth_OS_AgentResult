@@ -194,6 +194,7 @@ Allowed methods and paths:
 - `/approvals`
 - `/agents`
 - `/analytics/overview`
+- `/publication-results`
 - `/distribution-signals`
 - `/result-signals`
 - `/content/items`

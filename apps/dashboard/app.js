@@ -65,6 +65,7 @@ const RU = {
   "Work that can go outside": "Темы и тексты для выпуска",
   "Topics, QA, release": "Темы, QA, выпуск",
   "Business signals": "Бизнес-сигналы",
+  "Publication signals": "Сигналы публикаций",
   "Summary": "Пульт собственника",
   "Client acquisition workflow": "Цикл привлечения клиентов",
   "What moves from topic to result": "Что движется от темы к результату",
@@ -398,7 +399,7 @@ const routes = {
   "offer-brain": { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
   "content-pipeline": { title: "Materials", kicker: "Work that can go outside" },
   publications: { title: "Publications", kicker: "Topics, QA, release" },
-  analytics: { title: "Results", kicker: "Business signals" },
+  analytics: { title: "Results", kicker: "Publication signals" },
   settings: { title: "Settings", kicker: "Rules, access, and launch" },
   "demand-map": { title: "Strategy", kicker: "Client acquisition workflow" },
   strategy: { title: "Strategy", kicker: "Revenue direction" },
@@ -438,7 +439,7 @@ const demo = {
       channels: "Telegram-контур управления, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
       approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and money-sensitive actions.",
       releaseOwner: "Менеджер контента проверяет фактологию, стиль автора и иишность перед выпуском.",
-      firstSignalSource: "Ответы в Telegram, заявки формы, комментарии в канале или ручная отметка собственника."
+      firstSignalSource: "URL публикации, реакции канала, комментарии, репосты, сохранения или ручная отметка собственника."
     }
   },
   demand: [
@@ -532,6 +533,7 @@ const state = {
   approvals: demo.approvals,
   calendar: demo.calendar,
   distributionSignals: [],
+  publicationResults: [],
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -677,7 +679,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, workspaceState] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -687,6 +689,7 @@ async function loadData() {
       api("/content/items"),
       api("/publishing/calendar"),
       api("/distribution-signals").catch(() => api("/result-signals").catch(() => ({ data: [] }))),
+      api("/publication-results").catch(() => ({ data: [] })),
       api("/workspace/state").catch(() => ({ data: {} }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
@@ -699,6 +702,9 @@ async function loadData() {
     state.content = Array.isArray(content.data) ? content.data : state.content;
     state.calendar = Array.isArray(calendar.data) ? calendar.data : state.calendar;
     state.distributionSignals = Array.isArray(distributionSignals.data) ? distributionSignals.data : state.distributionSignals;
+    state.publicationResults = Array.isArray(publicationResults.data) && publicationResults.data.length
+      ? publicationResults.data
+      : derivePublicationResults(state.distributionSignals, state.calendar, state.content);
     state.resultSignals = state.distributionSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
@@ -726,6 +732,7 @@ async function loadData() {
       distribution_signals: state.distributionSignals.length,
       result_signals: state.distributionSignals.length
     };
+    state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -750,6 +757,7 @@ async function loadData() {
   state.metrics.approvals_total = state.approvals.length;
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   state.metrics.tasks_created = state.tasks.length;
+  refreshPublicationResults();
 
   if (!state.selectedApprovalId && state.approvals[0]) state.selectedApprovalId = state.approvals[0].id;
   render();
@@ -943,6 +951,75 @@ function deriveMetrics(source = {}) {
     content_items: Number(safeSource.content_items ?? state.content.length),
     calendar_items: Number(safeSource.calendar_items ?? state.calendar.length),
     pending_approvals: Number(safeSource.pending_approvals ?? state.approvals.filter((item) => item.status === "pending").length)
+  };
+}
+
+function derivePublicationResults(signals = [], calendarItems = [], contentItems = []) {
+  const calendarById = new Map(calendarItems.map((item) => [String(item.id || ""), item]));
+  const contentById = new Map(contentItems.map((item) => [String(item.id || ""), item]));
+  const sourceSignals = signals.length
+    ? signals
+    : calendarItems.filter((item) => item.status === "published").map((item) => distributionSignalFromCalendar(item));
+  return sourceSignals.map((signal) => {
+    const calendarItem = calendarById.get(String(signal.calendar_item_id || "")) || null;
+    const contentItem = contentById.get(String(signal.content_item_id || calendarItem?.content_item_id || "")) || null;
+    return publicationResultFromSignal(signal, calendarItem, contentItem);
+  });
+}
+
+function distributionSignalFromCalendar(item) {
+  return {
+    id: `calendar-distribution-signal-${item.id}`,
+    calendar_item_id: item.id,
+    content_item_id: item.content_item_id || null,
+    status: "confirmed",
+    source: item.channel || "manual",
+    signal_type: "distribution_signal.confirmed",
+    title: item.title,
+    note: item.metadata?.result_note || text("Confirmed publication", "Подтверждённая публикация"),
+    occurred_at: item.updated_at || item.scheduled_for || "",
+    confirmed_by: item.metadata?.published_confirmed_by || null,
+    metadata: {
+      calendar_item_id: item.id,
+      title: item.title,
+      status: "confirmed"
+    }
+  };
+}
+
+function publicationResultFromSignal(signal, calendarItem = null, contentItem = null) {
+  const signalMeta = signal?.metadata || {};
+  const calendarMeta = calendarItem?.metadata || {};
+  const contentMeta = contentItem?.metadata || {};
+  const result = calendarMeta.publication_result || {};
+  const reactions = result.reactions || {
+    comments: Number(result.comments ?? signalMeta.comments ?? 0),
+    reposts: Number(result.reposts ?? signalMeta.reposts ?? 0),
+    saves: Number(result.saves ?? signalMeta.saves ?? 0),
+    reactions: Number(result.reactions_count ?? signalMeta.reactions_count ?? 0)
+  };
+  const rawNextStep = result.next_step || signalMeta.next_step;
+  const nextStep = ["reuse", "expand", "update", "leave"].includes(rawNextStep) ? rawNextStep : "leave";
+  const url = result.publication_url || calendarMeta.publication_url || signalMeta.publication_url || "";
+  return {
+    id: `publication-result-${signal?.id || calendarItem?.id || Date.now()}`,
+    distribution_signal_id: signal?.id || "",
+    calendar_item_id: signal?.calendar_item_id || calendarItem?.id || "",
+    content_item_id: signal?.content_item_id || calendarItem?.content_item_id || "",
+    title: signal?.title || calendarItem?.title || contentItem?.title || text("Confirmed publication", "Подтверждённая публикация"),
+    channel: calendarItem?.channel || signal?.source || "manual",
+    format: contentItem?.content_type || calendarMeta.format || contentMeta.format || "publication",
+    publication_url: url,
+    status: signal?.status || "confirmed",
+    confirmed_at: signal?.occurred_at || calendarItem?.updated_at || "",
+    primary_reactions: reactions,
+    next_step: nextStep,
+    next_step_note: result.next_step_note || signalMeta.next_step_note || "",
+    evidence: {
+      has_url: Boolean(url),
+      has_reactions: Object.values(reactions).some((value) => Number(value) > 0),
+      source: signal?.source || calendarItem?.channel || "manual"
+    }
   };
 }
 
@@ -2622,6 +2699,7 @@ function renderAnalytics() {
   return `
     ${resultSignalContractPanel(metrics)}
     ${resultConfirmationClarityPanel()}
+    ${publicationResultsPanel()}
     ${resultFlowPanel(metrics)}
     ${hasBlockingLoopAction ? "" : `
       <article class="panel full">
@@ -2637,9 +2715,72 @@ function renderAnalytics() {
   `;
 }
 
+function publicationResultsPanel() {
+  const results = state.publicationResults.length
+    ? state.publicationResults
+    : derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+  if (!results.length) return "";
+  return `
+    <article class="panel full publication-results-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">${text("Publication results", "Результаты публикаций")}</p>
+          <h3>${text("What went out and what to do next", "Что вышло и что делать дальше")}</h3>
+        </div>
+      </div>
+      <div class="result-action-list">
+        ${results.slice(0, 6).map((item) => publicationResultRow(item)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function publicationResultRow(item) {
+  const reactions = item.primary_reactions || {};
+  const reactionSummary = [
+    [text("comments", "комм."), reactions.comments],
+    [text("reposts", "репосты"), reactions.reposts],
+    [text("saves", "сохр."), reactions.saves],
+    [text("reactions", "реакции"), reactions.reactions]
+  ].filter(([, value]) => Number(value) > 0)
+    .map(([label, value]) => `${value} ${label}`)
+    .join(" · ") || text("No primary reactions yet", "Первичных реакций пока нет");
+  const nextLabel = publicationNextStepLabel(item.next_step);
+  const url = item.publication_url || "";
+  const source = [
+    displayChannel(item.channel || "manual"),
+    labelize(item.format || "publication")
+  ].filter(Boolean).join(" · ");
+  return `
+    <article class="result-action-row publication-result-row">
+      <div>
+        <span>${escapeHtml(source)}</span>
+        <strong>${escapeHtml(item.title || text("Confirmed publication", "Подтверждённая публикация"))}</strong>
+        <p>${escapeHtml(url || text("URL not attached yet", "URL пока не прикреплён"))}</p>
+        <p>${escapeHtml(`${reactionSummary}. ${text("Next:", "Дальше:")} ${nextLabel}`)}</p>
+      </div>
+      <div class="button-row compact">
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
+      </div>
+    </article>
+  `;
+}
+
+function publicationNextStepLabel(step = "leave") {
+  const labels = {
+    reuse: text("reuse in the next material", "переиспользовать в следующем материале"),
+    expand: text("expand into a larger text", "расширить в большой материал"),
+    update: text("update the published material", "обновить опубликованный материал"),
+    leave: text("leave as published", "оставить как опубликованное")
+  };
+  return labels[step] || labels.leave;
+}
+
 function resultConfirmationClarityPanel() {
   const profile = state.offer?.profile || {};
-  const signalSource = String(profile.firstSignalSource || text("reply, request, form lead, channel comment, or owner mark", "ответ, заявка, форма, комментарий в канале или отметка собственника")).replace(/[.!?]+$/, "");
+  const signalSource = String(profile.firstSignalSource || text("publication URL, channel reaction, comment, repost, save, or owner mark", "URL публикации, реакция канала, комментарий, репост, сохранение или отметка собственника")).replace(/[.!?]+$/, "");
   const waiting = state.calendar.filter((item) => item.status === "handed_off");
   const confirmed = state.calendar.filter((item) => item.status === "published");
   if (!waiting.length && !confirmed.length) return "";
@@ -2654,8 +2795,8 @@ function resultConfirmationClarityPanel() {
       "Подтверждается только факт выхода."
     )
     : text(
-      "Demand needs a real reply, request, form, comment or owner mark.",
-      "Спрос нужен из ответа, заявки, формы, комментария или отметки."
+      "Result needs a URL, channel reaction, comment, repost, save, or owner mark.",
+      "Результату нужен URL, реакция канала, комментарий, репост, сохранение или отметка."
     );
 
   return `
@@ -3064,7 +3205,7 @@ function renderTechnicalSettings() {
     {
       label: text("First signal", "Первый сигнал"),
       value: profile.firstSignalSource ? text("Source set", "Источник задан") : text("Missing", "Не задан"),
-      note: profile.firstSignalSource || text("Reply, request, form, comment or mark.", "Ответ, заявка, форма, комментарий или отметка.")
+      note: profile.firstSignalSource || text("Publication URL, reaction, comment, repost, save, or mark.", "URL публикации, реакция, комментарий, репост, сохранение или отметка.")
     }
   ];
   const nextBlocker = pilotGaps[0] || (pendingApprovals ? text("Weekly topic", "Тема недели") : text("Access owner", "Владелец доступа"));
@@ -3922,6 +4063,7 @@ async function handleAction(action, id) {
     "export-calendar": exportCalendarCsv,
     "mark-calendar-published": () => updateCalendarStatus(id, "published"),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
+    "set-publication-result-step": () => setPublicationResultStep(id),
     "confirm-handed-off": confirmHandedOffCalendarItems,
     "edit-calendar-note": () => openFormModal("calendarNote", { itemId: id }),
     "assemble-pack": assemblePack,
@@ -4255,8 +4397,10 @@ async function updateCalendarStatus(id, status) {
       linkedContent.updated_at = new Date().toISOString();
       await persistContentState(linkedContent);
     }
+    if (status === "published") ensureLocalDistributionSignal(item);
   }
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
+  refreshPublicationResults();
   addActivity("Контроль выпуска", `Updated publication status: ${item.title} -> ${labelize(status)}`);
   showToast(status === "published"
     ? text("Result confirmed and counted.", "Результат подтверждён и учтён.")
@@ -4271,6 +4415,7 @@ async function confirmHandedOffCalendarItems() {
     item.status = "published";
     item.updated_at = new Date().toISOString();
     await persistCalendarState(item);
+    ensureLocalDistributionSignal(item);
     const linkedContent = state.content.find((entry) => entry.id === item.content_item_id);
     if (linkedContent) {
       linkedContent.status = "published";
@@ -4279,10 +4424,73 @@ async function confirmHandedOffCalendarItems() {
     }
   }
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
+  refreshPublicationResults();
   state.calendarFilter = "published";
   addActivity("Контроль выпуска", `Confirmed release result: ${items.length}`);
   showToast(text("Result confirmed and counted.", "Результат подтверждён и учтён."));
   openPublicationTab("calendar");
+}
+
+function ensureLocalDistributionSignal(item) {
+  if (state.distributionSignals.some((signal) => signal.calendar_item_id === item.id)) return;
+  const signal = {
+    id: `local-distribution-signal-${item.id}`,
+    calendar_item_id: item.id,
+    content_item_id: item.content_item_id || null,
+    status: "confirmed",
+    source: item.channel || "manual",
+    signal_type: "distribution_signal.confirmed",
+    title: item.title,
+    note: item.metadata?.result_note || text("Confirmed publication", "Подтверждённая публикация"),
+    occurred_at: item.updated_at || new Date().toISOString(),
+    confirmed_by: item.metadata?.published_confirmed_by || state.me.userId || null,
+    metadata: {
+      calendar_item_id: item.id,
+      title: item.title,
+      status: "confirmed"
+    }
+  };
+  state.distributionSignals = [signal, ...state.distributionSignals];
+  state.resultSignals = state.distributionSignals;
+  state.metrics.distribution_signals = state.distributionSignals.length;
+  state.metrics.result_signals = state.distributionSignals.length;
+}
+
+function refreshPublicationResults() {
+  state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+}
+
+async function setPublicationResultStep(encoded = "") {
+  const [calendarId, step = "leave"] = String(encoded).split("|");
+  if (!calendarId) return;
+  const item = state.calendar.find((entry) => entry.id === calendarId);
+  if (!item) return;
+  const nextStep = ["reuse", "expand", "update", "leave"].includes(step) ? step : "leave";
+  item.metadata = {
+    ...(item.metadata || {}),
+    publication_result: {
+      ...(item.metadata?.publication_result || {}),
+      next_step: nextStep,
+      next_step_note: publicationNextStepLabel(nextStep),
+      decided_at: new Date().toISOString(),
+      decided_by: state.me.userId || state.me.name || null
+    }
+  };
+  item.updated_at = new Date().toISOString();
+
+  if (state.online && !String(item.id || "").startsWith("local-calendar")) {
+    const result = await api(`/publishing/items/${item.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ metadata: item.metadata })
+    }).catch(() => null);
+    if (result?.data) state.calendar = mergeLocalItems(state.calendar, [result.data]);
+  } else {
+    upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
+  }
+
+  refreshPublicationResults();
+  showToast(text("Next content step saved.", "Следующий контент-шаг сохранён."));
+  setRoute("analytics");
 }
 
 async function persistContentState(item) {

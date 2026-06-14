@@ -56,7 +56,22 @@ process.stdin.on("end", () => {
     console.error(s);
     process.exit(1);
   }
-  console.log("demo distribution signals ok");
+console.log("demo distribution signals ok");
+});
+'
+
+curl -sS -m 15 \
+  -H "x-tenant-id: $DEMO_TENANT_ID" \
+  "$DEMO_API_URL/publication-results" | node -e '
+let s = "";
+process.stdin.on("data", c => s += c);
+process.stdin.on("end", () => {
+  const body = JSON.parse(s);
+  if (!Array.isArray(body?.data)) {
+    console.error(s);
+    process.exit(1);
+  }
+  console.log("demo publication results ok");
 });
 '
 

@@ -78,6 +78,11 @@ async function pageState(page) {
       releaseQueueActions: document.querySelectorAll('[data-action="mark-calendar-exported"]').length,
       resultConfirmActions: document.querySelectorAll('[data-action="mark-calendar-published"]').length,
       hasOpenResults: document.body.innerText.includes("Открыть результаты") || document.body.innerText.includes("Open results"),
+      hasPublicationResults: document.body.innerText.includes("Результаты публикаций")
+        || document.body.innerText.includes("РЕЗУЛЬТАТЫ ПУБЛИКАЦИЙ")
+        || document.body.innerText.includes("Publication results")
+        || document.body.innerText.includes("PUBLICATION RESULTS"),
+      publicationResultStepActions: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
       publishedCount: publishedColumn?.querySelector(".release-queue-head em")?.textContent?.trim() || "",
       releaseHeads
     };
@@ -169,6 +174,11 @@ async function run() {
     assert(afterPublish.releaseQueueActions === 0, "Release queue should be empty after result confirmation");
     assert(afterPublish.hasOpenResults, "Next action should open Results after confirmation");
     assert(Number(afterPublish.publishedCount) >= 2, `Published count did not increment: ${afterPublish.publishedCount}`);
+    await page.goto(`${baseUrl}/?v=${smokeVersion}#/analytics`);
+    await page.waitForSelector("#screenRoot");
+    const analyticsState = await pageState(page);
+    assert(analyticsState.hasPublicationResults, "Results screen should show publication results");
+    assert(analyticsState.publicationResultStepActions >= 3, "Publication result next-step actions are missing");
 
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");

@@ -109,6 +109,16 @@ try {
   });
   assert(compatibilitySignals.statusCode === 200, `result-signals compatibility failed: ${compatibilitySignals.statusCode} ${compatibilitySignals.body}`);
 
+  const publicationResults = await app.inject({
+    method: "GET",
+    url: "/publication-results"
+  });
+  assert(publicationResults.statusCode === 200, `publication-results failed: ${publicationResults.statusCode} ${publicationResults.body}`);
+  const publicationResult = publicationResults.json().data.find((item) => item.calendar_item_id === calendar.id);
+  assert(publicationResult?.channel === "telegram", `publication result channel mismatch: ${publicationResult?.channel}`);
+  assert(publicationResult?.format === "telegram_post", `publication result format mismatch: ${publicationResult?.format}`);
+  assert(publicationResult?.next_step === "leave", `publication result default next step mismatch: ${publicationResult?.next_step}`);
+
   const analytics = await app.inject({
     method: "GET",
     url: "/analytics/overview"

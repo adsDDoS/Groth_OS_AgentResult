@@ -90,8 +90,11 @@ Publishing creates jobs only after required approval exists.
 
 ## Distribution Signals
 
+- `GET /publication-results`
 - `GET /distribution-signals`
 - `GET /result-signals`
+
+`GET /publication-results` returns the owner-facing content-ops result contract: publication URL, channel, format, primary reactions, and next content step. It is derived from `distribution_signal` plus publishing calendar/content metadata until a dedicated table is introduced.
 
 `GET /distribution-signals` returns the canonical content-ops distribution-signal contract derived from `conversion_events`. `GET /result-signals` is a compatibility alias. `POST /publishing/items/:id/confirm-live` creates the first confirmed distribution signal for that calendar item.
 
