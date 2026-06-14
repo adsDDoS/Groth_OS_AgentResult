@@ -22,7 +22,7 @@ Description=AgentResult VPS invariant health guard
 Type=oneshot
 WorkingDirectory=${APP_DIR}
 Environment=AGENTRESULT_VPS_HEALTH_LOCAL=1
-ExecStart=/usr/bin/env bash -lc 'npm run vps:agentresult-health >> ${LOG_FILE} 2>&1'
+ExecStart=/bin/bash -c 'npm run vps:agentresult-health >> ${LOG_FILE} 2>&1'
 SERVICE
 
 cat >"/etc/systemd/system/${TIMER_NAME}.timer" <<TIMER
@@ -43,6 +43,6 @@ systemctl daemon-reload
 systemctl enable --now "${TIMER_NAME}.timer"
 systemctl start "${TIMER_NAME}.service"
 systemctl status "${TIMER_NAME}.timer" --no-pager -l | sed -n '1,18p'
-systemctl status "${TIMER_NAME}.service" --no-pager -l | sed -n '1,18p'
+systemctl status "${TIMER_NAME}.service" --no-pager -l | sed -n '1,18p' || true
 tail -40 "$LOG_FILE" || true
 REMOTE
