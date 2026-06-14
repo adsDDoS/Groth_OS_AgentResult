@@ -1,0 +1,14 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check modules/publications.js && node --check modules/tools.js && node --check modules/company-growth.js && node --check api/os-demo.js && node scripts/smoke-dashboard.mjs",
+    "smoke": "node scripts/smoke-dashboard.mjs",
+    "build": "npm run check && node scripts/prepare-public.mjs",
+    "vercel:build": "vercel build --prod",
+    "git:connect": "vercel git connect git@github.com:adsDDoS/Groth_OS_AgentResult.git --scope adsddosss-4657s-projects",
+    "deploy": "vercel deploy --prebuilt --prod --scope adsddosss-4657s-projects"
+  }
+}

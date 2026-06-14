@@ -37,14 +37,14 @@ export function createToolsModule(ctx) {
     return `
       <section class="tool-readiness-cockpit">
         <div>
-          <p class="eyebrow">${text("Launch access", "Доступы для запуска")}</p>
+          <p class="eyebrow">${text("Owner control", "Контроль собственника")}</p>
           <h3>${nextBlocker ? escapeHtml(nextBlocker.name) : text("No urgent access task", "Срочных доступов нет")}</h3>
           <p>${nextBlocker ? escapeHtml(toolNextAccessNote(nextBlocker)) : escapeHtml(text("The first loop can run through approvals, releases and result tracking.", "Первый цикл может идти через согласования, выпуск и отслеживание результата."))}</p>
         </div>
         <div class="tool-readiness-metrics">
-          ${compactMetric(text("Connected", "Подключено"), connected, text("ready now", "готово сейчас"))}
-          ${compactMetric(text("Blocks launch", "Блокирует запуск"), needsSetup, text("needs owner access", "нужен доступ от владельца"))}
-          ${compactMetric(text("Responsible", "Ответственный"), nextBlocker?.owner || text("Owner clear", "Владелец понятен"), text("who gives access", "кто даёт доступ"))}
+          ${compactMetric(text("Connected", "Подключено"), connected, text("can be used now", "можно использовать сейчас"))}
+          ${compactMetric(text("Blocks release", "Блокирует выпуск"), needsSetup, text("needs owner access", "нужен доступ от владельца"))}
+          ${compactMetric(text("Access owner", "Владелец доступа"), nextBlocker?.owner || text("Owner clear", "Владелец понятен"), text("who can unblock it", "кто разблокирует"))}
         </div>
       </section>
     `;
@@ -71,8 +71,8 @@ export function createToolsModule(ctx) {
       <article class="panel">
         <div class="panel-heading compact">
           <div>
-            <p class="eyebrow">${text("Access queue", "Очередь доступов")}</p>
-            <h3>${text("Only what affects launch", "Только то, что влияет на запуск")}</h3>
+            <p class="eyebrow">${text("Release access", "Доступы выпуска")}</p>
+            <h3>${text("Connected, blocker, owner, next action", "Подключено, блокер, владелец, следующий шаг")}</h3>
           </div>
         </div>
         <div class="tool-owner-list">
@@ -88,6 +88,7 @@ export function createToolsModule(ctx) {
         <div>
           <strong>${escapeHtml(tool.name)}</strong>
           <span>${escapeHtml(toolOwnerOutcome(tool))}</span>
+          <em>${escapeHtml(toolOwnerSummary(tool))}</em>
         </div>
         ${toolStatusBadge(tool.status)}
       </button>
@@ -99,6 +100,14 @@ export function createToolsModule(ctx) {
     if (tool.status === "needs-setup") return toolNextAccessNote(tool);
     if (tool.status === "later") return text("Useful later, not a blocker today", "Полезно позже, сегодня не блокер");
     return text("Not needed for the first sale/demo loop", "Не нужно для первого продающего демо");
+  }
+
+  function toolOwnerSummary(tool) {
+    return [
+      tool.status === "connected" ? text("connected", "подключено") : text("blocks release", "блокирует выпуск"),
+      tool.owner || text("owner not assigned", "владелец не назначен"),
+      tool.status === "connected" ? text("monitor", "контролировать") : text("assign access", "назначить доступ")
+    ].join(" · ");
   }
 
   function toolNextAccessNote(tool) {
@@ -369,7 +378,7 @@ export function createToolsModule(ctx) {
       <article class="panel tool-form-panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">${text("Selected access", "Выбранный доступ")}</p>
+            <p class="eyebrow">${text("Access owner", "Владелец доступа")}</p>
             <h3>${escapeHtml(tool.name)}</h3>
           </div>
           ${toolStatusBadge(tool.status)}
@@ -380,7 +389,7 @@ export function createToolsModule(ctx) {
           ${toolInput(text("Access link", "Ссылка на доступ"), "toolUrl", tool.url, text("Service, account or form", "Сервис, аккаунт или форма"))}
           ${toolInput(text("Who owns it", "Кто владеет доступом"), "toolOwner", tool.owner, text("Person or role responsible for access", "Человек или роль, отвечающие за доступ"))}
           <div class="permission-block">
-            <span class="meta-label">${text("What the system may do", "Что системе разрешено делать")}</span>
+            <span class="meta-label">${text("Allowed use", "Разрешённое использование")}</span>
             <div class="check-grid compact">
               ${permissions.map((permission) => `
                 <label class="check"><input type="checkbox" data-tool-permission="${escapeAttr(permission)}" ${tool.permissions.includes(permission) ? "checked" : ""} /> ${escapeHtml(toolPermissionLabel(permission))}</label>
@@ -389,7 +398,7 @@ export function createToolsModule(ctx) {
           </div>
           ${textarea(text("Limits", "Ограничения"), "toolLimits", tool.limits)}
           <div class="detail-actions">
-            <button type="button" class="button primary" data-action="save-tool">${text("Save setup", "Сохранить настройку")}</button>
+            <button type="button" class="button primary" data-action="save-tool">${text("Save access", "Сохранить доступ")}</button>
             <button type="button" class="button secondary" data-action="request-tool-owner">${text("Mark access owner needed", "Нужен владелец доступа")}</button>
           </div>
         </form>
@@ -419,7 +428,7 @@ export function createToolsModule(ctx) {
   function toolStatusMeta(status) {
     const statuses = {
       connected: { label: text("Connected", "Подключено"), className: "connected" },
-      "needs-setup": { label: text("Needs setup", "Нужно настроить"), className: "needs-setup" },
+      "needs-setup": { label: text("Needs access", "Нужен доступ"), className: "needs-setup" },
       "not-used": { label: text("Not used", "Не используем"), className: "not-used" },
       later: { label: text("Later", "Позже"), className: "later" }
     };
@@ -448,8 +457,8 @@ export function createToolsModule(ctx) {
     state.toolOverrides[overrideId] = { ...override, id: overrideId };
     state.selectedToolId = overrideId;
     saveLocalJson("aiGrowthOsToolOverrides", state.toolOverrides);
-    addActivity("AgentResult", `Saved tool setup: ${override.name}`);
-    showToast(text("Tool setup saved locally.", "Настройка инструмента сохранена локально."));
+    addActivity("AgentResult", `Saved access owner: ${override.name}`);
+    showToast(text("Access owner saved.", "Владелец доступа сохранён."));
     render();
   }
 

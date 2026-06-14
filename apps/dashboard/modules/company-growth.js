@@ -62,7 +62,7 @@ function renderOfferBrain() {
     <section class="owner-setup-strip">
       ${ownerSetupCard(text("Launch context", "Контекст запуска"), `${setupCompleteness}%`, text("Enough for first safe cycle", "Достаточно для первого цикла"))}
       ${ownerSetupCard(text("Control", "Контроль"), text("Approval first", "Через согласование"), text("Public actions need a decision", "Публичные действия через решение"))}
-      ${ownerSetupCard(text("Next result", "Следующий результат"), text("First release", "Первый выпуск"), text("Material, handoff, signal", "Материал, передача, сигнал"))}
+      ${ownerSetupCard(text("First cycle", "Первый цикл"), text("Release + signal", "Выпуск + сигнал"), text("Topic, AI draft, Source Pack, QA, release, result confirmation, signal", "Тема, AI-текст, Source Pack, QA, выпуск, подтверждение результата, сигнал"))}
     </section>
     ${ownerSetupGapsPanel(profile)}
     <div class="company-launch-layout">
@@ -74,24 +74,24 @@ function renderOfferBrain() {
           </div>
         </div>
         <form class="form-grid company-profile-form" id="offerForm">
-          ${field(text("Company name", "Название компании"), "companyName", state.offer?.name || "")}
-          ${field(text("Website", "Сайт"), "companyWebsite", state.offer?.website_url || "")}
           ${textarea(text("Offer", "Оффер"), "companyPositioning", state.offer?.positioning || profile.positioning || "")}
-          ${textarea(text("Buyer", "Клиент"), "companyIcp", profile.icp || "")}
-          ${textarea(text("Pain we solve", "Боль, которую решаем"), "companyPains", profile.pains || "")}
-          ${textarea(text("Proof we can use", "Доказательства"), "companyProof", profile.proof || "")}
-          ${textarea(text("Forbidden claims", "Запрещённые обещания"), "forbiddenClaims", profile.forbiddenClaims || "")}
-          ${textarea(text("Approval rules", "Правила согласования"), "approvalOwner", profile.approvalOwner || "")}
-          ${field(text("Release owner", "Ответственный за выпуск"), "releaseOwner", profile.releaseOwner || "")}
+          ${textarea(text("Audience", "Аудитория"), "companyIcp", profile.icp || "")}
+          ${textarea(text("Release channel", "Канал выпуска"), "companyChannels", profile.channels || "")}
+          ${field(text("Manager QA", "Менеджер QA"), "releaseOwner", profile.releaseOwner || "")}
           ${textarea(text("First signal source", "Источник первого сигнала"), "firstSignalSource", profile.firstSignalSource || "")}
+          ${textarea(text("Approval + risk rules", "Правила согласования и рисков"), "approvalOwner", profile.approvalOwner || "")}
+          ${textarea(text("Author voice source pack", "Source Pack стиля автора"), "toneRules", profile.authorVoiceContract || profile.tone || "")}
           <details class="company-advanced">
             <summary>${text("Additional context", "Дополнительный контекст")}</summary>
             <div class="form-grid company-advanced-grid">
+              ${field(text("Company name", "Название компании"), "companyName", state.offer?.name || "")}
+              ${field(text("Website", "Сайт"), "companyWebsite", state.offer?.website_url || "")}
+              ${textarea(text("Pain we solve", "Боль, которую решаем"), "companyPains", profile.pains || "")}
+              ${textarea(text("Proof we can use", "Доказательства"), "companyProof", profile.proof || "")}
+              ${textarea(text("Forbidden claims", "Запрещённые обещания"), "forbiddenClaims", profile.forbiddenClaims || "")}
               ${textarea(text("Products and formats", "Продукты и форматы"), "companyProducts", textValue(profile.products))}
-              ${textarea(text("Tone", "Тон"), "toneRules", profile.tone || "")}
               ${textarea(text("Competitors and alternatives", "Конкуренты и альтернативы"), "companyCompetitors", profile.competitors || "")}
               ${textarea(text("Domains and entry points", "Домены и точки входа"), "companyDomains", profile.domains || "")}
-              ${textarea(text("Channels and integrations", "Каналы и интеграции"), "companyChannels", profile.channels || "")}
             </div>
           </details>
         </form>
@@ -103,24 +103,27 @@ function renderOfferBrain() {
 }
 
 function ownerSetupCompleteness(profile) {
-  const keys = ["positioning", "icp", "pains", "proof", "forbiddenClaims", "channels", "approvalOwner", "releaseOwner", "firstSignalSource"];
-  const completed = keys.filter((key) => String(profile[key] || "").trim()).length;
+  const keys = ["positioning", "icp", "channels", "releaseOwner", "firstSignalSource", "approvalOwner", "tone"];
+  const completed = keys.filter((key) => String(ownerSetupValue(profile, key) || "").trim()).length;
   return Math.round((completed / keys.length) * 100);
+}
+
+function ownerSetupValue(profile, key) {
+  if (key === "tone") return profile.authorVoiceContract || profile.tone;
+  return profile[key];
 }
 
 function ownerSetupGaps(profile) {
   const fields = [
     ["positioning", text("What we sell", "Что продаём")],
     ["icp", text("Who we sell to", "Кому продаём")],
-    ["pains", text("Which problems we solve", "Какие проблемы решаем")],
-    ["proof", text("Proof we can use", "Доказательства")],
-    ["forbiddenClaims", text("Forbidden promises", "Запрещённые обещания")],
     ["channels", text("Release channel", "Канал выпуска")],
-    ["approvalOwner", text("Approval owner rules", "Правила согласования")],
-    ["releaseOwner", text("Release owner", "Ответственный за выпуск")],
-    ["firstSignalSource", text("First signal source", "Источник первого сигнала")]
+    ["releaseOwner", text("Manager QA", "Менеджер QA")],
+    ["firstSignalSource", text("First signal source", "Источник первого сигнала")],
+    ["approvalOwner", text("Approval and risk rules", "Правила согласования и рисков")],
+    ["tone", text("Author voice source pack", "Source Pack стиля автора")]
   ];
-  return fields.filter(([key]) => !String(profile[key] || "").trim()).map(([, label]) => label);
+  return fields.filter(([key]) => !String(ownerSetupValue(profile, key) || "").trim()).map(([, label]) => label);
 }
 
 function ownerSetupGapsPanel(profile) {
@@ -134,7 +137,7 @@ function ownerSetupGapsPanel(profile) {
           <p class="eyebrow">${text("Launch readiness", "Готовность запуска")}</p>
           <h3>${ready ? text("Ready for first release", "Готово к первому выпуску") : text("Missing launch context", "Не хватает контекста для запуска")}</h3>
         </div>
-        <button class="button secondary" data-action="create-setup-tasks" ${ready ? "disabled" : ""}>${text("Create tasks", "Создать задачи")}</button>
+        <button class="button secondary" data-action="create-setup-tasks" ${ready ? "disabled" : ""}>${text("Create setup actions", "Создать шаги настройки")}</button>
       </div>
       <div class="readiness-chip-row">
         ${visibleGaps.map((gap) => `<span>${escapeHtml(gap)}</span>`).join("")}
@@ -156,7 +159,7 @@ function companySummaryPanel(profile) {
   const guardrails = [
     profile.forbiddenClaims ? text("Risky claims are bounded", "Рискованные обещания ограничены") : text("Add forbidden claims", "Добавьте запрещённые обещания"),
     profile.approvalOwner ? text("Decision rule is clear", "Правило решения понятно") : text("Set approval rules", "Задайте правила согласования"),
-    profile.releaseOwner ? text("Release owner is assigned", "Ответственный за выпуск назначен") : text("Assign release owner", "Назначьте ответственного за выпуск"),
+    profile.releaseOwner ? text("Manager QA is assigned", "Менеджер QA назначен") : text("Assign manager QA", "Назначьте менеджера QA"),
     profile.firstSignalSource ? text("First signal source is clear", "Источник первого сигнала понятен") : text("Set first signal source", "Задайте источник первого сигнала")
   ];
   return `
@@ -216,8 +219,8 @@ function fallbackGrowthMoves(top) {
     ? text("Turn the weekly priority into one material", "Превратить приоритет недели в один материал")
     : text("Choose the first demand topic", "Выбрать первую тему спроса");
   const note = top
-    ? text("Prepare the material, approve it, then check the first signal.", "Подготовить материал, согласовать и проверить первый сигнал.")
-    : text("Start with one topic that can produce release and signal.", "Начните с одной темы, которая даст выпуск и сигнал.");
+    ? text("Approve the weekly topic, then AgentResult drafts, Source Pack filters, manager QA clears, release goes out, and the first signal is checked.", "Согласовать тему недели; дальше AgentResult пишет, Source Pack фильтрует, менеджер QA допускает, выпуск выходит, первый сигнал проверяется.")
+    : text("Start with one topic that can move through AI draft, Source Pack, manager QA, release, result confirmation and signal.", "Начните с одной темы, которая пройдёт AI-текст, Source Pack, QA менеджера, выпуск, подтверждение результата и сигнал.");
   return `
     <article class="growth-queue-row">
       <span>1</span>
@@ -227,7 +230,7 @@ function fallbackGrowthMoves(top) {
       </div>
       <em>
         <span>${escapeHtml(text("Next decision", "Следующее решение"))}</span>
-        <small>${escapeHtml(text("Material -> release -> signal", "Материал -> выпуск -> сигнал"))}</small>
+        <small>${escapeHtml(text("Topic -> Source Pack -> QA -> release -> signal", "Тема -> Source Pack -> QA -> выпуск -> сигнал"))}</small>
       </em>
     </article>
   `;
@@ -248,7 +251,7 @@ function demandBusinessReason(item) {
   if (type.includes("product")) return text("Commercial page for buyers already looking for an AI-agent system.", "Коммерческая страница для тех, кто уже ищет систему AI-агентов.");
   if (type.includes("pain")) return text("Turns a costly operational pain into a clear first conversation.", "Превращает дорогую операционную боль в понятный первый разговор.");
   if (type.includes("comparison")) return text("Helps the owner compare AgentResult with familiar alternatives.", "Помогает собственнику сравнить AgentResult с привычными альтернативами.");
-  if (type.includes("lead")) return text("Creates a low-risk handoff point before a sales call.", "Создаёт безопасную точку передачи до звонка.");
+  if (type.includes("lead")) return text("Creates a low-risk signal point before a sales call.", "Создаёт безопасную точку сигнала до звонка.");
   return text("Adds one useful entry point into the demand system.", "Добавляет полезную точку входа в систему спроса.");
 }
 

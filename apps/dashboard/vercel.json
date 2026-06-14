@@ -3,6 +3,10 @@
     {
       "source": "/api/agentresult-os-demo/:path*",
       "destination": "/api/os-demo?path=:path*"
+    },
+    {
+      "source": "/api/os-demo/:path*",
+      "destination": "/api/os-demo?path=:path*"
     }
   ]
 }
