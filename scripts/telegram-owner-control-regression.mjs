@@ -271,11 +271,29 @@ async function main() {
 
   const confirmed = await request("/telegram/intent", { text: "вышло" });
   expectEquals(confirmed.intent, "confirm_published", "confirm published intent");
-  expectIncludes(confirmed.text, "Выход подтверждён", "confirm published");
-  expectNoCommandUx(confirmed, "confirm published");
-  expectNoOwnerNoise(confirmed, "confirm published");
-  expectEquals(confirmed.ownerBrief.counts.handedOff, 0, "owner brief handed off after publish");
-  expectEquals(confirmed.ownerBrief.counts.published, publishedBeforeConfirm + 1, "owner brief published after publish");
+  expectIncludes(confirmed.text, "Пришлите URL публикации", "confirm published starts result dialog");
+  expectNoCommandUx(confirmed, "confirm published starts result dialog");
+  expectNoOwnerNoise(confirmed, "confirm published starts result dialog");
+  expectEquals(confirmed.ownerBrief.counts.handedOff, 1, "owner brief handed off before result data");
+  expectEquals(confirmed.ownerBrief.counts.published, publishedBeforeConfirm, "owner brief published before result data");
+
+  const resultUrl = await request("/telegram/intent", { text: "https://t.me/agentresult/200" });
+  expectEquals(resultUrl.intent, "publication_result_confirmation_url", "publication result URL step");
+  expectIncludes(resultUrl.text, "Укажите формат", "publication result asks format");
+
+  const resultFormat = await request("/telegram/intent", { text: "telegram_post" });
+  expectEquals(resultFormat.intent, "publication_result_confirmation_format", "publication result format step");
+  expectIncludes(resultFormat.text, "Укажите первичные реакции", "publication result asks reactions");
+
+  const confirmedResult = await request("/telegram/intent", { text: "комментарии 2, репосты 1, сохранения 3, реакции 8" });
+  expectEquals(confirmedResult.intent, "publication_result_confirmation_complete", "publication result complete");
+  expectIncludes(confirmedResult.text, "Данные результата сохранены", "publication result saved");
+  expectIncludes(confirmedResult.text, "https://t.me/agentresult/200", "publication result URL saved");
+  expectButtonLabels(confirmedResult, ["Переиспользовать", "Расширить", "Обновить"], "publication result next-step buttons after confirm");
+  expectNoCommandUx(confirmedResult, "publication result complete");
+  expectNoOwnerNoise(confirmedResult, "publication result complete");
+  expectEquals(confirmedResult.ownerBrief.counts.handedOff, 0, "owner brief handed off after result data");
+  expectEquals(confirmedResult.ownerBrief.counts.published, publishedBeforeConfirm + 1, "owner brief published after result data");
 
   const publishedCounts = await calendarStatusCounts();
   expectEquals(publishedCounts.handed_off ?? 0, 0, "calendar handed_off after publish");
@@ -305,6 +323,10 @@ async function main() {
 
   const publicationResultId = published.ownerBrief.publishedResults?.[0]?.id;
   if (!publicationResultId) throw new Error("published status should include a publication result id");
+  const publicationResult = published.ownerBrief.publishedResults[0];
+  expectEquals(publicationResult.publicationUrl, "https://t.me/agentresult/200", "published result URL");
+  expectEquals(publicationResult.format, "telegram_post", "published result format");
+  expectEquals(Number(publicationResult.primaryReactions?.comments), 2, "published result comments");
   const contentBeforeReuse = await get("/content/items");
   const reuse = await request("/telegram/commands", { command: "/reuse", targetId: publicationResultId });
   expectIncludes(reuse.text, "переиспользовать материал", "publication result reuse");

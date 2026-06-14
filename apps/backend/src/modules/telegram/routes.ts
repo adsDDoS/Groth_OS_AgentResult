@@ -49,6 +49,14 @@ type OnboardingState = {
   step: OnboardingStep;
   updatedAt?: string;
 };
+type PublicationResultConfirmationStep = "url" | "format" | "reactions" | "done";
+type PublicationResultConfirmationState = {
+  answers: Record<string, string>;
+  calendarItemId: string;
+  completedAt?: string;
+  step: PublicationResultConfirmationStep;
+  updatedAt?: string;
+};
 
 const telegramActionSchema = z.object({
   action: z.enum(["approval.approve", "approval.request_changes", "publishing.confirm_live"]),
@@ -87,6 +95,13 @@ const onboardingStateSchema = z.object({
   answers: z.record(z.string()).default({}),
   completedAt: z.string().optional(),
   step: z.enum(["offer", "client", "channel", "release_owner", "first_signal_source", "approval_rules", "first_material", "done"]).default("offer"),
+  updatedAt: z.string().optional()
+});
+const publicationResultConfirmationStateSchema = z.object({
+  answers: z.record(z.string()).default({}),
+  calendarItemId: z.string().uuid(),
+  completedAt: z.string().optional(),
+  step: z.enum(["url", "format", "reactions", "done"]).default("url"),
   updatedAt: z.string().optional()
 });
 
@@ -589,6 +604,48 @@ async function saveOnboardingState(tenantId: string, state: OnboardingState & { 
   return { ...payload, id: typeof row.id === "string" ? row.id : undefined };
 }
 
+async function loadPublicationResultConfirmationState(tenantId: string): Promise<(PublicationResultConfirmationState & { id?: string }) | null> {
+  const result = await query(
+    "select * from integrations where tenant_id = $1 order by created_at desc limit $2",
+    [tenantId, 200]
+  );
+  const row = (result.rows as Row[]).find((item) => item.provider === "telegram_publication_result_confirmation" && item.status === "active");
+  const parsed = publicationResultConfirmationStateSchema.safeParse(row?.config);
+
+  return row && parsed.success ? { ...parsed.data, id: typeof row.id === "string" ? row.id : undefined } : null;
+}
+
+async function savePublicationResultConfirmationState(
+  tenantId: string,
+  state: PublicationResultConfirmationState & { id?: string }
+) {
+  const payload: PublicationResultConfirmationState = {
+    answers: state.answers,
+    calendarItemId: state.calendarItemId,
+    ...(state.completedAt ? { completedAt: state.completedAt } : {}),
+    step: state.step,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (state.id) {
+    await patchJson("integrations", state.id, {
+      provider: "telegram_publication_result_confirmation",
+      status: state.step === "done" ? "completed" : "active",
+      config: payload
+    }, tenantId);
+    return { ...payload, id: state.id };
+  }
+
+  const row = await insertJson("integrations", {
+    provider: "telegram_publication_result_confirmation",
+    status: state.step === "done" ? "completed" : "active",
+    config: payload,
+    last_checked_at: null
+  }, tenantId);
+
+  return { ...payload, id: typeof row.id === "string" ? row.id : undefined };
+}
+
 async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
   let result: Row | null = null;
 
@@ -613,12 +670,14 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   }
 
   if (input.action === "publishing.confirm_live") {
-    result = await confirmPublishingCalendarLive({
-      id: input.targetId,
-      tenantId: context.tenantId,
-      userId: context.userId,
-      note: input.note || "Подтверждено из Telegram-контура"
-    });
+    const confirmation = await startPublicationResultConfirmation(input.targetId, context);
+    return {
+      action: input.action,
+      result: null,
+      ownerBrief: confirmation.ownerBrief,
+      text: confirmation.text,
+      buttons: confirmation.buttons
+    };
   }
 
   const briefData = await loadOwnerBriefData(context.tenantId);
@@ -1235,6 +1294,204 @@ function renderPublishedStatusMessage(brief: OwnerBrief) {
   }
 
   return lines.join("\n");
+}
+
+function renderPublicationResultConfirmationPrompt(step: PublicationResultConfirmationStep, item?: Row | null) {
+  const title = textValue(item?.title, "материал");
+  if (step === "url") {
+    return [
+      "Зафиксируем результат публикации.",
+      "",
+      `Материал: ${title}`,
+      "",
+      "Пришлите URL публикации. Если ссылки пока нет, напишите: без URL."
+    ].join("\n");
+  }
+
+  if (step === "format") {
+    return [
+      "URL зафиксирован.",
+      "",
+      "Укажите формат: telegram_post, article, vc_post или свой вариант."
+    ].join("\n");
+  }
+
+  return [
+    "Формат зафиксирован.",
+    "",
+    "Укажите первичные реакции: комментарии 2, репосты 1, сохранения 3, реакции 8.",
+    "Если реакций пока нет, напишите: 0."
+  ].join("\n");
+}
+
+function normalizePublicationFormat(value: string) {
+  const text = value.trim().toLowerCase();
+  if (!text) return "telegram_post";
+  if (text.includes("telegram") || text.includes("телеграм") || text.includes("пост")) return "telegram_post";
+  if (text.includes("vc")) return "vc_post";
+  if (text.includes("стат") || text.includes("article")) return "article";
+  return text.replace(/\s+/g, "_");
+}
+
+function isSkipPublicationUrl(value: string) {
+  const text = value.trim().toLowerCase();
+  return ["0", "-", "нет", "без url", "без ссылки", "ссылки нет", "пока нет"].includes(text);
+}
+
+function parsePublicationReactions(value: string) {
+  const text = value.toLowerCase();
+  const numberAfter = (patterns: string[]) => {
+    for (const pattern of patterns) {
+      const match = text.match(new RegExp(`${pattern}\\D{0,20}(\\d+)`, "i"));
+      if (match) return Number(match[1] ?? 0);
+    }
+    return 0;
+  };
+  const named = {
+    comments: numberAfter(["коммент\\w*", "comment\\w*"]),
+    reposts: numberAfter(["репост\\w*", "repost\\w*"]),
+    saves: numberAfter(["сохран\\w*", "save\\w*"]),
+    reactions: numberAfter(["реакц\\w*", "reaction\\w*", "лайк\\w*", "like\\w*"])
+  };
+  if (Object.values(named).some((count) => count > 0)) return named;
+
+  const numbers = [...text.matchAll(/\d+/g)].map((match) => Number(match[0]));
+  if (!numbers.length) return named;
+  return {
+    comments: numbers[0] ?? 0,
+    reposts: numbers[1] ?? 0,
+    saves: numbers[2] ?? 0,
+    reactions: numbers[3] ?? 0
+  };
+}
+
+async function startPublicationResultConfirmation(
+  calendarItemId: string,
+  context: { tenantId: string; userId?: string }
+) {
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const item = briefData.calendar.find((row) => row.id === calendarItemId) ?? null;
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  await savePublicationResultConfirmationState(context.tenantId, {
+    answers: {},
+    calendarItemId,
+    step: "url"
+  });
+
+  return {
+    command: "published",
+    text: renderPublicationResultConfirmationPrompt("url", item),
+    buttons: [],
+    ownerBrief
+  };
+}
+
+async function continuePublicationResultConfirmation(
+  input: TelegramIntentInput,
+  context: TelegramExecutionContext,
+  state: PublicationResultConfirmationState & { id?: string }
+) {
+  const raw = input.text.trim();
+  const text = raw.toLowerCase().replace(/\s+/g, " ");
+
+  if (includesAny(text, ["отмена", "стоп", "не подтверждать", "прервать"])) {
+    await savePublicationResultConfirmationState(context.tenantId, {
+      ...state,
+      step: "done",
+      completedAt: new Date().toISOString()
+    });
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    const ownerBrief = buildOwnerBrief(briefData);
+    return {
+      intent: "publication_result_confirmation_cancelled",
+      command: null,
+      text: "Подтверждение выхода остановил. Данные публикации не менял.",
+      buttons: ownerControlButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  if (state.step === "url") {
+    const nextState = await savePublicationResultConfirmationState(context.tenantId, {
+      ...state,
+      answers: {
+        ...state.answers,
+        publicationUrl: isSkipPublicationUrl(raw) ? "" : raw
+      },
+      step: "format"
+    });
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    return {
+      intent: "publication_result_confirmation_url",
+      command: null,
+      text: renderPublicationResultConfirmationPrompt("format"),
+      buttons: [],
+      ownerBrief: buildOwnerBrief(briefData),
+      state: nextState
+    };
+  }
+
+  if (state.step === "format") {
+    const nextState = await savePublicationResultConfirmationState(context.tenantId, {
+      ...state,
+      answers: {
+        ...state.answers,
+        format: normalizePublicationFormat(raw)
+      },
+      step: "reactions"
+    });
+    const briefData = await loadOwnerBriefData(context.tenantId);
+    return {
+      intent: "publication_result_confirmation_format",
+      command: null,
+      text: renderPublicationResultConfirmationPrompt("reactions"),
+      buttons: [],
+      ownerBrief: buildOwnerBrief(briefData),
+      state: nextState
+    };
+  }
+
+  const primaryReactions = parsePublicationReactions(raw);
+  const published = await confirmPublishingCalendarLive({
+    id: state.calendarItemId,
+    tenantId: context.tenantId,
+    userId: context.userId,
+    note: input.note || "Подтверждено из Telegram-контура",
+    publicationUrl: state.answers.publicationUrl ?? "",
+    format: state.answers.format ?? "telegram_post",
+    primaryReactions,
+    nextStep: "leave",
+    nextStepNote: "Результат подтверждён из Telegram"
+  });
+  await savePublicationResultConfirmationState(context.tenantId, {
+    ...state,
+    answers: {
+      ...state.answers,
+      reactions: raw
+    },
+    step: "done",
+    completedAt: new Date().toISOString()
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  return {
+    intent: "publication_result_confirmation_complete",
+    command: null,
+    text: [
+      "Выход подтверждён. Данные результата сохранены.",
+      "",
+      state.answers.publicationUrl ? `URL: ${state.answers.publicationUrl}` : "URL: не указан",
+      `Формат: ${state.answers.format ?? "telegram_post"}`,
+      `Первичные реакции: комментарии ${primaryReactions.comments}, репосты ${primaryReactions.reposts}, сохранения ${primaryReactions.saves}, реакции ${primaryReactions.reactions}`,
+      "",
+      "Теперь можно запустить следующий контент-шаг."
+    ].join("\n"),
+    buttons: publicationResultCommandButtons(ownerBrief),
+    ownerBrief,
+    result: published
+  };
 }
 
 function publicationResultCardLines(result: Row) {
@@ -1958,19 +2215,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
       };
     }
 
-    const actionResult = await executeTelegramAction({
-      action: "publishing.confirm_live",
-      targetId: handoff.id,
-      note: input.note
-    }, context);
-
-    return {
-      command,
-      text: "Выход подтверждён. Материал учтён в результатах.",
-      buttons: briefCommandButtons(actionResult.ownerBrief),
-      ownerBrief: actionResult.ownerBrief,
-      actionResult
-    };
+    return startPublicationResultConfirmation(input.targetId ?? handoff.id, context);
   }
 
   if (["published_status", "что вышло", "статус выпуска"].includes(command)) {
@@ -2080,6 +2325,11 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     }
 
     return continueOnboarding(input, context, onboardingState);
+  }
+
+  const publicationResultConfirmationState = await loadPublicationResultConfirmationState(context.tenantId);
+  if (publicationResultConfirmationState && publicationResultConfirmationState.step !== "done") {
+    return continuePublicationResultConfirmation(input, context, publicationResultConfirmationState);
   }
 
   if (includesAny(text, [
@@ -2569,16 +2819,14 @@ function isTelegramOwnerAllowed(update: TelegramUpdate, allowedUsers: Set<string
 }
 
 function renderTelegramActionResultMessage(actionResult: Awaited<ReturnType<typeof executeTelegramAction>>) {
+  if ("text" in actionResult && typeof actionResult.text === "string") return actionResult.text;
+
   if (actionResult.action === "approval.approve") {
     return "Решение зафиксировано: согласовано.";
   }
 
   if (actionResult.action === "approval.request_changes") {
     return "Решение зафиксировано: нужны правки.";
-  }
-
-  if (actionResult.action === "publishing.confirm_live") {
-    return renderResultMessage(actionResult.ownerBrief);
   }
 
   return "Решение зафиксировано.";
@@ -2611,7 +2859,9 @@ async function processTelegramOwnerControlUpdate(update: TelegramUpdate, allowed
       await sendTelegramOwnerControlMessage({
         chatId,
         text: renderTelegramActionResultMessage(actionResult),
-        buttons: briefCommandButtons(actionResult.ownerBrief)
+        buttons: "buttons" in actionResult && Array.isArray(actionResult.buttons)
+          ? actionResult.buttons
+          : briefCommandButtons(actionResult.ownerBrief)
       });
       await query(
         `insert into integrations (tenant_id, provider, status, config)

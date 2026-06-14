@@ -193,9 +193,11 @@ Result body:
 - `callbackData`: compact callback payload for Telegram inline buttons;
 - `delivery: "preview_only"` until a real Telegram sender is connected.
 
-`POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages.
+`POST /telegram/actions` executes one prepared Telegram-control action against the existing backend workflow and returns a refreshed `ownerBrief`. It does not send external Telegram messages. `publishing.confirm_live` starts the Telegram publication-result confirmation dialog instead of immediately marking the item published.
 
 `POST /telegram/commands` executes a predictable owner-facing command and returns ready-to-send text for Hermes Telegram. It is the preferred path for slash commands and short owner commands where model interpretation should be minimized.
+
+For handoff confirmation, `/published` or the natural phrase "вышло" starts a three-step result dialog in `/telegram/intent`: publication URL, format, and primary reactions. The final answer calls the canonical `confirm-live` workflow and writes `publication_result` data.
 
 For published material cards, `/telegram/commands` supports `reuse`, `expand`, and `update` with `targetId` set to a `publication_result.id`. These commands call the canonical `/publication-results/:id/reuse|expand|update` domain workflow: create reusable material, create article outline, or create an update task. `POST /telegram/intent` also maps ordinary owner phrases such as "переиспользуй", "расширь опубликованный материал", and "обнови материал" to the same backend commands.
 
