@@ -6,6 +6,7 @@ const port = Number(process.env.DASHBOARD_SMOKE_PORT || 4173);
 const baseUrl = process.env.DASHBOARD_SMOKE_URL || `http://127.0.0.1:${port}`;
 const smokeVersion = process.env.DASHBOARD_SMOKE_VERSION || "smoke";
 const shouldStartServer = !process.env.DASHBOARD_SMOKE_URL;
+const waitTimeoutMs = Number(process.env.DASHBOARD_SMOKE_TIMEOUT_MS || 30_000);
 
 let chromium;
 try {
@@ -177,6 +178,8 @@ async function run() {
   await waitForDashboard();
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  page.setDefaultTimeout(waitTimeoutMs);
+  page.setDefaultNavigationTimeout(waitTimeoutMs);
   await page.addInitScript(() => {
     window.__dashboardSmokeErrors = [];
     window.addEventListener("error", (event) => {
@@ -188,8 +191,8 @@ async function run() {
   });
 
   try {
-    await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`);
-    await page.waitForSelector(".tabs-panel");
+    await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`, { timeout: waitTimeoutMs });
+    await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
 
     const initial = await pageState(page);
     assert(initial.routeTitle === "Публикации", "Publications route did not load in RU");
