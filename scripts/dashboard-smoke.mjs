@@ -195,7 +195,7 @@ async function run() {
     await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
 
     const initial = await pageState(page);
-    assert(initial.routeTitle === "Публикации", "Publications route did not load in RU");
+    assert(initial.routeTitle === "Публикационный стол", "Publication Desk route did not load in RU");
     assert(initial.pendingApprovals === 1, `Expected one pending topic approval, saw ${initial.pendingApprovals}`);
     assert(initial.staleP3DecisionCards === 0, "Stale p3 calendar item is asking for topic approval");
     await assertNoConsoleErrors(page);

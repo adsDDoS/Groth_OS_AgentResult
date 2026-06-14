@@ -205,12 +205,19 @@ h3 {
 .help-chip {
   min-height: 38px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 0 14px;
   background: #fffdf8;
   color: var(--body-strong);
   font-size: 13px;
   font-weight: 750;
+  cursor: default;
+}
+
+.help-chip.online {
+  border-color: rgba(93, 184, 114, 0.34);
+  background: rgba(93, 184, 114, 0.12);
+  color: #2f7a42;
 }
 
 .language-button {
@@ -273,6 +280,243 @@ h3 {
 .screen-root > * {
   min-width: 0;
   max-width: 100%;
+}
+
+.owner-command-center {
+  display: grid;
+  gap: 12px;
+}
+
+.command-center-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.command-center-head h3 {
+  max-width: 980px;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.command-center-head p:not(.eyebrow) {
+  max-width: 860px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.command-center-head .button {
+  min-width: 148px;
+}
+
+.owner-command-statuses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.owner-command-statuses article {
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.owner-command-statuses article.active {
+  border-color: rgba(212, 160, 23, 0.34);
+  background: rgba(212, 160, 23, 0.08);
+}
+
+.owner-command-statuses article.done {
+  border-color: rgba(93, 184, 114, 0.28);
+  background: rgba(93, 184, 114, 0.08);
+}
+
+.owner-command-statuses article.muted {
+  background: var(--surface-soft);
+}
+
+.owner-command-statuses span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.owner-command-statuses strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.owner-command-statuses p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.command-center-workbench {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.command-center-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+
+.command-center-table-head h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.command-center-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.command-center-filters span {
+  min-height: 26px;
+  padding: 6px 9px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.command-center-table {
+  display: grid;
+  min-width: 880px;
+}
+
+.command-center-row {
+  display: grid;
+  grid-template-columns: 76px minmax(260px, 1.6fr) minmax(100px, 0.6fr) minmax(120px, 0.7fr) minmax(110px, 0.6fr) 112px;
+  align-items: center;
+  min-height: 58px;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+
+.command-center-row:last-child {
+  border-bottom: 0;
+}
+
+.command-center-row > span {
+  min-width: 0;
+  padding: 9px 12px;
+  color: var(--body);
+  font-size: 13px;
+}
+
+.command-center-row-header {
+  min-height: 38px;
+  background: var(--surface-soft);
+}
+
+.command-center-row-header > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.command-center-row.active {
+  background: #fffdf8;
+}
+
+.command-center-row.queued {
+  background: rgba(232, 165, 90, 0.06);
+}
+
+.command-center-row.done {
+  background: rgba(93, 184, 114, 0.06);
+}
+
+.queue-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 24px;
+  border-radius: 999px;
+  background: var(--surface-dark);
+  color: var(--on-dark);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.command-center-row.queued .queue-priority {
+  background: var(--accent-amber);
+  color: var(--ink);
+}
+
+.command-center-row.done .queue-priority,
+.command-center-row.muted .queue-priority {
+  background: var(--surface-card);
+  color: var(--muted);
+}
+
+.queue-title strong,
+.queue-title small {
+  display: block;
+  min-width: 0;
+}
+
+.queue-title strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-title small {
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-center-row mark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(212, 160, 23, 0.14);
+  color: #7a5811;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .owner-guide {
@@ -2019,8 +2263,13 @@ select:focus {
   .material-command,
   .material-list-card,
   .manager-qa-head,
-  .manager-qa-card {
+  .manager-qa-card,
+  .command-center-head {
     grid-template-columns: 1fr;
+  }
+
+  .owner-command-statuses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .author-source-grid {
@@ -2082,6 +2331,14 @@ select:focus {
     display: none;
   }
 
+  .nav-group {
+    display: contents;
+  }
+
+  .nav-group-label {
+    display: none;
+  }
+
   .nav-link {
     flex: 0 0 auto;
     min-height: 44px;
@@ -2133,6 +2390,28 @@ select:focus {
   .help-chip,
   .topbar-actions .button.secondary {
     display: none;
+  }
+
+  .command-center-head,
+  .command-center-table-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .command-center-head {
+    display: grid;
+  }
+
+  .command-center-head .button {
+    width: 100%;
+  }
+
+  .owner-command-statuses {
+    grid-template-columns: 1fr;
+  }
+
+  .command-center-filters {
+    justify-content: flex-start;
   }
 
   .button {

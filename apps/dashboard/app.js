@@ -48,6 +48,18 @@ const RU = {
   "Preparation rules": "Правила подготовки",
   "Results": "Результаты",
   "Settings": "Настройки",
+  "Command Center": "Командный центр",
+  "Content Pipeline": "Контент-пайплайн",
+  "Publication Desk": "Публикационный стол",
+  "Results Desk": "Стол результатов",
+  "Knowledge Base": "База знаний",
+  "Operate": "Работа",
+  "Control": "Контроль",
+  "Planning archive": "Архив планирования",
+  "Offer, proof, author voice": "Оффер, доказательства, голос автора",
+  "Materials in production": "Материалы в производстве",
+  "Release queue and live check": "Очередь выпуска и проверка выхода",
+  "Publication results and next steps": "Результаты публикаций и следующие шаги",
   "Tools": "Инструменты",
   "Access": "Доступы",
   "Launch readiness": "Готовность запуска",
@@ -358,13 +370,12 @@ function text(en, ru) {
 }
 
 const navItems = [
-  { route: "overview", title: "Today", group: "command", primary: true },
-  { route: "growth-plan", title: "Strategy", group: "details" },
-  { route: "offer-brain", title: "Company", group: "details" },
-  { route: "content-pipeline", title: "Materials", group: "details" },
-  { route: "publications", title: "Publications", group: "details" },
-  { route: "analytics", title: "Results", group: "details" },
-  { route: "settings", title: "Settings", group: "details" }
+  { route: "overview", title: "Command Center", group: "operate", primary: true },
+  { route: "content-pipeline", title: "Content Pipeline", group: "operate" },
+  { route: "publications", title: "Publication Desk", group: "operate" },
+  { route: "analytics", title: "Results Desk", group: "operate" },
+  { route: "offer-brain", title: "Knowledge Base", group: "control" },
+  { route: "settings", title: "Settings", group: "control" }
 ];
 
 const routeAliases = {
@@ -394,21 +405,21 @@ const settingsTabs = {
 };
 
 const routes = {
-  overview: { title: "Today", kicker: "Summary" },
-  "growth-plan": { title: "Strategy", kicker: "Revenue direction" },
-  "offer-brain": { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
-  "content-pipeline": { title: "Materials", kicker: "Work that can go outside" },
-  publications: { title: "Publications", kicker: "Topics, QA, release" },
-  analytics: { title: "Results", kicker: "Publication signals" },
+  overview: { title: "Command Center", kicker: "Today" },
+  "growth-plan": { title: "Knowledge Base", kicker: "Planning archive" },
+  "offer-brain": { title: "Knowledge Base", kicker: "Offer, proof, author voice" },
+  "content-pipeline": { title: "Content Pipeline", kicker: "Materials in production" },
+  publications: { title: "Publication Desk", kicker: "Release queue and live check" },
+  analytics: { title: "Results Desk", kicker: "Publication results and next steps" },
   settings: { title: "Settings", kicker: "Rules, access, and launch" },
-  "demand-map": { title: "Strategy", kicker: "Client acquisition workflow" },
-  strategy: { title: "Strategy", kicker: "Revenue direction" },
-  company: { title: "Company", kicker: "What we sell, to whom, and why we are trusted" },
-  materials: { title: "Materials", kicker: "Work that can go outside" },
-  content: { title: "Materials", kicker: "Work that can go outside" },
-  approvals: { title: "Publications", kicker: "What moves from topic to result" },
-  "publishing-calendar": { title: "Publications", kicker: "What moves from topic to result" },
-  "manual-export": { title: "Publications", kicker: "What moves from topic to result" },
+  "demand-map": { title: "Knowledge Base", kicker: "Client acquisition workflow" },
+  strategy: { title: "Knowledge Base", kicker: "Planning archive" },
+  company: { title: "Knowledge Base", kicker: "Offer, proof, author voice" },
+  materials: { title: "Content Pipeline", kicker: "Materials in production" },
+  content: { title: "Content Pipeline", kicker: "Materials in production" },
+  approvals: { title: "Publication Desk", kicker: "Release queue and live check" },
+  "publishing-calendar": { title: "Publication Desk", kicker: "Release queue and live check" },
+  "manual-export": { title: "Publication Desk", kicker: "Release queue and live check" },
   agents: { title: "Settings", kicker: "Rules, access, and launch" }
 };
 
@@ -1073,8 +1084,10 @@ function renderRouteModal() {
 function renderChrome() {
   document.querySelector(".brand-lockup h1").textContent = tr("Growth Control");
   const helpButton = document.querySelector("#helpButton");
-  helpButton.textContent = text("Help", "Справка");
-  helpButton.hidden = true;
+  helpButton.textContent = state.online ? text("Online", "Онлайн") : text("Demo", "Демо");
+  helpButton.hidden = false;
+  helpButton.setAttribute("aria-label", state.online ? text("Backend online", "Backend online") : text("Demo mode", "Demo mode"));
+  helpButton.classList.toggle("online", state.online);
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLang);
   });
@@ -1478,8 +1491,8 @@ function defaultScheduleDate() {
 function renderNav() {
   const activeRoute = canonicalRoute();
   const groups = [
-    [text("Command center", "Командный центр"), navItems.filter((item) => item.group === "command")],
-    [text("Cycle details", "Детали цикла"), navItems.filter((item) => item.group === "details")]
+    [text("Operate", "Работа"), navItems.filter((item) => item.group === "operate")],
+    [text("Control", "Контроль"), navItems.filter((item) => item.group === "control")]
   ];
   elements.navList.innerHTML = groups.map(([label, items]) => `
     <div class="nav-group">
@@ -1531,7 +1544,6 @@ function renderOverview() {
   const pending = state.approvals.filter((item) => item.status === "pending");
   return `
     ${ownerCommandCenter(pending)}
-    ${weeklyRhythmPanel()}
   `;
 }
 
@@ -1548,13 +1560,17 @@ function compactMetric(label, value, note) {
 function ownerCommandCenter(pending) {
   const command = ownerCommandPriority(pending);
   const statuses = ownerCommandStatuses(pending);
+  const rows = commandCenterRows(pending);
+  const activeRows = rows.filter((row) => row.state !== "done").length;
 
   return `
     <section class="owner-command-center" aria-label="${escapeAttr(text("Owner command center", "Командный центр собственника"))}">
-      <div class="owner-command-main">
-        <p class="eyebrow">${text("Today", "Сегодня")}</p>
-        <h3>${escapeHtml(command.title)}</h3>
-        <p>${escapeHtml(command.note)}</p>
+      <div class="command-center-head">
+        <div>
+          <p class="eyebrow">${text("Command Center", "Командный центр")}</p>
+          <h3>${escapeHtml(command.title)}</h3>
+          <p>${escapeHtml(command.note)}</p>
+        </div>
         <button class="button primary" data-action="${escapeAttr(command.action)}" data-id="${escapeAttr(command.id || "")}">${escapeHtml(command.label)}</button>
       </div>
       <div class="owner-command-statuses">
@@ -1566,7 +1582,163 @@ function ownerCommandCenter(pending) {
           </article>
         `).join("")}
       </div>
+      <div class="command-center-workbench">
+        <div class="command-center-table-head">
+          <div>
+            <p class="eyebrow">${text("Action queue", "Очередь действий")}</p>
+            <h4>${escapeHtml(text(`${activeRows} active items`, `${activeRows} активных пунктов`))}</h4>
+          </div>
+          <div class="command-center-filters" aria-label="${escapeAttr(text("Queue filters", "Фильтры очереди"))}">
+            <span>${escapeHtml(state.online ? text("Backend source", "Источник: backend") : text("Demo source", "Источник: демо"))}</span>
+            <span>${escapeHtml(text("Owner + manager loop", "Контур: собственник + менеджер"))}</span>
+          </div>
+        </div>
+        <div class="command-center-table" role="table" aria-label="${escapeAttr(text("Command Center action queue", "Очередь действий командного центра"))}">
+          <div class="command-center-row command-center-row-header" role="row">
+            <span role="columnheader">${escapeHtml(text("Priority", "Приоритет"))}</span>
+            <span role="columnheader">${escapeHtml(text("Work item", "Объект"))}</span>
+            <span role="columnheader">${escapeHtml(text("Owner", "Роль"))}</span>
+            <span role="columnheader">${escapeHtml(text("State", "Статус"))}</span>
+            <span role="columnheader">${escapeHtml(text("Due", "Срок"))}</span>
+            <span role="columnheader">${escapeHtml(text("Action", "Действие"))}</span>
+          </div>
+          ${rows.map(commandCenterRow).join("")}
+        </div>
+      </div>
     </section>
+  `;
+}
+
+function commandCenterRows(pending) {
+  const rows = [];
+  pending.forEach((approval) => {
+    const context = getApprovalContext(approval);
+    rows.push({
+      priority: text("P1", "P1"),
+      kind: text("Approval", "Согласование"),
+      title: context.title || approval.summary || text("Owner decision", "Решение собственника"),
+      meta: approval.summary || context.channel || "",
+      owner: text("Owner", "Собственник"),
+      state: "active",
+      status: text("Needs decision", "Ждёт решения"),
+      due: formatDate(context.raw?.scheduled_for || context.when || approval.created_at),
+      action: "go-approval",
+      id: approval.id,
+      label: text("Open", "Открыть")
+    });
+  });
+
+  state.content
+    .filter((item) => ["approved", "revised_draft"].includes(materialOwnerStatus(item)) && !materialCalendarItem(item))
+    .forEach((item) => {
+      rows.push({
+        priority: text("P2", "P2"),
+        kind: text("QA", "QA"),
+        title: item.title,
+        meta: `${displayChannel(item.channel || "manual")} · ${tr(labelize(item.content_type || "material"))}`,
+        owner: text("Manager", "Менеджер"),
+        state: "active",
+        status: text("QA needed", "Нужен QA"),
+        due: formatDate(item.updated_at || item.created_at),
+        action: "mark-manager-qa-passed",
+        id: item.id,
+        label: text("QA passed", "QA пройден")
+      });
+    });
+
+  state.calendar
+    .filter((item) => item.status === "scheduled")
+    .forEach((item) => {
+      rows.push({
+        priority: text("P2", "P2"),
+        kind: text("Release", "Выпуск"),
+        title: item.title,
+        meta: displayChannel(item.channel || "manual"),
+        owner: text("Release owner", "Ответственный"),
+        state: "queued",
+        status: text("Ready for handoff", "К передаче"),
+        due: formatDate(item.scheduled_for || item.updated_at),
+        action: "mark-calendar-exported",
+        id: item.id,
+        label: text("Hand off", "Передать")
+      });
+    });
+
+  state.calendar
+    .filter((item) => item.status === "handed_off")
+    .forEach((item) => {
+      rows.push({
+        priority: text("P1", "P1"),
+        kind: text("Live check", "Проверка выхода"),
+        title: item.title,
+        meta: displayChannel(item.channel || "manual"),
+        owner: text("Owner", "Собственник"),
+        state: "active",
+        status: text("Needs result", "Ждёт результат"),
+        due: formatDate(item.updated_at || item.scheduled_for),
+        action: "mark-calendar-published",
+        id: item.id,
+        label: text("Confirm", "Подтвердить")
+      });
+    });
+
+  const openResults = state.publicationResults.filter((item) => !item.next_step || item.next_step === "leave").slice(0, 3);
+  openResults.forEach((item) => {
+    rows.push({
+      priority: text("P3", "P3"),
+      kind: text("Result", "Результат"),
+      title: item.title || text("Publication result", "Результат публикации"),
+      meta: `${displayChannel(item.channel || "manual")} · ${item.publication_url || text("URL recorded", "URL зафиксирован")}`,
+      owner: text("Content lead", "Контент-лид"),
+      state: "muted",
+      status: text("Choose next step", "Выбрать шаг"),
+      due: formatDate(item.confirmed_at || item.occurred_at),
+      action: "go-analytics",
+      id: item.calendar_item_id || item.id,
+      label: text("Review", "Смотреть")
+    });
+  });
+
+  if (!rows.length) {
+    rows.push({
+      priority: text("P3", "P3"),
+      kind: text("Planning", "Планирование"),
+      title: text("Choose the next content topic", "Выбрать следующую тему"),
+      meta: text("No blocking action is waiting.", "Блокирующих действий нет."),
+      owner: text("Owner", "Собственник"),
+      state: "done",
+      status: text("Clear", "Чисто"),
+      due: text("Today", "Сегодня"),
+      action: "go-demand-map",
+      id: "",
+      label: text("Plan", "План")
+    });
+  }
+
+  return rows.sort((a, b) => commandPriorityRank(a.priority) - commandPriorityRank(b.priority));
+}
+
+function commandPriorityRank(priority) {
+  if (String(priority).includes("1")) return 1;
+  if (String(priority).includes("2")) return 2;
+  return 3;
+}
+
+function commandCenterRow(row) {
+  return `
+    <div class="command-center-row ${escapeAttr(row.state)}" role="row">
+      <span role="cell"><em class="queue-priority">${escapeHtml(row.priority)}</em></span>
+      <span role="cell" class="queue-title">
+        <strong>${escapeHtml(row.title)}</strong>
+        <small>${escapeHtml(row.kind)} · ${escapeHtml(row.meta || text("No extra context", "Без контекста"))}</small>
+      </span>
+      <span role="cell">${escapeHtml(row.owner)}</span>
+      <span role="cell"><mark>${escapeHtml(row.status)}</mark></span>
+      <span role="cell">${escapeHtml(row.due || text("Not set", "Не задано"))}</span>
+      <span role="cell">
+        <button class="button secondary table-button" data-action="${escapeAttr(row.action)}" data-id="${escapeAttr(row.id || "")}">${escapeHtml(row.label)}</button>
+      </span>
+    </div>
   `;
 }
 
