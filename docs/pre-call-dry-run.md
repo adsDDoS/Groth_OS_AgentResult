@@ -10,11 +10,23 @@ https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
 
 ## Result
 
-Status: ready after copy-fix deploy verification.
+Status: ready.
 
 Target time: 7 minutes.
 
 Observed run shape: 3 screens only, no forbidden sections opened.
+
+Verified commit:
+
+```text
+6c78533 Prepare pre-call dashboard demo
+```
+
+Verified CI:
+
+```text
+Dashboard smoke #141: success
+```
 
 ## Screens
 
@@ -52,6 +64,15 @@ Changed pilot/demo copy to content-ops language:
 Also updated the approval summary and preview to describe topics, texts, approvals, release, URL confirmation, primary reactions, and next content step.
 
 ## Final Gate
+
+Production verification passed on 2026-06-14:
+
+- `Сегодня`: new content-ops topic visible.
+- `Публикации`: release queue, live check, and published count visible.
+- `Результаты`: URL, primary reactions, and next content step visible.
+- No console errors observed across the three screens.
+- Old sales topic was not present on production.
+- Forbidden sections stayed unopened.
 
 Before the call:
 
