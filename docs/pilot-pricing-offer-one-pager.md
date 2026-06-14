@@ -4,6 +4,7 @@
 
 ## Offer Rule
 
+- Не делать offer, если closeout decision: Stop.
 - Не продавать leads, sales или revenue attribution.
 - Продавать управляемый production loop: темы, черновики, QA, выпуск, URL/source, реакции, next content step.
 - Предлагать только один следующий вариант, если decision очевиден.
