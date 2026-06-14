@@ -5,7 +5,7 @@
 Define the canonical state machine for the first AgentResult Growth Control product loop:
 
 ```text
-approval -> content_item -> publishing_calendar_item -> result_signal
+approval -> content_item -> publishing_calendar_item -> distribution_signal
 ```
 
 This packet turns the Dev Agent System from a role document into a working task intake for the next product implementation step.
@@ -17,7 +17,7 @@ The owner should see one clear next action at every moment:
 - approve or request changes;
 - let AgentResult and the manager move the material through QA;
 - confirm live release;
-- inspect the result signal.
+- inspect the publication result and distribution signal.
 
 The system must not show stale decisions like an already approved topic asking for approval again.
 
@@ -48,17 +48,17 @@ Current workflow docs:
 
 `approval`, `content_item`, and `publishing_calendar_item` exist as first-class tables.
 
-`result_signal` is now an explicit backend contract, but not yet a first-class table. Result data currently lives across analytics and publishing tables:
+`distribution_signal` is the canonical backend contract, but not yet a first-class table. Result data currently lives across analytics and publishing tables:
 
-- `conversion_events` for business events;
+- `conversion_events` for compatibility storage until a dedicated migration exists;
 - `published_urls` for live material records;
 - `page_metrics` and `channel_metrics` for aggregate performance;
 - `publishing_calendar_items.metadata` for demo/manual result notes.
 
 Domain State Machine v1 should either:
 
-- keep `result_signal` as a view/contract over current tables; or
-- introduce a dedicated `result_signals` table in a later implementation packet.
+- keep `distribution_signal` as a view/contract over current tables; or
+- introduce a dedicated `distribution_signals` table in a later implementation packet.
 
 This packet does not require a database migration. It defines the contract that the next implementation must follow.
 
@@ -208,16 +208,16 @@ Owner UI invariant:
 Temy nedeli column shows only pending approvals or calendar items that genuinely require owner decision.
 ```
 
-### result_signal
+### distribution_signal
 
-Purpose: represents the business signal after a material is live or handed into a result-confirmation flow.
+Purpose: represents the content-operations signal after a material is live or handed into a publication-confirmation flow.
 
 Canonical v1 statuses:
 
 - `expected`
 - `awaiting_confirmation`
 - `confirmed`
-- `qualified`
+- `actionable`
 - `dismissed`
 
 Allowed transitions:
@@ -225,9 +225,9 @@ Allowed transitions:
 ```text
 expected -> awaiting_confirmation
 awaiting_confirmation -> confirmed
-confirmed -> qualified
+confirmed -> actionable
 confirmed -> dismissed
-qualified -> dismissed
+actionable -> dismissed
 ```
 
 Current storage mapping:
@@ -235,13 +235,13 @@ Current storage mapping:
 - `publishing_calendar_items.status = handed_off` means signal is expected but not confirmed.
 - `publishing_calendar_items.status = published` means live release is confirmed.
 - `published_urls` records public live evidence when URL exists.
-- `conversion_events` records replies, leads, forms, meetings, CRM tasks, or manual owner confirmation.
+- `conversion_events` records `distribution_signal.confirmed` events and still reads legacy `result_signal.confirmed` events until migration.
 - aggregate metrics remain in `page_metrics` and `channel_metrics`.
 
 Invariants:
 
 - no result can be counted before `published` or explicit manual confirmation;
-- signal source must be owner-facing, for example Telegram reply, form request, CRM event, comment, meeting, or manual mark;
+- signal source must be content-facing, for example publication URL, channel reaction, comment, repost, save, indexation mark, or manual owner mark;
 - a confirmed result should create or update a visible Results next action.
 
 ## Cross-Entity Flow
@@ -255,8 +255,8 @@ Invariants:
 6. publishing_calendar_item moves to scheduled.
 7. Manager hands off or releases channel work.
 8. Owner/responsible person confirms live.
-9. System records result_signal through current analytics/result storage.
-10. Results screen shows next action based on signal quality.
+9. System records distribution_signal through current analytics/result storage.
+10. Results screen shows next content step based on publication evidence and primary reactions.
 ```
 
 ## Agent Assignments
@@ -275,7 +275,7 @@ Deliverables:
 
 - propose TypeScript constants or shared types for canonical statuses;
 - identify where approval side effects should live;
-- decide whether `result_signal` should be a new table or derived contract in v1.
+- decide whether `distribution_signal` should be a new table or derived contract in v1.
 
 ### Frontend Product Agent
 
@@ -314,7 +314,7 @@ Deliverables:
 ## Acceptance Criteria
 
 - The task packet names the four entities and their canonical statuses.
-- The packet documents current storage reality for `result_signal`.
+- The packet documents current storage reality for `distribution_signal`.
 - The packet defines side-effect rules for approved calendar approvals.
 - The packet assigns concrete work to every Dev Agent System role.
 - `npm run agent-system:check` validates that this packet exists.
@@ -322,7 +322,7 @@ Deliverables:
 
 ## Out Of Scope
 
-- Database migration for `result_signals`.
+- Database migration for `distribution_signals`.
 - Backend route changes.
 - Dashboard UI changes.
 - Vercel deploy.
@@ -338,7 +338,7 @@ Option A: docs/types first
 Option B: backend reconciliation first
   -> move approval side effects into backend service.
 
-Option C: result_signal table first
+Option C: distribution_signal table first
   -> add migration and Results contract before UI expansion.
 ```
 

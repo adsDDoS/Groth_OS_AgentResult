@@ -7,7 +7,7 @@ import { contentRoutes } from "./modules/content/routes.js";
 import { geoRoutes } from "./modules/geo/routes.js";
 import { hermesRoutes } from "./modules/hermes/index.js";
 import { publishingRoutes } from "./modules/publishing/routes.js";
-import { resultSignalRoutes } from "./modules/result-signals/routes.js";
+import { distributionSignalRoutes } from "./modules/distribution-signals/routes.js";
 import { seoRoutes } from "./modules/seo/routes.js";
 import { taskRoutes } from "./modules/tasks/routes.js";
 import { telegramRoutes } from "./modules/telegram/routes.js";
@@ -125,7 +125,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await contentRoutes(app);
   await approvalsRoutes(app);
   await publishingRoutes(app);
-  await resultSignalRoutes(app);
+  await distributionSignalRoutes(app);
   await seoRoutes(app);
   await geoRoutes(app);
   await hermesRoutes(app);
@@ -158,7 +158,7 @@ export async function registerRoutes(app: FastifyInstance) {
         (select count(*) from approvals where tenant_id = $1 and status = 'pending') as pending_approvals,
         (select count(*) from approvals where tenant_id = $1) as approvals_total,
         (select count(*) from publishing_calendar_items where tenant_id = $1 and status in ('published', 'handed_off')) as published_materials,
-        (select count(*) from conversion_events where tenant_id = $1 and event_type = 'result_signal.confirmed') as result_signals,
+        (select count(*) from conversion_events where tenant_id = $1 and event_type in ('distribution_signal.confirmed', 'result_signal.confirmed')) as distribution_signals,
         (select count(*) from tasks where tenant_id = $1) as tasks_created,
         0 as leads,
         0 as receivables_in_progress,
@@ -172,7 +172,8 @@ export async function registerRoutes(app: FastifyInstance) {
         leads: Number(summary.leads ?? result.rows[0]?.leads ?? 0),
         tasks_created: Number(summary.tasks_created ?? result.rows[0]?.tasks_created ?? 0),
         published_materials: Number(summary.published_materials ?? result.rows[0]?.published_materials ?? 0),
-        result_signals: Number(summary.result_signals ?? result.rows[0]?.result_signals ?? 0),
+        distribution_signals: Number(summary.distribution_signals ?? summary.result_signals ?? result.rows[0]?.distribution_signals ?? 0),
+        result_signals: Number(summary.result_signals ?? summary.distribution_signals ?? result.rows[0]?.distribution_signals ?? 0),
         receivables_in_progress: Number(summary.receivables_in_progress ?? result.rows[0]?.receivables_in_progress ?? 0),
         promised_payments: Number(summary.promised_payments ?? result.rows[0]?.promised_payments ?? 0),
         recovered_payments: Number(summary.recovered_payments ?? result.rows[0]?.recovered_payments ?? 0),

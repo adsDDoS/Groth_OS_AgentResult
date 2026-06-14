@@ -35,21 +35,24 @@ export const PUBLISHING_CALENDAR_STATUSES = [
 
 export type PublishingCalendarStatus = (typeof PUBLISHING_CALENDAR_STATUSES)[number];
 
-export const RESULT_SIGNAL_STATUSES = [
+export const DISTRIBUTION_SIGNAL_STATUSES = [
   "expected",
   "awaiting_confirmation",
   "confirmed",
-  "qualified",
+  "actionable",
   "dismissed"
 ] as const;
 
-export type ResultSignalStatus = (typeof RESULT_SIGNAL_STATUSES)[number];
+export type DistributionSignalStatus = (typeof DISTRIBUTION_SIGNAL_STATUSES)[number];
+
+export const RESULT_SIGNAL_STATUSES = DISTRIBUTION_SIGNAL_STATUSES;
+export type ResultSignalStatus = DistributionSignalStatus;
 
 export const DOMAIN_ENTITIES = [
   "approval",
   "content_item",
   "publishing_calendar_item",
-  "result_signal"
+  "distribution_signal"
 ] as const;
 
 export type DomainEntity = (typeof DOMAIN_ENTITIES)[number];
@@ -58,14 +61,14 @@ export type DomainStatusByEntity = {
   approval: ApprovalStatus;
   content_item: ContentStatus;
   publishing_calendar_item: PublishingCalendarStatus;
-  result_signal: ResultSignalStatus;
+  distribution_signal: DistributionSignalStatus;
 };
 
 export const DOMAIN_STATUSES = {
   approval: APPROVAL_STATUSES,
   content_item: CONTENT_STATUSES,
   publishing_calendar_item: PUBLISHING_CALENDAR_STATUSES,
-  result_signal: RESULT_SIGNAL_STATUSES
+  distribution_signal: DISTRIBUTION_SIGNAL_STATUSES
 } as const;
 
 export const DOMAIN_TRANSITIONS = {
@@ -97,11 +100,11 @@ export const DOMAIN_TRANSITIONS = {
     archived: [],
     rejected: []
   },
-  result_signal: {
+  distribution_signal: {
     expected: ["awaiting_confirmation"],
     awaiting_confirmation: ["confirmed"],
-    confirmed: ["qualified", "dismissed"],
-    qualified: ["dismissed"],
+    confirmed: ["actionable", "dismissed"],
+    actionable: ["dismissed"],
     dismissed: []
   }
 } as const satisfies {

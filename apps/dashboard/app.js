@@ -531,6 +531,7 @@ const state = {
   content: demo.content,
   approvals: demo.approvals,
   calendar: demo.calendar,
+  distributionSignals: [],
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -541,6 +542,7 @@ const state = {
     tasks_created: 0,
     approvals_total: demo.approvals.length,
     published_materials: shippedCalendarCount(demo.calendar),
+    distribution_signals: 0,
     result_signals: 0,
     leads: 3,
     receivables_in_progress: 0,
@@ -675,7 +677,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, resultSignals, workspaceState] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, workspaceState] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -684,7 +686,7 @@ async function loadData() {
       api("/analytics/overview"),
       api("/content/items"),
       api("/publishing/calendar"),
-      api("/result-signals").catch(() => ({ data: [] })),
+      api("/distribution-signals").catch(() => api("/result-signals").catch(() => ({ data: [] }))),
       api("/workspace/state").catch(() => ({ data: {} }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
@@ -696,7 +698,8 @@ async function loadData() {
     state.agents = agents.data?.length ? agents.data : demo.agents;
     state.content = Array.isArray(content.data) ? content.data : state.content;
     state.calendar = Array.isArray(calendar.data) ? calendar.data : state.calendar;
-    state.resultSignals = Array.isArray(resultSignals.data) ? resultSignals.data : state.resultSignals;
+    state.distributionSignals = Array.isArray(distributionSignals.data) ? distributionSignals.data : state.distributionSignals;
+    state.resultSignals = state.distributionSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
@@ -707,7 +710,8 @@ async function loadData() {
       content_items: state.content.length,
       approvals_total: state.approvals.length,
       published_materials: shippedCalendarCount(state.calendar),
-      result_signals: state.resultSignals.length
+      distribution_signals: state.distributionSignals.length,
+      result_signals: state.distributionSignals.length
     };
   } catch {
     setBackendStatus(false);
@@ -719,7 +723,8 @@ async function loadData() {
       pending_approvals: state.approvals.filter((item) => item.status === "pending").length,
       approvals_total: state.approvals.length,
       published_materials: shippedCalendarCount(state.calendar),
-      result_signals: state.resultSignals.length
+      distribution_signals: state.distributionSignals.length,
+      result_signals: state.distributionSignals.length
     };
   }
 
@@ -926,7 +931,8 @@ function deriveMetrics(source = {}) {
     tasks_created: Number(safeSource.tasks_created ?? safeSource.tasks ?? 0),
     approvals_total: Number(safeSource.approvals_total ?? safeSource.approvals ?? state.approvals.length),
     published_materials: Number(safeSource.published_materials ?? shippedCalendarCount(state.calendar)),
-    result_signals: Number(safeSource.result_signals ?? state.resultSignals.length ?? 0),
+    distribution_signals: Number(safeSource.distribution_signals ?? safeSource.result_signals ?? state.distributionSignals.length ?? state.resultSignals.length ?? 0),
+    result_signals: Number(safeSource.result_signals ?? safeSource.distribution_signals ?? state.distributionSignals.length ?? state.resultSignals.length ?? 0),
     leads: Number(safeSource.leads ?? 0),
     receivables_in_progress: Number(safeSource.receivables_in_progress ?? 0),
     promised_payments: Number(safeSource.promised_payments ?? 0),
@@ -1029,7 +1035,7 @@ function renderModal() {
         <div class="guide-steps">
           ${guideStep("1", text("Weekly topics", "Темы недели"), text("Approve topics and boundaries once a week.", "Согласуйте темы и границы один раз в неделю."))}
           ${guideStep("2", text("Manager QA", "Менеджер QA"), text("Routine text QA stays with the manager.", "Рутинный QA текста остаётся у менеджера."))}
-          ${guideStep("3", text("Check results", "Проверьте результат"), text("Confirmed releases and demand signals are tracked in Results.", "Подтверждённые выпуски и сигналы спроса отслеживаются в результатах."))}
+          ${guideStep("3", text("Check results", "Проверьте результат"), text("Confirmed releases and distribution signals are tracked in Results.", "Подтверждённые выпуски и сигналы дистрибуции отслеживаются в результатах."))}
         </div>
         <div class="modal-warning">${text("Help stays available from the top bar.", "Справка доступна в верхней панели.")}</div>
         <div class="detail-actions">
@@ -1139,12 +1145,12 @@ function renderFormModal() {
     },
     metrics: {
       eyebrow: text("Results", "Результаты"),
-      title: text("Record first result signals", "Зафиксировать первые сигналы результата"),
+      title: text("Record first distribution signals", "Зафиксировать первые сигналы дистрибуции"),
       submit: "submit-metrics-form",
       button: text("Save signals", "Сохранить сигналы"),
       body: `
         <div class="form-grid two-col">
-          ${numberField(text("Demand signals", "Сигналы спроса"), "metricLeads", state.metrics.leads || 0)}
+          ${numberField(text("Primary reactions", "Первичные реакции"), "metricLeads", state.metrics.leads || 0)}
           ${numberField(text("Follow-up actions", "Следующие действия"), "metricTasks", state.metrics.tasks_created || 0)}
         </div>
         <div class="form-grid">
@@ -1529,8 +1535,8 @@ function ownerCommandPriority(pending) {
   const publishedCount = state.calendar.filter((item) => item.status === "published").length;
   if (publishedCount) {
     return {
-      title: text("Check the result signal", "Проверить сигнал результата"),
-      note: text("Check signal source and next action.", "Проверьте источник сигнала и следующий шаг."),
+      title: text("Check the publication result", "Проверить результат публикации"),
+      note: text("Check channel, URL, first reactions, and next content step.", "Проверьте канал, URL, первые реакции и следующий контент-шаг."),
       action: "go-analytics",
       id: "",
       label: text("Open results", "Открыть результаты")
@@ -1654,8 +1660,8 @@ function resultPath(pending, publishedCount) {
     {
       title: text("Signal", "Сигнал"),
       note: hasLeads
-        ? text(`${state.metrics.leads} demand signals in Results.`, `${state.metrics.leads} сигнала спроса в результатах.`)
-        : text("Record the first reply, request, form or owner mark after release.", "Зафиксируйте первый ответ, заявку, форму или отметку собственника после выпуска."),
+        ? text(`${state.metrics.leads} primary reactions in Results.`, `${state.metrics.leads} первичные реакции в результатах.`)
+        : text("Record the first URL, reaction, comment, repost, save, or owner mark after release.", "Зафиксируйте первый URL, реакцию, комментарий, репост, сохранение или отметку собственника после выпуска."),
       state: hasLeads ? "done" : publishedCount ? "active" : "muted",
       action: "go-analytics",
       label: text("Results", "Результаты")
@@ -1774,8 +1780,8 @@ function ownerNextMoves(pending) {
       id: "growth"
     },
     {
-      title: text("Record first result signals", "Зафиксировать первые сигналы результата"),
-      meta: text("Replies, requests, forms, owner marks or confirmed releases.", "Ответы, заявки, формы, отметки собственника или подтверждённые выпуски."),
+      title: text("Record first distribution signals", "Зафиксировать первые сигналы дистрибуции"),
+      meta: text("URLs, channel reactions, comments, reposts, saves, owner marks, or confirmed releases.", "URL, реакции канала, комментарии, репосты, сохранения, отметки собственника или подтверждённые выпуски."),
       label: text("Add signal", "Добавить сигнал"),
       action: "import-metrics",
       id: "metrics"
@@ -1966,13 +1972,13 @@ function managerDailyRunbook() {
       title: text("Return weak AI text", "Завернуть AI-текст")
     }),
     managerRunbookItem({
-      empty: text("No release is waiting for result signal.", "Нет выпуска в ожидании сигнала результата."),
+      empty: text("No release is waiting for distribution check.", "Нет выпуска в ожидании проверки дистрибуции."),
       fallbackAction: "go-analytics",
       fallbackLabel: text("Open results", "Открыть результаты"),
       item: buckets.signalItems[0],
-      meta: text("Result signal", "Сигнал результата"),
+      meta: text("Distribution signal", "Сигнал дистрибуции"),
       status: text("In manager queue", "В очереди менеджера"),
-      title: text("Capture result signal", "Зафиксировать сигнал")
+      title: text("Capture publication result", "Зафиксировать результат")
     }),
     managerRunbookItem({
       empty: text("No owner decision is blocking the day.", "Нет решения собственника, которое блокирует день."),
@@ -2681,31 +2687,31 @@ function resultConfirmationClarityPanel() {
 
 function resultSignalContractPanel(metrics) {
   const profile = state.offer?.profile || {};
-  const source = compactDisplayText(String(profile.firstSignalSource || text("reply, request, form lead, channel comment, or owner mark", "ответ, заявка, форма, комментарий в канале или отметка собственника")).replace(/[.!?]+$/, ""), 84);
+  const source = compactDisplayText(String(profile.firstSignalSource || text("publication URL, channel reaction, comment, repost, save, or owner mark", "URL публикации, реакция канала, комментарий, репост, сохранение или отметка собственника")).replace(/[.!?]+$/, ""), 84);
   const marker = compactDisplayText(String(profile.releaseOwner || text("Owner or manager QA", "Собственник или менеджер QA")).replace(/[.!?]+$/, ""), 64);
   const signals = [
-    text("Reply or request", "Ответ или заявка"),
-    text("Form lead", "Форма"),
+    text("Publication URL", "URL публикации"),
+    text("Channel reaction", "Реакция канала"),
     text("Channel comment", "Комментарий"),
-    text("Owner mark", "Отметка собственника")
+    text("Reuse mark", "Отметка для переиспользования")
   ];
-  const hasDemandSignal = Number(metrics.leads || 0) > 0;
+  const hasDistributionSignal = Number(metrics.distribution_signals || metrics.result_signals || 0) > 0;
   const publishedCount = state.calendar.filter((item) => item.status === "published").length;
-  const contractNote = hasDemandSignal
+  const contractNote = hasDistributionSignal
     ? text(`Recorded. Source: ${source}. Marked by: ${marker}.`, `Зафиксировано. Источник: ${source}. Отмечает: ${marker}.`)
     : publishedCount
-      ? text(`No demand yet. Watch: ${source}. Marked by: ${marker}.`, `Спроса пока нет. Источник: ${source}. Отмечает: ${marker}.`)
+      ? text(`Publication is live. Watch: ${source}. Marked by: ${marker}.`, `Публикация вышла. Смотрим: ${source}. Отмечает: ${marker}.`)
       : text(`After release: ${source}. Marked by: ${marker}.`, `После выпуска: ${source}. Отмечает: ${marker}.`);
   return `
     <article class="panel full result-signal-contract">
       <div class="panel-heading compact">
         <div>
-          <p class="eyebrow">${text("Result signal", "Сигнал результата")}</p>
-          <h3>${hasDemandSignal ? text("Demand signal recorded", "Сигнал спроса зафиксирован") : text("Signal source", "Источник сигнала")}</h3>
+          <p class="eyebrow">${text("Distribution signal", "Сигнал дистрибуции")}</p>
+          <h3>${hasDistributionSignal ? text("Publication result recorded", "Результат публикации зафиксирован") : text("Publication check source", "Источник проверки публикации")}</h3>
         </div>
       </div>
       <p>${escapeHtml(contractNote)}</p>
-      <p>${escapeHtml(text("Money: only from deal, invoice or valued request.", "Деньги: только из сделки, счёта или заявки с суммой."))}</p>
+      <p>${escapeHtml(text("Next step: reuse, expand, update, or leave as published.", "Следующий шаг: переиспользовать, расширить, обновить или оставить как опубликованное."))}</p>
       <div class="readiness-chip-row">
         ${signals.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
       </div>
@@ -2802,24 +2808,24 @@ function primaryBusinessSignal(metrics) {
       note: text("Recovered payments are counted only after confirmation.", "Возврат денег считается только после подтверждения.")
     };
   }
-  if (metrics.result_signals) {
+  if (metrics.distribution_signals || metrics.result_signals) {
     return {
-      value: String(metrics.result_signals),
-      title: text("Result signal confirmed", "Сигнал результата подтверждён"),
-      note: text("Confirmed release created a result signal.", "Подтверждённый выпуск создал сигнал результата.")
+      value: String(metrics.distribution_signals || metrics.result_signals),
+      title: text("Publication result confirmed", "Результат публикации подтверждён"),
+      note: text("Confirmed release created a distribution signal.", "Подтверждённый выпуск создал сигнал дистрибуции.")
     };
   }
   if (metrics.published_materials) {
     return {
       value: String(metrics.published_materials),
       title: text("Work has been released", "Работа вышла"),
-      note: text("Waiting for reply, request, form or owner mark.", "Ждём ответ, заявку, форму или отметку.")
+      note: text("Waiting for URL, channel reaction, comment, or reuse mark.", "Ждём URL, реакцию канала, комментарий или отметку для переиспользования.")
     };
   }
   return {
     value: "0",
-    title: text("No market signal yet", "Рыночного сигнала пока нет"),
-    note: text("No reply, request, form or owner mark yet.", "Пока нет ответа, заявки, формы или отметки.")
+    title: text("No publication signal yet", "Сигнала публикации пока нет"),
+    note: text("No URL, channel reaction, comment, or reuse mark yet.", "Пока нет URL, реакции канала, комментария или отметки для переиспользования.")
   };
 }
 
@@ -2853,7 +2859,7 @@ function resultActionList(metrics) {
       <strong>${escapeHtml(text("No follow-up actions yet", "Следующих действий пока нет"))}</strong>
       <p>${escapeHtml(metrics.leads || metrics.published_materials
         ? text("Create follow-up actions from the current signals when you are ready to tighten the loop.", "Создайте следующие действия по текущим сигналам, когда будете готовы усиливать контур.")
-        : text("First get a release or recorded demand signal, then follow-up actions will become useful.", "Сначала нужен выпуск или зафиксированный сигнал спроса, потом следующие действия станут полезными."))}</p>
+        : text("First get a release or recorded distribution signal, then follow-up actions will become useful.", "Сначала нужен выпуск или зафиксированный сигнал дистрибуции, потом следующие действия станут полезными."))}</p>
     </div>
   `;
 }
@@ -2872,8 +2878,8 @@ function resultNextMove(metrics) {
   }
   if (!metrics.leads && !metrics.published_materials) {
     return {
-      title: text("Get the first release and first demand signal into the system", "Зафиксируйте первый выпуск и первый сигнал спроса"),
-      note: text("Until a material is released and a reply, request, form or owner mark is recorded, results show preparation, not the market.", "Пока нет выпуска и ответа, заявки, формы или отметки собственника, результаты показывают подготовку, а не рынок."),
+      title: text("Get the first release and distribution signal into the system", "Зафиксируйте первый выпуск и сигнал дистрибуции"),
+      note: text("Until a material is released and a URL, reaction, comment, or owner mark is recorded, results show preparation, not distribution.", "Пока нет выпуска и URL, реакции, комментария или отметки собственника, результаты показывают подготовку, а не дистрибуцию."),
       action: "import-metrics",
       label: text("Add signal", "Добавить сигнал"),
       variant: "primary"
@@ -2892,8 +2898,8 @@ function resultNextMove(metrics) {
   }
   if (!metrics.leads) {
     return {
-      title: text("Record the first demand signal after release", "Зафиксируйте первый сигнал спроса после выпуска"),
-      note: text("For the first pilot, a useful result starts with a reply, request, form lead, channel comment or owner mark.", "Для первого пилота полезный результат начинается с ответа, заявки, формы, комментария в канале или отметки собственника."),
+      title: text("Record the first distribution signal after release", "Зафиксируйте первый сигнал дистрибуции после выпуска"),
+      note: text("For the first pilot, a useful result starts with a publication URL, channel reaction, comment, repost, save, or owner mark.", "Для первого пилота полезный результат начинается с URL публикации, реакции канала, комментария, репоста, сохранения или отметки собственника."),
       action: "import-metrics",
       label: text("Add signal", "Добавить сигнал"),
       variant: "secondary"
@@ -4335,8 +4341,8 @@ function packageAssets() {
       id: "seo",
       label: text("Website page: AgentResult Growth Control", "Страница сайта: AgentResult Growth Control"),
       preview: text(
-        "H1: AgentResult Growth Control for B2B companies\nMeta: Turn weekly topics into AI drafts, manager QA, controlled release, and tracked result signals.\nCTA: Start the first controlled release.",
-        "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите темы недели в AI-тексты, QA менеджера, контролируемый выпуск и фиксируемые сигналы результата.\nCTA: Запустить первый управляемый выпуск."
+        "H1: AgentResult Growth Control for B2B companies\nMeta: Turn weekly topics into AI drafts, manager QA, controlled release, and tracked distribution signals.\nCTA: Start the first controlled release.",
+        "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите темы недели в AI-тексты, QA менеджера, контролируемый выпуск и фиксируемые сигналы дистрибуции.\nCTA: Запустить первый управляемый выпуск."
       )
     },
     {
@@ -4953,7 +4959,7 @@ async function generateImprovementTasks() {
       title: text("Set first signal source", "Задать первый источник сигнала"),
       owner: text("Growth control", "Контроль роста"),
       status: "next",
-      note: text("No demand signal is recorded yet. Use a reply, request, form, channel comment or owner mark.", "Сигнал спроса ещё не зафиксирован. Подойдёт ответ, заявка, форма, комментарий в канале или отметка собственника.")
+      note: text("No distribution signal is recorded yet. Use a URL, channel reaction, comment, repost, save, or owner mark.", "Сигнал дистрибуции ещё не зафиксирован. Подойдёт URL, реакция канала, комментарий, репост, сохранение или отметка собственника.")
     });
   }
   if (!metrics.published_materials) {
@@ -5283,8 +5289,8 @@ function ensureApprovedContentDraft(contentItem, approval = null) {
   if (existing) return;
   const preview = String(approval?.preview || "").trim();
   const fallback = text(
-    "One AI agent does not fix sales by itself. The owner needs a controlled loop: topics, proof, draft, manager QA, regular release, and a visible result signal.\n\nAgentResult keeps that loop explicit. The owner approves the weekly topic once; AgentResult prepares the text; the manager removes AI-ish wording and checks the author's style before release.",
-    "Один AI-агент сам по себе не наводит порядок в продажах. Собственнику нужен управляемый контур: темы, proof, текст, QA менеджера, регулярный выпуск и видимый сигнал результата.\n\nAgentResult держит этот контур явным. Собственник один раз согласует тему недели; AgentResult готовит текст; менеджер убирает иишность и проверяет стиль автора перед выпуском."
+    "One AI agent does not fix content operations by itself. The owner needs a controlled loop: topics, proof, draft, manager QA, regular release, and a visible distribution signal.\n\nAgentResult keeps that loop explicit. The owner approves the weekly topic once; AgentResult prepares the text; the manager removes AI-ish wording and checks the author's style before release.",
+    "Один AI-агент сам по себе не наводит порядок в контент-операциях. Собственнику нужен управляемый контур: темы, proof, текст, QA менеджера, регулярный выпуск и видимый сигнал дистрибуции.\n\nAgentResult держит этот контур явным. Собственник один раз согласует тему недели; AgentResult готовит текст; менеджер убирает иишность и проверяет стиль автора перед выпуском."
   );
   contentItem.metadata = {
     ...metadata,

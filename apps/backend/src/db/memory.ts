@@ -807,7 +807,9 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
   if (normalized.includes("select count(*) from content_items")) {
     const approvals = tenantRows("approvals", values[0]);
     const calendar = tenantRows("publishing_calendar_items", values[0]);
-    const resultSignals = tenantRows("conversion_events", values[0]).filter((row) => row.event_type === "result_signal.confirmed");
+    const distributionSignals = tenantRows("conversion_events", values[0]).filter(
+      (row) => row.event_type === "distribution_signal.confirmed" || row.event_type === "result_signal.confirmed"
+    );
     const latestImport = tenantRows("analytics_imports", values[0]).sort(sortCreatedDesc)[0];
     const summary = isRecord(latestImport?.payload) ? latestImport.payload : {};
     return result([
@@ -817,7 +819,8 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
         pending_approvals: approvals.filter((row) => row.status === "pending").length,
         approvals_total: approvals.length,
         published_materials: calendar.filter((row) => row.status === "published" || row.status === "handed_off").length,
-        result_signals: resultSignals.length,
+        distribution_signals: distributionSignals.length,
+        result_signals: distributionSignals.length,
         tasks_created: tenantRows("tasks", values[0]).length,
         leads: Number(summary.leads ?? 0),
         receivables_in_progress: Number(summary.receivables_in_progress ?? 0),

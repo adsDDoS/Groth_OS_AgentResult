@@ -47,7 +47,7 @@ process.stdin.on("end", () => {
 
 curl -sS -m 15 \
   -H "x-tenant-id: $DEMO_TENANT_ID" \
-  "$DEMO_API_URL/result-signals" | node -e '
+  "$DEMO_API_URL/distribution-signals" | node -e '
 let s = "";
 process.stdin.on("data", c => s += c);
 process.stdin.on("end", () => {
@@ -56,7 +56,7 @@ process.stdin.on("end", () => {
     console.error(s);
     process.exit(1);
   }
-  console.log("demo result signals ok");
+  console.log("demo distribution signals ok");
 });
 '
 

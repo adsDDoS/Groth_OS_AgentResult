@@ -3,21 +3,21 @@
 import {
   APPROVAL_STATUSES,
   CONTENT_STATUSES,
+  DISTRIBUTION_SIGNAL_STATUSES,
   DOMAIN_ENTITIES,
   DOMAIN_TRANSITIONS,
   PUBLISHING_CALENDAR_STATUSES,
-  RESULT_SIGNAL_STATUSES,
   canTransition,
   isKnownStatus,
   nextStatuses
 } from "../packages/shared/dist/domain.js";
 
-const expectedEntities = ["approval", "content_item", "publishing_calendar_item", "result_signal"];
+const expectedEntities = ["approval", "content_item", "publishing_calendar_item", "distribution_signal"];
 const expectedStatusSets = {
   approval: APPROVAL_STATUSES,
   content_item: CONTENT_STATUSES,
   publishing_calendar_item: PUBLISHING_CALENDAR_STATUSES,
-  result_signal: RESULT_SIGNAL_STATUSES
+  distribution_signal: DISTRIBUTION_SIGNAL_STATUSES
 };
 
 const allowedTransitions = [
@@ -29,9 +29,9 @@ const allowedTransitions = [
   ["publishing_calendar_item", "review", "scheduled"],
   ["publishing_calendar_item", "scheduled", "handed_off"],
   ["publishing_calendar_item", "handed_off", "published"],
-  ["result_signal", "expected", "awaiting_confirmation"],
-  ["result_signal", "awaiting_confirmation", "confirmed"],
-  ["result_signal", "confirmed", "qualified"]
+  ["distribution_signal", "expected", "awaiting_confirmation"],
+  ["distribution_signal", "awaiting_confirmation", "confirmed"],
+  ["distribution_signal", "confirmed", "actionable"]
 ];
 
 const blockedTransitions = [
@@ -41,8 +41,8 @@ const blockedTransitions = [
   ["content_item", "handed_off", "scheduled"],
   ["publishing_calendar_item", "published", "scheduled"],
   ["publishing_calendar_item", "archived", "published"],
-  ["result_signal", "dismissed", "confirmed"],
-  ["result_signal", "expected", "qualified"]
+  ["distribution_signal", "dismissed", "confirmed"],
+  ["distribution_signal", "expected", "actionable"]
 ];
 
 let failures = 0;

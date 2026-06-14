@@ -4,7 +4,7 @@ import { canTransition, isKnownStatus, type PublishingCalendarStatus } from "@ai
 import { query } from "../../db/client.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { createApprovalRequest, reconcileApprovedCalendarApprovals, requireApproval } from "../approvals/service.js";
-import { ensurePublishedResultSignal } from "../result-signals/routes.js";
+import { ensurePublishedDistributionSignal } from "../distribution-signals/routes.js";
 
 const idParams = z.object({ id: z.string().uuid() });
 const statusBody = z.object({ status: z.enum(["draft", "review", "scheduled", "published", "handed_off", "archived", "rejected"]) });
@@ -127,7 +127,7 @@ async function transitionCalendarItem(input: {
     await syncLinkedContentStatus(String(item.content_item_id), input.tenantId, input.status);
   }
   if (item && input.status === "published") {
-    await ensurePublishedResultSignal({
+    await ensurePublishedDistributionSignal({
       tenantId: input.tenantId,
       contentItemId: typeof item.content_item_id === "string" ? item.content_item_id : null,
       calendarItemId: input.id,
