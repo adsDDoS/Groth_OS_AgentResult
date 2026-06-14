@@ -2803,6 +2803,7 @@ function publicationResultRow(item) {
       <div class="button-row compact">
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
       </div>
     </article>
@@ -4495,6 +4496,8 @@ async function submitPublicationResultForm() {
   };
   state.formModal = null;
   await updateCalendarStatus(id, "published", { payload, metadata });
+  const updatedItem = state.calendar.find((entry) => entry.id === id) || item;
+  await executePublicationNextStep(updatedItem, nextStep);
 }
 
 async function confirmHandedOffCalendarItems() {
@@ -4578,8 +4581,113 @@ async function setPublicationResultStep(encoded = "") {
   }
 
   refreshPublicationResults();
-  showToast(text("Next content step saved.", "Следующий контент-шаг сохранён."));
-  setRoute("analytics");
+  await executePublicationNextStep(item, nextStep);
+}
+
+async function executePublicationNextStep(item, nextStep = "leave") {
+  if (nextStep === "leave") {
+    showToast(text("Publication left as is.", "Публикация оставлена как есть."));
+    setRoute("analytics");
+    return null;
+  }
+  const existingAction = item.metadata?.publication_result?.next_step_action || null;
+  if (existingAction?.type === nextStep && existingAction.target_id) {
+    showToast(text("Next content action already exists.", "Следующее контент-действие уже создано."));
+    if (existingAction.target_type === "content_item") setRoute("content-pipeline");
+    else setRoute("overview");
+    return existingAction;
+  }
+
+  const action = nextStep === "update"
+    ? await createPublicationUpdateTask(item)
+    : await createPublicationFollowupContent(item, nextStep);
+  if (!action) return null;
+  await savePublicationNextStepAction(item, nextStep, action);
+  if (action.target_type === "content_item") {
+    showToast(nextStep === "expand"
+      ? text("Article outline created from the publication result.", "План статьи создан из результата публикации.")
+      : text("New reusable material created from the publication result.", "Новый материал для переиспользования создан из результата публикации."));
+    setRoute("content-pipeline");
+  } else {
+    showToast(text("Update task created from the publication result.", "Задача на правку создана из результата публикации."));
+    setRoute("overview");
+  }
+  return action;
+}
+
+async function createPublicationFollowupContent(item, nextStep) {
+  const sourceContent = state.content.find((entry) => entry.id === item.content_item_id) || {};
+  const result = item.metadata?.publication_result || {};
+  const isExpand = nextStep === "expand";
+  const titlePrefix = isExpand ? text("Expand", "Расширить") : text("Reuse", "Переиспользовать");
+  const contentItem = {
+    id: `local-content-${nextStep}-${Date.now()}`,
+    demand_map_item_id: sourceContent.demand_map_item_id || null,
+    title: `${titlePrefix}: ${item.title}`,
+    content_type: isExpand ? "article_outline" : (sourceContent.content_type || "telegram_post"),
+    channel: isExpand ? "website" : (sourceContent.channel || item.channel || "telegram"),
+    status: "idea",
+    owner: sourceContent.owner || "AgentResult",
+    body_md: "",
+    metadata: {
+      source_publication_result: true,
+      source_calendar_item_id: item.id,
+      source_content_item_id: item.content_item_id || null,
+      source_publication_url: result.publication_url || "",
+      next_step: nextStep,
+      brief: isExpand
+        ? text(`Expand the strongest angle from: ${item.title}`, `Расширить сильный тезис из публикации: ${item.title}`)
+        : text(`Reuse the strongest angle from: ${item.title}`, `Переиспользовать сильный тезис из публикации: ${item.title}`),
+      proof: result.next_step_note || result.publication_url || ""
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  const saved = await saveContentItem(contentItem);
+  state.content = mergeLocalItems(state.content, [saved]);
+  state.metrics.content_items = state.content.length;
+  addActivity("AgentResult", `Created ${nextStep} content from publication result: ${item.title}`);
+  return { type: nextStep, target_type: "content_item", target_id: saved.id, created_at: new Date().toISOString() };
+}
+
+async function createPublicationUpdateTask(item) {
+  const result = item.metadata?.publication_result || {};
+  const task = await addLocalTask({
+    title: text(`Update published material: ${item.title}`, `Обновить опубликованный материал: ${item.title}`),
+    owner: text("Release control", "Контроль выпуска"),
+    status: "next",
+    note: [
+      result.publication_url ? text(`URL: ${result.publication_url}`, `URL: ${result.publication_url}`) : "",
+      result.next_step_note || publicationNextStepLabel("update")
+    ].filter(Boolean).join("\n"),
+    source: "publication_result_update",
+    targetType: "publishing_calendar_item",
+    targetId: item.id
+  });
+  addActivity("AgentResult", `Created update task from publication result: ${item.title}`);
+  return { type: "update", target_type: "task", target_id: task.id, created_at: new Date().toISOString() };
+}
+
+async function savePublicationNextStepAction(item, nextStep, action) {
+  item.metadata = {
+    ...(item.metadata || {}),
+    publication_result: {
+      ...(item.metadata?.publication_result || {}),
+      next_step: nextStep,
+      next_step_action: action
+    }
+  };
+  item.updated_at = new Date().toISOString();
+  if (state.online && !String(item.id || "").startsWith("local-calendar")) {
+    const result = await api(`/publishing/items/${item.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ metadata: item.metadata })
+    }).catch(() => null);
+    if (result?.data) state.calendar = mergeLocalItems(state.calendar, [result.data]);
+  } else {
+    upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
+  }
+  refreshPublicationResults();
 }
 
 async function persistContentState(item) {

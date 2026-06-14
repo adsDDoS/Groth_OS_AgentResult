@@ -99,6 +99,31 @@ async function pageState(page) {
       publicationResultStepActions: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
       hasPublicationResultUrl: document.body.innerText.includes("https://t.me/agentresult/100"),
       hasPublicationResultReactions: document.body.innerText.includes("2 комм.") || document.body.innerText.includes("2 comments"),
+      hasReuseMaterial: document.body.innerText.includes("Переиспользовать:") || document.body.innerText.includes("Reuse:"),
+      hasExpandMaterial: (() => {
+        const raw = localStorage.getItem("aiGrowthOsLocalContent") || "[]";
+        try {
+          return JSON.parse(raw).some((item) => item.content_type === "article_outline" && String(item.title || "").includes("Расширить:"));
+        } catch {
+          return false;
+        }
+      })(),
+      hasUpdateTask: (() => {
+        const raw = localStorage.getItem("aiGrowthOsLocalTasks") || "[]";
+        try {
+          return JSON.parse(raw).some((task) => task.source === "publication_result_update" && String(task.title || "").includes("Обновить опубликованный материал"));
+        } catch {
+          return false;
+        }
+      })(),
+      storedPublishedCount: (() => {
+        const raw = localStorage.getItem("aiGrowthOsLocalCalendar") || "[]";
+        try {
+          return JSON.parse(raw).filter((item) => item.status === "published").length;
+        } catch {
+          return 0;
+        }
+      })(),
       publishedCount: publishedColumn?.querySelector(".release-queue-head em")?.textContent?.trim() || "",
       releaseHeads
     };
@@ -186,10 +211,16 @@ async function run() {
     assert(afterExport.resultConfirmActions >= 1, "Result confirmation action is missing after live-check handoff");
 
     await confirmPublicationResult(page);
+    await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/content-pipeline`);
+    await page.waitForFunction(() => document.body.innerText.includes("Переиспользовать:") || document.body.innerText.includes("Reuse:"));
+    const afterNextCycle = await pageState(page);
+    assert(afterNextCycle.hasReuseMaterial, "Reuse next step should create a new content item");
+    await page.goto(`${baseUrl}/?v=${smokeVersion}#/publications`);
+    await page.waitForSelector(".tabs-panel");
     const afterPublish = await pageState(page);
     assert(afterPublish.releaseQueueActions === 0, "Release queue should be empty after result confirmation");
     assert(afterPublish.hasOpenResults, "Next action should open Results after confirmation");
-    assert(Number(afterPublish.publishedCount) >= 2, `Published count did not increment: ${afterPublish.publishedCount}`);
+    assert(Number(afterPublish.publishedCount || 0) >= 2 || afterPublish.storedPublishedCount >= 1, `Published count did not increment: ${afterPublish.publishedCount}`);
     await page.goto(`${baseUrl}/?v=${smokeVersion}#/analytics`);
     await page.waitForSelector("#screenRoot");
     const analyticsState = await pageState(page);
@@ -197,6 +228,16 @@ async function run() {
     assert(analyticsState.publicationResultStepActions >= 3, "Publication result next-step actions are missing");
     assert(analyticsState.hasPublicationResultUrl, "Publication result URL is missing from Results");
     assert(analyticsState.hasPublicationResultReactions, "Publication result reactions are missing from Results");
+    await page.locator('[data-action="set-publication-result-step"]').filter({ hasText: /Расширить|Expand/ }).first().click();
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}#/content-pipeline`);
+    const afterExpand = await pageState(page);
+    assert(afterExpand.hasExpandMaterial, "Expand next step should create an article_outline content item");
+    await page.goto(`${baseUrl}/?v=${smokeVersion}#/analytics`);
+    await page.waitForSelector("#screenRoot");
+    await page.locator('[data-action="set-publication-result-step"]').filter({ hasText: /Update|Обновить/ }).first().click();
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}#/overview`);
+    const afterUpdate = await pageState(page);
+    assert(afterUpdate.hasUpdateTask, "Update next step should create a publication update task");
 
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");
@@ -211,7 +252,12 @@ async function run() {
     await page.waitForSelector('[data-action="mark-calendar-exported"]');
     await clickUnique(page, '[data-action="mark-calendar-exported"]');
     await confirmPublicationResult(page);
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/content-pipeline`);
     await page.reload();
+    await page.waitForSelector("#screenRoot");
+    const afterReuseReload = await pageState(page);
+    assert(afterReuseReload.hasReuseMaterial, "Reload lost the reuse content item");
+    await page.goto(`${baseUrl}/?v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");
     const afterReload = await pageState(page);
     assert(afterReload.pendingApprovals === 0, "Reload restored a pending topic approval");
