@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 
 const port = Number(process.env.DASHBOARD_SMOKE_PORT || 4173);
 const baseUrl = process.env.DASHBOARD_SMOKE_URL || `http://127.0.0.1:${port}`;
+const smokeVersion = process.env.DASHBOARD_SMOKE_VERSION || "smoke";
 const shouldStartServer = !process.env.DASHBOARD_SMOKE_URL;
 
 let chromium;
@@ -35,7 +36,7 @@ function assert(condition, message) {
 async function waitForDashboard() {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    if (server?.exitCode !== null) {
+    if (server && server.exitCode !== null) {
       throw new Error(`Dashboard server exited early: ${serverError.trim() || `code ${server.exitCode}`}`);
     }
     try {
@@ -101,7 +102,7 @@ async function assertResponsiveShell(page) {
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const route of routes) {
-      await page.goto(`${baseUrl}/?v=smoke-responsive#/${route}`);
+      await page.goto(`${baseUrl}/?v=${smokeVersion}-responsive#/${route}`);
       await page.waitForSelector("#screenRoot");
       const shell = await page.evaluate(() => {
         const languageSwitch = document.querySelector(".language-switch")?.getBoundingClientRect();
@@ -138,7 +139,7 @@ async function run() {
   });
 
   try {
-    await page.goto(`${baseUrl}/?demo=reset&v=smoke#/publications`);
+    await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`);
     await page.waitForSelector(".tabs-panel");
 
     const initial = await pageState(page);
@@ -149,9 +150,9 @@ async function run() {
 
     await clickUnique(page, '[data-action="approve-weekly-batch"]');
     await clickUnique(page, '[data-action="confirm-weekly-batch-approval"]');
-    await page.waitForURL(`${baseUrl}/?demo=reset&v=smoke#/content-pipeline`);
+    await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/content-pipeline`);
     await clickUnique(page, '[data-action="mark-manager-qa-passed"]');
-    await page.waitForURL(`${baseUrl}/?demo=reset&v=smoke#/publications`);
+    await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`);
     await page.waitForSelector('[data-action="mark-calendar-exported"]');
 
     const afterQa = await pageState(page);
@@ -169,16 +170,16 @@ async function run() {
     assert(afterPublish.hasOpenResults, "Next action should open Results after confirmation");
     assert(Number(afterPublish.publishedCount) >= 2, `Published count did not increment: ${afterPublish.publishedCount}`);
 
-    await page.goto(`${baseUrl}/?demo=reset&v=smoke-persist#/publications`);
+    await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");
-    await page.evaluate(() => history.replaceState(null, "", "/?v=smoke-persist#/publications"));
+    await page.evaluate((version) => history.replaceState(null, "", `/?v=${version}-persist#/publications`), smokeVersion);
     await clickUnique(page, '[data-action="approve-weekly-batch"]');
     await clickUnique(page, '[data-action="confirm-weekly-batch-approval"]');
-    await page.waitForURL(`${baseUrl}/?v=smoke-persist#/content-pipeline`);
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/content-pipeline`);
     await page.reload();
     await page.waitForSelector('[data-action="mark-manager-qa-passed"]');
     await clickUnique(page, '[data-action="mark-manager-qa-passed"]');
-    await page.waitForURL(`${baseUrl}/?v=smoke-persist#/publications`);
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector('[data-action="mark-calendar-exported"]');
     await clickUnique(page, '[data-action="mark-calendar-exported"]');
     await page.locator('[data-action="mark-calendar-published"]').first().click();
