@@ -1,253 +1,237 @@
-# AgentResult Growth Control Pilot Demo
+# GrothOS Client-Safe Demo Script
 
-Current repeatable web demo contract:
+Purpose: show a serious content-ops control surface in 7 minutes without turning the call into product training.
 
-```text
-docs/customer-demo-contract.md
-```
-
-Цель показа: за 5-7 минут показать собственнику рабочий контур:
+Stable dashboard:
 
 ```text
-готово -> решение -> передано -> вышло -> сигнал
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
 ```
 
-Позиционирование в одном предложении:
+One-line positioning:
 
 ```text
-AgentResult Growth Control помогает собственнику держать выпуск и результат под контролем: AgentResult готовит работу, собственник принимает решение, команда выпускает, система фиксирует статус и сигнал.
+GrothOS turns content production into a controlled loop: topic, owner decision, QA, release, confirmed publication, and next content step.
 ```
 
-Не показывать как backend-admin, контентный кабинет или AI-игрушку. Язык показа: решение, передача, выпуск, сигнал, заявки, задачи, контроль.
+## Demo Shape
 
-## Before Demo
+Show only three screens:
 
-1. Сбросить только demo tenant.
-2. Открыть dashboard на demo tenant.
-3. Проверить, что Telegram/API отвечает на `что готово`.
-4. Не использовать основной pilot tenant в resettable demo.
+1. `Сегодня`
+2. `Публикации`
+3. `Результаты`
 
-Demo tenant:
+Show one scenario:
 
 ```text
-10000000-0000-4000-8000-000000000001
+topic decision -> manager QA -> release queue -> live confirmation -> publication result
 ```
 
-Main pilot tenant:
+Do not show:
 
-```text
-00000000-0000-0000-0000-000000000001
-```
+- `База`
+- `Настройки`
+- backend/API endpoints
+- Vercel/GitHub/VPS
+- raw Telegram token or env values
+- reset commands
+- slash-command training
+- unfinished CRM, money, demand, or revenue attribution areas
 
-Dashboard:
-
-```text
-http://127.0.0.1:4173/?demo=reset&api=http://127.0.0.1:3000&tenant=10000000-0000-4000-8000-000000000001#/overview
-```
-
-## 5-7 Minute Flow
-
-### 1. Сегодня
+## Opening
 
 Say:
 
 ```text
-Это ежедневный пульт собственника. Здесь видно, что требует решения, что уже вышло и где есть следующий шаг.
+Я покажу не AI-писателя, а производственный контур текстовой контент-фермы: что готовим, что согласовано, что вышло, и что делать с результатом дальше.
 ```
 
-Show:
+Then open:
 
-- pending decision
-- published material
-- result signal
+```text
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
+```
 
-Do not explain every card. The point is control, not dashboard training.
+## Screen 1: Сегодня
 
-### 2. Публикации
+Goal: prove this is a control surface, not a demo landing page.
 
 Say:
 
 ```text
-Выпуск разделён на три состояния: ждёт решения, передано вручную, вышло. Передано не считается опубликованным, пока выход не подтверждён.
+Это экран ежедневного контроля. Здесь не надо разбирать весь dashboard: видно главное действие, очередь работы и где сейчас стоит выпуск.
 ```
 
-Show:
+Point at:
 
-- `Ждёт решения`
-- `Передано вручную`
-- `Вышло`
-- material card
+- top action
+- four status cells
+- action queue
 
-### 3. Telegram Owner-Control
+Do not explain every card.
+
+Say only if asked:
+
+```text
+Dashboard нужен для контроля и аудита. Ежедневная работа может идти через Telegram, но источник состояния один.
+```
+
+Transition:
+
+```text
+Теперь покажу место, где материал проходит от решения к выходу.
+```
+
+## Screen 2: Публикации
+
+Open:
+
+```text
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/publications
+```
 
 Say:
 
 ```text
-Собственнику не нужно помнить команды. Он пишет обычными фразами.
+Публикации разделены на три понятных состояния: очередь выпуска, проверка выхода и опубликовано. Важно: передано в выпуск не равно опубликовано.
 ```
 
-Send:
+Point at:
+
+- `Очередь выпуска`
+- `Проверка выхода`
+- `Опубликовано`
+- pending owner decision or ready release row
+- QA evidence if present
+
+Use this explanation:
+
+```text
+Собственник один раз задаёт границу темы. Дальше текст проходит QA и выпуск. Собственник возвращается только на исключение или подтверждение результата.
+```
+
+If demonstrating the click flow, do only this path:
+
+1. approve weekly topic
+2. let route move to `Материалы`
+3. click `QA пройден`
+4. return to `Публикации`
+5. click `К проверке выхода`
+6. click `Подтвердить результат` or `Отметить: вышло`
+
+Do not open:
+
+- settings
+- integration/access panels
+- backend health pages
+- raw generated text editor unless specifically requested
+
+Transition:
+
+```text
+После выхода нас интересует не обещание продаж, а производственный результат публикации.
+```
+
+## Screen 3: Результаты
+
+Open:
+
+```text
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/analytics
+```
+
+Say:
+
+```text
+Результаты здесь про контент-операции: URL, канал, формат, первичные реакции и следующий контент-шаг.
+```
+
+Point at:
+
+- confirmed publications count
+- URL column
+- primary reactions
+- next step actions: reuse, expand, update, leave
+
+Use this wording:
+
+```text
+Мы не говорим "пост принёс деньги", пока нет реальной аналитики. Сначала фиксируем факт выхода и первичную реакцию, потом решаем: переиспользовать, расширить, обновить или оставить.
+```
+
+Close with:
+
+```text
+Первый пилот должен доказать управляемость производства: тема не теряется, текст не зависает, выпуск подтверждается, результат превращается в следующий контент-шаг.
+```
+
+## Telegram Mention
+
+Do not make Telegram the main demo unless the client specifically asks about daily work.
+
+If asked, say:
+
+```text
+В рабочем режиме собственник может писать обычными фразами: "что готово", "покажи первый", "согласую", "передал в выпуск", "вышло". Но на первом показе я держу фокус на продуктовой логике.
+```
+
+Allowed phrases for internal smoke:
 
 ```text
 что готово
-```
-
-Expected:
-
-```text
-Ждёт решения: 1
-```
-
-Send:
-
-```text
 покажи первый
-```
-
-Expected: AgentResult shows the material text.
-
-Send:
-
-```text
 согласую
-```
-
-Expected:
-
-```text
-Решение зафиксировано: согласовано.
-```
-
-Send:
-
-```text
 передал в выпуск
-```
-
-Expected:
-
-```text
-Передано в выпуск вручную.
-```
-
-Say:
-
-```text
-Это важное разделение: материал уже ушёл ответственному, но ещё не считается вышедшим.
-```
-
-Send:
-
-```text
 вышло
-```
-
-Expected:
-
-```text
-Пришлите URL публикации.
-```
-
-Send:
-
-```text
-https://t.me/agentresult/300
-```
-
-Expected: AgentResult asks for format.
-
-Send:
-
-```text
-telegram_post
-```
-
-Expected: AgentResult asks for primary reactions.
-
-Send:
-
-```text
-комментарии 2, репосты 1, сохранения 3, реакции 8
-```
-
-Expected:
-
-```text
-Данные результата сохранены.
-```
-
-### 4. Результаты
-
-Open `Результаты` or send:
-
-```text
 что по результату
 ```
 
-Expected:
+## What Not To Say
 
-- `Вышло: 2` after full lifecycle
-- `Заявки: 3`
-- next task
-
-Say:
+Avoid:
 
 ```text
-Результат здесь не про обещание роста. Система фиксирует факты: что вышло, какой сигнал появился и что делать дальше.
+лиды
+гарантированный рост
+автопостинг без контроля
+CRM уже подключена
+полная автономность
+мы заменяем редактора
+это просто AI пишет посты
 ```
 
-## Close
-
-Use this closing line:
+Use instead:
 
 ```text
-Первый пилот не про полную автономность. Он про устойчивый контур: готово, решение, выпуск, подтверждение результата. После этого уже можно подключать CRM, источники заявок и более сложные сценарии.
+публикация
+первичная реакция
+следующий контент-шаг
+контур производства
+контроль выхода
+QA
+решение собственника
 ```
 
-## Setup Commands
+## Pre-Call Checks
 
-Local or Docker image after build:
+Run:
 
 ```bash
-AI_GROWTH_OS_STORAGE=postgres \
-DATABASE_URL=postgres://... \
-npm run build
-
-AI_GROWTH_OS_STORAGE=postgres \
-DATABASE_URL=postgres://... \
-npm run demo:reset-pilot
+npm run dashboard:smoke
+npm run pilot-demo:owner-flow-smoke
+npm run vps:agentresult-health
+bash scripts/smoke-demo-api-proxy-vps.sh
 ```
 
-VPS through backend image:
+Optional if Telegram will be shown:
 
 ```bash
-docker run --rm \
-  --network agentresult-os-net \
-  --env-file /opt/agentresult-os/app/.env \
-  agentresult-os-backend:<sha> \
-  node apps/backend/dist/db/reset-pilot-demo.js
+npm run telegram:production-smoke
 ```
 
-API smoke:
+Security note:
 
-```bash
-curl -s http://127.0.0.1:3000/telegram/intent \
-  -H 'content-type: application/json' \
-  -H 'x-tenant-id: 10000000-0000-4000-8000-000000000001' \
-  -d '{"text":"что готово"}'
+```text
+Old Telegram token is acceptable only for internal demo/pre-production. Rotate before client pilot with real client data.
 ```
-
-For live bot demo, configure backend owner-control tenant:
-
-```bash
-AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_TENANT_ID=10000000-0000-4000-8000-000000000001
-```
-
-## Guardrails
-
-- Do not reset the main pilot tenant.
-- Do not use `/demo_reset` in live owner chat unless it points at the demo tenant.
-- Do not show `Деньги: 0` in Growth Control.
-- Do not say Hermes to the client; owner-facing name is AgentResult.
-- Do not promise autopublishing, guaranteed growth, or autonomous public actions.
-- Do not present dashboard as the daily working surface; Telegram owner-control is the daily surface, dashboard is setup/source of truth/fallback.
