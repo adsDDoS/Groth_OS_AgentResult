@@ -279,6 +279,17 @@ Required checks:
 npm run telegram:production-smoke
 ```
 
+Optional recurring monitor:
+
+```bash
+npm run telegram:production-monitor
+```
+
+It runs the same production smoke on the VPS, appends a timestamped line to
+`/opt/agentresult-os/runtime/telegram-owner-control-monitor.log`, and can send a
+short Telegram alert when `TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID` is set locally.
+Use it from cron or a systemd timer after the owner-control contour is live.
+
 Expected state:
 
 - both backend containers are memory-limited;

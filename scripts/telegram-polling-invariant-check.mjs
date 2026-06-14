@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const routes = readFileSync(resolve(root, "apps/backend/src/modules/telegram/routes.ts"), "utf8");
 const smoke = readFileSync(resolve(root, "scripts/smoke-telegram-publication-result-vps.sh"), "utf8");
+const monitor = readFileSync(resolve(root, "scripts/monitor-telegram-owner-control-vps.sh"), "utf8");
 const deployment = readFileSync(resolve(root, "docs/deployment.md"), "utf8");
 
 function assertIncludes(source, fragment, label) {
@@ -22,6 +23,9 @@ assertIncludes(smoke, "getWebhookInfo", "production smoke");
 assertIncludes(smoke, "webhook empty ok", "production smoke");
 assertIncludes(smoke, "single token owner ok", "production smoke");
 assertIncludes(smoke, "owner-control bot token is also present in", "production smoke");
+assertIncludes(monitor, "npm run telegram:production-smoke", "production monitor");
+assertIncludes(monitor, "telegram-owner-control invariant failed", "production monitor");
+assertIncludes(monitor, "TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID", "production monitor");
 assertIncludes(deployment, "Telegram webhook URL is empty", "deployment docs");
 assertIncludes(deployment, "owner-control bot token must stay polling-only", "deployment docs");
 
