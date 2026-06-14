@@ -21,6 +21,7 @@ Description=AgentResult VPS invariant health guard
 [Service]
 Type=oneshot
 WorkingDirectory=${APP_DIR}
+Environment=AGENTRESULT_VPS_HEALTH_LOCAL=1
 ExecStart=/usr/bin/env bash -lc 'npm run vps:agentresult-health >> ${LOG_FILE} 2>&1'
 SERVICE
 
