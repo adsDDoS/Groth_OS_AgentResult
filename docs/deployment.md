@@ -267,16 +267,16 @@ scripts/deploy-backend-vps.sh
 Required checks:
 
 ```bash
-docker ps --filter name=agentresult-os
-docker stats --no-stream agentresult-os-backend agentresult-os-telegram-owner-control agentresult-os-demo-readonly-proxy
-docker logs --since=2m agentresult-os-telegram-owner-control
+npm run telegram:production-smoke
 ```
 
 Expected state:
 
 - both backend containers are memory-limited;
+- `agentresult-os-telegram-owner-control` runs the current git short SHA image tag;
 - `agentresult-os-telegram-owner-control` logs `Telegram owner-control polling middleware is enabled`;
 - Telegram webhook URL is empty;
+- the deployed bundle contains the Telegram publication-result confirmation dialog;
 - Hermes is not polling the same bot token;
 - classic Hermes Telegram gateway containers (`agentresult-agent-*`) are stopped or rebuilt without `TELEGRAM_BOT_TOKEN` for this owner-control bot;
 - ordinary owner phrases route through backend intent logic;
@@ -287,11 +287,7 @@ Do not start the classic `agentresult-agent-*` Telegram gateway containers again
 Quick cutover verification:
 
 ```bash
-docker ps --format '{{.Names}}' | grep -E '^agentresult-agent-' || true
-docker logs --since=2m agentresult-os-telegram-owner-control
-curl -s -H 'content-type: application/json' \
-  -d '{"text":"что дальше"}' \
-  http://127.0.0.1:18831/telegram/intent
+npm run telegram:production-smoke
 ```
 
 ## Backups

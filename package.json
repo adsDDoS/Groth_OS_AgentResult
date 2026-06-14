@@ -21,6 +21,7 @@
     "publishing-commands:check": "npm run build && node scripts/publishing-commands-check.mjs",
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --cwd apps/dashboard",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
+    "telegram:production-smoke": "bash scripts/smoke-telegram-publication-result-vps.sh",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",
