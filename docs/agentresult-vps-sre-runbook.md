@@ -1,5 +1,7 @@
 # AgentResult VPS SRE Runbook
 
+[![AgentResult VPS health](https://github.com/adsDDoS/Groth_OS_AgentResult/actions/workflows/agentresult-vps-health.yml/badge.svg)](https://github.com/adsDDoS/Groth_OS_AgentResult/actions/workflows/agentresult-vps-health.yml)
+
 Use this page before and after any AgentResult VPS work. This is the operational
 source of truth for keeping the owner-control contour alive.
 
@@ -92,6 +94,10 @@ Manual GitHub workflow:
 - Workflow name: `AgentResult VPS health`.
 - Required secret: `AGENTRESULT_VPS_SSH_KEY`.
 - Optional input: `expected_owner_image_tag`.
+- Launch path: GitHub repo -> Actions -> `AgentResult VPS health` ->
+  `Run workflow` -> branch `main`.
+- Leave `expected_owner_image_tag` empty for a general invariant check; set it
+  to a git short SHA when verifying a specific owner-control deploy.
 
 ## Recovery
 

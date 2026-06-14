@@ -35,7 +35,10 @@ jobs:
           AGENTRESULT_VPS_SSH_KEY: ${{ secrets.AGENTRESULT_VPS_SSH_KEY }}
           VPS_HOST_INPUT: ${{ inputs.vps_host }}
         run: |
-          test -n "$AGENTRESULT_VPS_SSH_KEY"
+          if [ -z "$AGENTRESULT_VPS_SSH_KEY" ]; then
+            echo "::error title=Missing repository secret::Configure AGENTRESULT_VPS_SSH_KEY in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$AGENTRESULT_VPS_SSH_KEY" > ~/.ssh/agentresult_vps
