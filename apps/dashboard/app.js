@@ -4859,6 +4859,7 @@ async function submitPublicationResultForm() {
   await updateCalendarStatus(id, "published", { payload, metadata });
   const updatedItem = state.calendar.find((entry) => entry.id === id) || item;
   await executePublicationNextStep(updatedItem, nextStep);
+  goRoute("analytics");
 }
 
 async function confirmHandedOffCalendarItems() {
