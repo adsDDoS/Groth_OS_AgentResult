@@ -39,6 +39,11 @@ Use it as the north star for dashboard, Telegram, backend workflow, and agent
 task changes. In short: AgentResult should feel like a serious operating
 cockpit for controlled content production, not like a text-heavy AI demo.
 
+The Visual Dashboard v1 blueprint is documented in
+`docs/visual-dashboard-blueprint-v1.md`. Use it before changing dashboard
+navigation, layout, tables, drawers, publication screens, results screens, or
+visual hierarchy.
+
 The product language is:
 
 - money

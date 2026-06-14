@@ -4,6 +4,9 @@ This document is the durable product course for AgentResult OS / GrothOS work.
 Use it before product, UX, dashboard, Telegram, backend workflow, or agent task
 changes.
 
+For the first visual implementation pass, use
+`docs/visual-dashboard-blueprint-v1.md`.
+
 ## North Star
 
 AgentResult is not a generic AI dashboard and not a tutorial product. It is an
@@ -90,6 +93,9 @@ Dashboard, Telegram, and backend must support the same loop:
 ## Dashboard Direction
 
 The first screen should be a working Command Center, not a welcome page.
+
+The concrete Visual Dashboard v1 implementation blueprint is
+`docs/visual-dashboard-blueprint-v1.md`.
 
 Recommended main navigation:
 
