@@ -44,6 +44,21 @@ tenant_id="$(printf '%s\n' "$env_output" | sed -n 's/^AI_GROWTH_OS_TELEGRAM_OWNE
 [ -n "$tenant_id" ] || fail "AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_TENANT_ID is missing"
 echo "polling env ok"
 
+bot_token="$(printf '%s\n' "$env_output" | sed -n 's/^TELEGRAM_BOT_TOKEN=//p' | tail -1)"
+[ -n "$bot_token" ] || fail "TELEGRAM_BOT_TOKEN is missing"
+same_token_containers="$(
+  for container in $(docker ps --format '{{.Names}}'); do
+    if docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
+      | grep -qx "TELEGRAM_BOT_TOKEN=$bot_token"; then
+      printf '%s\n' "$container"
+    fi
+  done
+)"
+unexpected_same_token_containers="$(printf '%s\n' "$same_token_containers" | grep -vx "$CONTAINER_NAME" || true)"
+[ -z "$unexpected_same_token_containers" ] \
+  || fail "owner-control bot token is also present in: $(printf '%s' "$unexpected_same_token_containers" | paste -sd ',' -)"
+echo "single token owner ok"
+
 docker exec "$CONTAINER_NAME" sh -lc \
   "grep -q 'Пришлите URL публикации' apps/backend/dist/modules/telegram/routes.js && grep -q 'telegram_publication_result_confirmation' apps/backend/dist/modules/telegram/routes.js" \
   || fail "publication result dialog marker is missing in deployed bundle"

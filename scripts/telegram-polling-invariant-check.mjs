@@ -20,6 +20,8 @@ assertIncludes(routes, "ensureTelegramOwnerControlPollingMode(app)", "telegram r
 assertIncludes(routes, "getUpdates", "telegram routes");
 assertIncludes(smoke, "getWebhookInfo", "production smoke");
 assertIncludes(smoke, "webhook empty ok", "production smoke");
+assertIncludes(smoke, "single token owner ok", "production smoke");
+assertIncludes(smoke, "owner-control bot token is also present in", "production smoke");
 assertIncludes(deployment, "Telegram webhook URL is empty", "deployment docs");
 assertIncludes(deployment, "owner-control bot token must stay polling-only", "deployment docs");
 

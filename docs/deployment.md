@@ -253,6 +253,9 @@ The owner-control bot token must stay polling-only in this contour. When
 Telegram webhook with `drop_pending_updates=false` before polling. Do not add a
 deploy step that calls Telegram `setWebhook` for the same token unless the
 owner-control container is deliberately switched out of polling mode.
+The same bot token must not be present in the regular demo API container. Deploy
+the demo API with `STRIP_TELEGRAM_ENV=1` and keep token-bearing Telegram env
+only in `agentresult-os-telegram-owner-control`.
 
 The Telegram owner-control container should use the same pilot tenant that Vercel demo opens:
 

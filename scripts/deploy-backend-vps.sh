@@ -51,15 +51,20 @@ fi
 
 git pull --ff-only origin main
 SHA="$(git rev-parse --short HEAD)"
+IMAGE="agentresult-os-backend:$SHA"
 
-docker build -f apps/backend/Dockerfile -t "agentresult-os-backend:$SHA" .
+if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "Reusing existing image $IMAGE"
+else
+  docker build -f apps/backend/Dockerfile -t "$IMAGE" .
+fi
 
 if [ "${STORAGE_MODE:-auto}" != "local" ]; then
   docker run --rm \
     --network "$NETWORK_NAME" \
     -v "$RUNTIME_DIR:/runtime" \
     --env-file /tmp/agentresult-backend.env \
-    "agentresult-os-backend:$SHA" \
+    "$IMAGE" \
     node apps/backend/dist/db/migrate.js
 fi
 
@@ -77,7 +82,7 @@ docker run -d \
   -p "$HOST_BIND:$HOST_PORT:$CONTAINER_PORT" \
   -v "$RUNTIME_DIR:/runtime" \
   --env-file /tmp/agentresult-backend.env \
-  "agentresult-os-backend:$SHA"
+  "$IMAGE"
 
 rm -f /tmp/agentresult-backend.env
 docker ps --filter "name=$CONTAINER_NAME" --format '{{.Names}} {{.Image}} {{.Status}}'
