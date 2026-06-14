@@ -8,6 +8,12 @@ Use this before a first client-safe GrothOS demo.
 docs/pilot-qualification-note.md
 ```
 
+Intake перед пилотом:
+
+```text
+docs/pilot-onboarding-intake.md
+```
+
 Canonical script:
 
 ```text

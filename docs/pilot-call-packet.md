@@ -8,6 +8,12 @@
 docs/pilot-qualification-note.md
 ```
 
+После `идём в пилот` собрать:
+
+```text
+docs/pilot-onboarding-intake.md
+```
+
 Dashboard:
 
 ```text
