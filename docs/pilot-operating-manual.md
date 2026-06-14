@@ -13,7 +13,8 @@
 | Week 2 expansion | `docs/pilot-week-2-expansion-board.md` | Same loop / narrow expansion / channel test / repair week. | Final decision. |
 | Decision | This manual | Continue / narrow / repair / stop. | Closeout report. |
 | Closeout | `docs/pilot-closeout-report-template.md` | Commercial next step. | Offer or stop. |
-| Offer | `docs/pilot-pricing-offer-one-pager.md` | Paid pilot / narrow loop / repair sprint. | Start paid scope or close. |
+| Offer | `docs/pilot-pricing-offer-one-pager.md` | Paid pilot / narrow loop / repair sprint. | Follow-up message. |
+| Follow-up | `docs/pilot-sales-follow-up-templates.md` | Continue / Narrow / Repair message. | Start paid scope or close. |
 
 ## Operating Rules
 
@@ -80,4 +81,10 @@ docs/pilot-closeout-report-template.md
 
 ```text
 docs/pilot-pricing-offer-one-pager.md
+```
+
+После предложения отправить follow-up:
+
+```text
+docs/pilot-sales-follow-up-templates.md
 ```

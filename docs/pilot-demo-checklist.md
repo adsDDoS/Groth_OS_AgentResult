@@ -50,6 +50,12 @@ Pricing / offer one-pager:
 docs/pilot-pricing-offer-one-pager.md
 ```
 
+Sales follow-up templates:
+
+```text
+docs/pilot-sales-follow-up-templates.md
+```
+
 Canonical script:
 
 ```text
