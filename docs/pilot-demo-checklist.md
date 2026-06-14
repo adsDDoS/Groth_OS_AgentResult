@@ -2,6 +2,12 @@
 
 Use this before a first client-safe GrothOS demo.
 
+Pilot operating manual:
+
+```text
+docs/pilot-operating-manual.md
+```
+
 Квалификация перед показом:
 
 ```text
