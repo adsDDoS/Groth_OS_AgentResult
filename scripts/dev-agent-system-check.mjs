@@ -32,6 +32,21 @@ const checks = [
       "Vercel Security Checkpoint",
       "npm run dashboard:smoke"
     ]
+  },
+  {
+    file: "docs/dev-agent-system/task-packets/domain-state-machine-v1.md",
+    tokens: [
+      "approval -> content_item -> publishing_calendar_item -> result_signal",
+      "`result_signal` is not yet a first-class table",
+      "approved publishing_calendar_item approval",
+      "Option A, then Option B",
+      "Repo Archaeologist",
+      "Backend Domain Agent",
+      "Frontend Product Agent",
+      "QA Smoke Agent",
+      "DevOps Deploy Agent",
+      "Docs Runbook Agent"
+    ]
   }
 ];
 

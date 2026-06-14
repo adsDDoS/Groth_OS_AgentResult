@@ -15,6 +15,7 @@ The system is lead-controlled. Specialist agents can research, implement, test, 
 - [Roles](dev-agent-system/roles.md)
 - [Contracts](dev-agent-system/contracts.md)
 - [Production Fix Playbook](dev-agent-system/workflows/production-fix.md)
+- [Domain State Machine v1 Task Packet](dev-agent-system/task-packets/domain-state-machine-v1.md)
 
 ## Operating Rules
 
@@ -47,4 +48,3 @@ A production change must have:
 - deploy or rollback path known;
 - final state checked in Git;
 - next weighted goal proposed.
-
