@@ -2,6 +2,12 @@
 
 Использовать после `docs/pilot-onboarding-intake.md`. Цель первой недели — провести один материал через полный контур: тема -> черновик -> QA -> выпуск -> подтверждение -> review.
 
+Day 7 review template:
+
+```text
+docs/pilot-day-7-review-template.md
+```
+
 | День | Фокус | Владелец | Действие | Выход | Gate |
 | --- | --- | --- | --- | --- | --- |
 | Day 0 | Setup | Operator + owner | Заполнить intake: канал, роли, cadence, формат, forbidden claims, result source. | Готовый pilot context. | Есть канал, approval owner, QA/release owner, result owner. |
@@ -10,7 +16,7 @@
 | Day 3 | QA | QA/release owner | Проверить фактуру, стиль, риски, готовность к выпуску. | QA passed or changes requested. | Нет спорных claims без owner approval. |
 | Day 4 | Release | QA/release owner | Передать материал в канал или ответственному за ручной выпуск. | Release handoff recorded. | Передано не равно опубликовано; нужен live check. |
 | Day 5 | Confirmation | Result owner | Подтвердить факт выхода: URL, канал, формат, первичные реакции. | Publication result recorded. | Есть URL/source или manual owner mark. |
-| Day 7 | Review | Owner + operator | Разобрать первую неделю и выбрать next content step. | Reuse / expand / update / leave. | Понятно, что делать со следующим материалом. |
+| Day 7 | Review | Owner + operator | Заполнить Day 7 review и выбрать next content step. | Reuse / expand / update / leave + week 2 decision. | Понятно, что делать со следующим материалом и продолжаем ли пилот. |
 
 ## Daily Rule
 

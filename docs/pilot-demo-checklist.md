@@ -20,6 +20,12 @@ Week-1 execution board:
 docs/pilot-week-1-execution-board.md
 ```
 
+Day 7 review:
+
+```text
+docs/pilot-day-7-review-template.md
+```
+
 Canonical script:
 
 ```text
