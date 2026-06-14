@@ -140,7 +140,7 @@ They cannot publish, update live website content, send newsletters, post to soci
 
 - [AgentResult OS Knowledge](knowledge.md)
 - [Codex Agent Instructions](AGENTS.md)
-- [GrothOS Pilot Packet Index](docs/pilot-packet-index.md)
+- [GrothOS Pilot Packet Index](docs/pilot-packet-index.md) - safe entrypoint for pilot docs, access labels, and client-call routing.
 - [Product](docs/product.md)
 - [Commercial Product Roadmap](docs/commercial-product-roadmap.md)
 - [Architecture](docs/architecture.md)

@@ -1,5 +1,7 @@
 # Pilot Demo Checklist
 
+Access: `internal-only`
+
 Use this before a first client-safe GrothOS demo.
 
 Pilot operating manual:

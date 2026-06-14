@@ -1,5 +1,7 @@
 # GrothOS Pre-Call Dry Run
 
+Access: `internal-only`
+
 Date: 2026-06-14
 
 Production URL:

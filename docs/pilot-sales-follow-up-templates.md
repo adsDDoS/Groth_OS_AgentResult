@@ -1,5 +1,7 @@
 # GrothOS Pilot Sales Follow-Up Templates
 
+Access: `operator-only`
+
 Использовать после `docs/pilot-pricing-offer-one-pager.md`. Цель — отправить короткое сообщение по closeout decision без нового объяснения продукта.
 
 ## Continue

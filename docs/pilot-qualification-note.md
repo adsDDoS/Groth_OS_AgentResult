@@ -1,5 +1,7 @@
 # GrothOS Pilot Qualification Note
 
+Access: `operator-only`
+
 Использовать до предложения пилота. Цель — защитить GrothOS от неправильных первых клиентов.
 
 ## Кому Показывать

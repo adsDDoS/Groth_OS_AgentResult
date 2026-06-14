@@ -1,5 +1,7 @@
 # GrothOS Pilot Onboarding Intake
 
+Access: `client-facing`
+
 Собрать у qualified клиента до первой недели пилота. Цель — запустить один управляемый content loop, а не описать весь будущий продукт.
 
 После заполнения intake использовать execution board:

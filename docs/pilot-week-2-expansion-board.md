@@ -1,5 +1,7 @@
 # GrothOS Pilot Week-2 Expansion Board
 
+Access: `operator-only`
+
 Использовать только после `docs/pilot-day-7-review-template.md`. Цель второй недели — проверить повторяемость content loop без расползания пилота.
 
 ## Starting Gate

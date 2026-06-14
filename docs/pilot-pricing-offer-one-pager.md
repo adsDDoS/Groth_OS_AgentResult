@@ -1,5 +1,7 @@
 # GrothOS Pilot Pricing / Offer One-Pager
 
+Access: `operator-only`
+
 Использовать после `docs/pilot-closeout-report-template.md`. Цель — перевести closeout decision в конкретное предложение, а не в размытое обсуждение.
 
 ## Offer Rule

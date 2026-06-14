@@ -1,5 +1,7 @@
 # GrothOS Pilot Day 7 Review Template
 
+Access: `client-facing`
+
 Использовать после `docs/pilot-week-1-execution-board.md`. Цель review — решить, что делать на второй неделе: продолжать, сузить контур, исправить процесс или остановить пилот.
 
 Если решение `Go` или `Narrow`, следующий документ:

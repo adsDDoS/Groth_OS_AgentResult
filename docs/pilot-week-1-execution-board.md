@@ -1,5 +1,7 @@
 # GrothOS Pilot Week-1 Execution Board
 
+Access: `operator-only`
+
 Использовать после `docs/pilot-onboarding-intake.md`. Цель первой недели — провести один материал через полный контур: тема -> черновик -> QA -> выпуск -> подтверждение -> review.
 
 Day 7 review template:

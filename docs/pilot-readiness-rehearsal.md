@@ -1,5 +1,7 @@
 # Pilot Readiness Rehearsal
 
+Access: `internal-only`
+
 Date: 2026-06-14
 
 Production URL:

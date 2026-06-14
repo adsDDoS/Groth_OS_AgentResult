@@ -1,5 +1,7 @@
 # AgentResult OS Demo / Private Beta Baseline
 
+Access: `internal-only`
+
 ## Status
 
 AgentResult OS dashboard is the current demo and private-beta control surface.

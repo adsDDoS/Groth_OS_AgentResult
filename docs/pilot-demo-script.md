@@ -1,5 +1,7 @@
 # GrothOS Client-Safe Demo Script
 
+Access: `operator-only`
+
 Purpose: show a serious content-ops control surface in 7 minutes without turning the call into product training.
 
 Stable dashboard:

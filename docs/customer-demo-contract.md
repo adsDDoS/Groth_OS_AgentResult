@@ -1,5 +1,7 @@
 # AgentResult Growth Control Customer Demo Contract
 
+Access: `internal-only`
+
 Этот документ фиксирует повторяемое customer demo. Его цель - показать собственнику не “AI-кабинет”, а рабочий контур:
 
 ```text

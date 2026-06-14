@@ -1,5 +1,7 @@
 # AgentResult Growth Control Demo-to-Pilot Onboarding
 
+Access: `internal-only`
+
 Этот документ фиксирует переход от customer demo к первому пилоту. Его задача - сделать следующий шаг после показа понятным для собственника и команды:
 
 ```text

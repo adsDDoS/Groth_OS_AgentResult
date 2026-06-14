@@ -1,5 +1,7 @@
 # GrothOS Demo Operator Card
 
+Access: `operator-only`
+
 Шпаргалка для первого client-safe показа. Держать созвон в 7 минутах.
 
 Call script:

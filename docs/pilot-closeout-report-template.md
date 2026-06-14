@@ -1,5 +1,7 @@
 # GrothOS Pilot Closeout Report Template
 
+Access: `client-facing`
+
 Использовать после `docs/pilot-operating-manual.md`. Цель отчёта — зафиксировать итог пилота и перевести его в решение: continue, narrow, repair или stop.
 
 ## 1. Pilot Summary
