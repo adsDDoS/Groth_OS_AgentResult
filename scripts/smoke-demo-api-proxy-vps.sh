@@ -75,6 +75,21 @@ process.stdin.on("end", () => {
 });
 '
 
+curl -sS -m 15 \
+  -H "x-tenant-id: $DEMO_TENANT_ID" \
+  "$DEMO_API_URL/owner-action-audit" | node -e '
+let s = "";
+process.stdin.on("data", c => s += c);
+process.stdin.on("end", () => {
+  const body = JSON.parse(s);
+  if (!Array.isArray(body?.data)) {
+    console.error(s);
+    process.exit(1);
+  }
+  console.log("demo owner action audit ok");
+});
+'
+
 TASKS_STATUS="$(
   curl -sS -m 15 \
     -o /tmp/agentresult-demo-tasks-response.json \

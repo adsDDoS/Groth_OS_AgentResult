@@ -21,7 +21,7 @@ cat > /opt/agentresult-os/demo-readonly-proxy/Caddyfile <<CADDY
 
   @demoOptions {
     method OPTIONS
-    path /health /me /offer /demand-map /approvals /agents /analytics/overview /publication-results /distribution-signals /result-signals /content/items /publishing/calendar /workspace/state /tasks
+    path /health /me /offer /demand-map /approvals /agents /analytics/overview /publication-results /distribution-signals /result-signals /owner-action-audit /content/items /publishing/calendar /workspace/state /tasks
   }
   handle @demoOptions {
     reverse_proxy ${BACKEND_UPSTREAM}
@@ -29,7 +29,7 @@ cat > /opt/agentresult-os/demo-readonly-proxy/Caddyfile <<CADDY
 
   @demoRead {
     method GET
-    path /health /me /offer /demand-map /approvals /agents /analytics/overview /publication-results /distribution-signals /result-signals /content/items /publishing/calendar /workspace/state /tasks
+    path /health /me /offer /demand-map /approvals /agents /analytics/overview /publication-results /distribution-signals /result-signals /owner-action-audit /content/items /publishing/calendar /workspace/state /tasks
   }
   handle @demoRead {
     reverse_proxy ${BACKEND_UPSTREAM}
