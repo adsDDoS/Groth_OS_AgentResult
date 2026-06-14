@@ -54,7 +54,7 @@ if (!response.ok) {
 cd "$APP_DIR"
 
 set +e
-output="$(AGENTRESULT_VPS_HEALTH_LOCAL=1 bash -lc "$HEALTH_COMMAND" 2>&1)"
+output="$(AGENTRESULT_VPS_HEALTH_LOCAL=1 bash -c "$HEALTH_COMMAND" 2>&1)"
 status=$?
 set -e
 
