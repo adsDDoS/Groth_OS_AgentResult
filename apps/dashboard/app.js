@@ -534,6 +534,7 @@ const state = {
   calendar: demo.calendar,
   distributionSignals: [],
   publicationResults: [],
+  publicationResultsSource: "derived",
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -702,9 +703,11 @@ async function loadData() {
     state.content = Array.isArray(content.data) ? content.data : state.content;
     state.calendar = Array.isArray(calendar.data) ? calendar.data : state.calendar;
     state.distributionSignals = Array.isArray(distributionSignals.data) ? distributionSignals.data : state.distributionSignals;
-    state.publicationResults = Array.isArray(publicationResults.data) && publicationResults.data.length
-      ? publicationResults.data
+    const backendPublicationResults = Array.isArray(publicationResults.data) ? publicationResults.data : [];
+    state.publicationResults = backendPublicationResults.length
+      ? backendPublicationResults
       : derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+    state.publicationResultsSource = backendPublicationResults.length ? "backend" : "derived";
     state.resultSignals = state.distributionSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
@@ -733,6 +736,7 @@ async function loadData() {
       result_signals: state.distributionSignals.length
     };
     state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+    state.publicationResultsSource = "derived";
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -2801,10 +2805,10 @@ function publicationResultRow(item) {
         <p>${escapeHtml(`${reactionSummary}. ${text("Next:", "Дальше:")} ${nextLabel}`)}</p>
       </div>
       <div class="button-row compact">
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
       </div>
     </article>
   `;
@@ -4549,15 +4553,24 @@ function ensureLocalDistributionSignal(item) {
 }
 
 function refreshPublicationResults() {
+  if (state.publicationResultsSource === "backend") return;
   state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+  state.publicationResultsSource = "derived";
 }
 
 async function setPublicationResultStep(encoded = "") {
-  const [calendarId, step = "leave"] = String(encoded).split("|");
-  if (!calendarId) return;
+  const [publicationResultId = "", calendarId = "", step = "leave"] = String(encoded).split("|");
   const item = state.calendar.find((entry) => entry.id === calendarId);
   if (!item) return;
   const nextStep = ["reuse", "expand", "update", "leave"].includes(step) ? step : "leave";
+  if (state.online && !String(item.id || "").startsWith("local-calendar") && nextStep !== "leave") {
+    await executePublicationNextStep(item, nextStep, {
+      publicationResultId,
+      requireBackend: true
+    });
+    return;
+  }
+
   item.metadata = {
     ...(item.metadata || {}),
     publication_result: {
@@ -4581,10 +4594,10 @@ async function setPublicationResultStep(encoded = "") {
   }
 
   refreshPublicationResults();
-  await executePublicationNextStep(item, nextStep);
+  await executePublicationNextStep(item, nextStep, { publicationResultId });
 }
 
-async function executePublicationNextStep(item, nextStep = "leave") {
+async function executePublicationNextStep(item, nextStep = "leave", options = {}) {
   if (nextStep === "leave") {
     showToast(text("Publication left as is.", "Публикация оставлена как есть."));
     setRoute("analytics");
@@ -4598,7 +4611,11 @@ async function executePublicationNextStep(item, nextStep = "leave") {
     return existingAction;
   }
 
-  const backendAction = await executePublicationNextStepCommand(item, nextStep);
+  const backendAction = await executePublicationNextStepCommand(item, nextStep, options.publicationResultId);
+  if (!backendAction && options.requireBackend) {
+    showToast(text("Could not create next content action.", "Не удалось создать следующее контент-действие."));
+    return null;
+  }
   const action = backendAction || (nextStep === "update"
     ? await createPublicationUpdateTask(item)
     : await createPublicationFollowupContent(item, nextStep));
@@ -4616,10 +4633,10 @@ async function executePublicationNextStep(item, nextStep = "leave") {
   return action;
 }
 
-async function executePublicationNextStepCommand(item, nextStep) {
+async function executePublicationNextStepCommand(item, nextStep, explicitPublicationResultId = "") {
   if (!state.online || String(item.id || "").startsWith("local-calendar")) return null;
   const publicationResult = state.publicationResults.find((entry) => entry.calendar_item_id === item.id);
-  const publicationResultId = publicationResult?.id || item.id;
+  const publicationResultId = explicitPublicationResultId || publicationResult?.id || item.id;
   try {
     const response = await api(`/publication-results/${publicationResultId}/${nextStep}`, {
       method: "POST",
@@ -4642,6 +4659,7 @@ async function executePublicationNextStepCommand(item, nextStep) {
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
       state.metrics.tasks_created = state.tasks.length;
     }
+    if (data.publication_result) state.publicationResultsSource = "backend";
     refreshPublicationResults();
     return data.action || null;
   } catch {

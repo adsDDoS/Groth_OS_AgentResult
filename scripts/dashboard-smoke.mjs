@@ -97,6 +97,9 @@ async function pageState(page) {
         || document.body.innerText.includes("Publication results")
         || document.body.innerText.includes("PUBLICATION RESULTS"),
       publicationResultStepActions: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
+      publicationResultCanonicalActions: [...document.querySelectorAll('[data-action="set-publication-result-step"]')]
+        .filter((node) => String(node.dataset.id || "").startsWith("publication-result-") && String(node.dataset.id || "").split("|").length === 3)
+        .length,
       hasPublicationResultUrl: document.body.innerText.includes("https://t.me/agentresult/100"),
       hasPublicationResultReactions: document.body.innerText.includes("2 комм.") || document.body.innerText.includes("2 comments"),
       hasReuseMaterial: document.body.innerText.includes("Переиспользовать:") || document.body.innerText.includes("Reuse:"),
@@ -226,6 +229,10 @@ async function run() {
     const analyticsState = await pageState(page);
     assert(analyticsState.hasPublicationResults, "Results screen should show publication results");
     assert(analyticsState.publicationResultStepActions >= 3, "Publication result next-step actions are missing");
+    assert(
+      analyticsState.publicationResultCanonicalActions === analyticsState.publicationResultStepActions,
+      "Publication result next-step actions should use publication_result ids"
+    );
     assert(analyticsState.hasPublicationResultUrl, "Publication result URL is missing from Results");
     assert(analyticsState.hasPublicationResultReactions, "Publication result reactions are missing from Results");
     await page.locator('[data-action="set-publication-result-step"]').filter({ hasText: /Расширить|Expand/ }).first().click();
