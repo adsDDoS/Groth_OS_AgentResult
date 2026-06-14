@@ -4,6 +4,10 @@ Before making changes in this repository, read `knowledge.md`.
 
 `knowledge.md` is the source of truth for AgentResult OS product direction, UX rules, demo state, backend/local mode, forbidden claims, and next logical steps.
 
+`docs/product-direction.md` is the durable product course. Use it before
+dashboard, Telegram, backend workflow, and agent task changes so the product
+stays a serious operating cockpit, not a text-heavy AI demo.
+
 ## Project Identity
 
 AgentResult OS is an owner-facing B2B operating system for the Russian market.

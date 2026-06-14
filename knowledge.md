@@ -34,6 +34,11 @@ AI prepares -> owner approves -> team releases or hands off -> result is tracked
 
 This loop is more important than dashboard breadth, AI autonomy, or extra metrics. Every product decision should strengthen this loop.
 
+The durable product direction is documented in `docs/product-direction.md`.
+Use it as the north star for dashboard, Telegram, backend workflow, and agent
+task changes. In short: AgentResult should feel like a serious operating
+cockpit for controlled content production, not like a text-heavy AI demo.
+
 The product language is:
 
 - money
@@ -60,6 +65,49 @@ Avoid product language that sounds like:
 - long explanations of obvious UI
 - "magic automation"
 - daily dashboard addiction
+
+## Product UX Direction
+
+AgentResult should be designed as a working cockpit on the level of mature
+business systems such as Bitrix24, amoCRM, Salesforce, HubSpot, Linear,
+Airtable, Stripe, and Vercel dashboards.
+
+The product must always answer four operator questions:
+
+- What needs a decision now?
+- What is already in work?
+- What is ready to release?
+- What went live, what happened, and what should be reused next?
+
+Core work surfaces:
+
+- Command Center: today's owner and manager decisions.
+- Content Pipeline: material production from idea to approved and QA-ready.
+- Publication Desk: release queue, handoff, live check, and publication status.
+- Results Desk: publication URL, channel, format, primary reactions, and next
+  content step.
+- Knowledge Base: offer, products, proof, author voice, forbidden claims, and
+  channel rules.
+- Control Layer: audit trail, approvals, risk flags, and state history.
+
+The interface should explain itself through structure, not through paragraphs.
+Use dense tables, queues, status chips, detail drawers, filters, tabs, audit
+history, and one obvious primary action. Avoid tutorial copy, hero sections,
+decorative feature cards, AI hype, empty analytics, and duplicated demo
+fallbacks that hide backend truth.
+
+Every domain object needs one natural home:
+
+- `approval` lives in the decision queue.
+- `content_item` lives in the content pipeline.
+- `publishing_calendar_item` lives in the publication desk.
+- `publication_result` lives in the results desk.
+- owner/action history lives in audit/control.
+
+When choosing between a pretty dashboard and a more useful operating cockpit,
+choose the cockpit. When choosing between explaining a feature and making the
+next action obvious, make the action obvious. When choosing between UI-side
+convenience and backend-owned domain truth, choose backend-owned domain truth.
 
 ## Core Offer
 
