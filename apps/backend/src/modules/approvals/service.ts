@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { APPROVAL_SCOPES, canTransition, type ApprovalScope } from "@ai-growth-os/shared";
 import { query } from "../../db/client.js";
+import { recordOwnerActionAudit } from "../common/audit.js";
 
 const protectedApprovalScopes = new Set<string>(APPROVAL_SCOPES);
 
@@ -68,6 +69,23 @@ export async function decideApproval(input: {
   const approval = result.rows[0] ?? null;
   if (approval?.status === "approved") {
     await applyApprovalSideEffects(approval);
+  }
+  if (approval) {
+    await recordOwnerActionAudit({
+      tenantId: input.tenantId,
+      action: `approval.${input.status}`,
+      targetType: "approval",
+      targetId: input.id,
+      userId: input.decidedBy ?? null,
+      source: "approval_command",
+      metadata: {
+        scope: approval.scope,
+        approval_status: approval.status,
+        approval_target_type: approval.target_type,
+        approval_target_id: approval.target_id,
+        decision_note: approval.decision_note ?? null
+      }
+    });
   }
   return approval;
 }

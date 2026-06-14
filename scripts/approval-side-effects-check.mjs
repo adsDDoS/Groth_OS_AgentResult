@@ -11,7 +11,7 @@ process.env.AI_GROWTH_OS_STORAGE = "local";
 process.env.AI_GROWTH_OS_LOCAL_DATA_FILE = localDataFile;
 
 const { query } = await import("../apps/backend/dist/db/client.js");
-const { insertJson } = await import("../apps/backend/dist/modules/common/repository.js");
+const { insertJson, listRows } = await import("../apps/backend/dist/modules/common/repository.js");
 const {
   createApprovalRequest,
   decideApproval,
@@ -77,6 +77,16 @@ try {
   assert(decidedCalendar?.status === "scheduled", `approved calendar decision should schedule item, saw ${decidedCalendar?.status}`);
   assert(decidedCalendar.metadata?.approval_id === approval.id, "decision side effect should attach approval_id");
   assert(decidedCalendar.metadata?.decision_note === "Approved by regression check", "decision side effect should attach decision_note");
+
+  const auditRows = await listRows("integrations", { tenantId, limit: 200 });
+  const approvalAudit = auditRows.find((row) =>
+    row.provider === "owner_action_audit"
+    && row.config?.action === "approval.approved"
+    && row.config?.target_type === "approval"
+    && row.config?.target_id === approval.id
+    && row.config?.approval_target_id === calendar.id
+  );
+  assert(approvalAudit, "approval decision audit event missing");
 
   console.log("Approval side effects check passed");
 } finally {

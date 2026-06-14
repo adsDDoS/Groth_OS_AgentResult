@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { canTransition, isKnownStatus, type PublishingCalendarStatus } from "@ai-growth-os/shared";
 import { query } from "../../db/client.js";
+import { recordOwnerActionAudit } from "../common/audit.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { createApprovalRequest, reconcileApprovedCalendarApprovals, requireApproval } from "../approvals/service.js";
 import { ensurePublishedDistributionSignal } from "../distribution-signals/routes.js";
@@ -83,6 +84,9 @@ export async function publishingRoutes(app: FastifyInstance) {
         id,
         tenantId: request.tenantId,
         status: "handed_off",
+        userId: request.userId,
+        auditAction: "publishing.handoff",
+        auditSource: "publishing_command",
         metadata: {
           handoff_note: note ?? "",
           handed_off_by: request.userId ?? null,
@@ -105,7 +109,8 @@ export async function publishingRoutes(app: FastifyInstance) {
         format: body.format,
         primaryReactions: body.primaryReactions,
         nextStep: body.nextStep,
-        nextStepNote: body.nextStepNote
+        nextStepNote: body.nextStepNote,
+        auditSource: "publishing_command"
       })
     };
   });
@@ -131,12 +136,16 @@ export async function confirmPublishingCalendarLive(input: {
   };
   nextStep?: "reuse" | "expand" | "update" | "leave";
   nextStepNote?: string;
+  auditSource?: string;
 }) {
   const now = new Date().toISOString();
   return transitionCalendarItem({
     id: input.id,
     tenantId: input.tenantId,
     status: "published",
+    userId: input.userId,
+    auditAction: "publishing.confirm_live",
+    auditSource: input.auditSource ?? "publishing_command",
     metadata: {
       result_note: input.note ?? "",
       published_confirmed_by: input.userId ?? null,
@@ -163,6 +172,9 @@ async function transitionCalendarItem(input: {
   id: string;
   tenantId: string;
   status: PublishingCalendarStatus;
+  userId?: string | null;
+  auditAction?: string;
+  auditSource?: string;
   metadata?: Record<string, unknown>;
 }) {
   const current = await loadCalendarItem(input.id, input.tenantId);
@@ -192,6 +204,23 @@ async function transitionCalendarItem(input: {
       title: typeof item.title === "string" ? item.title : null,
       note: typeof input.metadata?.result_note === "string" ? input.metadata.result_note : "",
       confirmedBy: typeof input.metadata?.published_confirmed_by === "string" ? input.metadata.published_confirmed_by : null
+    });
+  }
+  if (item && input.auditAction) {
+    await recordOwnerActionAudit({
+      tenantId: input.tenantId,
+      action: input.auditAction,
+      targetType: "publishing_calendar_item",
+      targetId: input.id,
+      userId: input.userId ?? null,
+      source: input.auditSource ?? "publishing_command",
+      metadata: {
+        from_status: from,
+        to_status: input.status,
+        calendar_title: item.title ?? null,
+        content_item_id: item.content_item_id ?? null,
+        publication_result: input.metadata?.publication_result ?? null
+      }
     });
   }
   return item;

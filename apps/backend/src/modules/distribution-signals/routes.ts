@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query } from "../../db/client.js";
 import { createAgentTask } from "../agents/runner.js";
+import { recordOwnerActionAudit } from "../common/audit.js";
 import { insertJson, patchJson } from "../common/repository.js";
 
 const confirmedEventType = "distribution_signal.confirmed";
@@ -112,6 +113,22 @@ export async function executePublicationResultCommand(input: {
   const resultMetadata = publicationResultMetadata(contextWithCalendar.calendar);
   const existingAction = isRecord(resultMetadata.next_step_action) ? resultMetadata.next_step_action : null;
   if (existingAction?.type === input.command && existingAction.target_id) {
+    await recordOwnerActionAudit({
+      tenantId: input.tenantId,
+      action: `publication_result.${input.command}`,
+      targetType: "publication_result",
+      targetId: input.publicationResultId,
+      userId: input.userId ?? null,
+      source: "publication_result_command",
+      metadata: {
+        idempotent: true,
+        calendar_item_id: contextWithCalendar.calendar.id ?? null,
+        distribution_signal_id: contextWithCalendar.signal.id ?? null,
+        next_target_type: existingAction.target_type ?? null,
+        next_target_id: existingAction.target_id,
+        note: input.note ?? null
+      }
+    });
     return {
       action: existingAction,
       target: null,
@@ -147,6 +164,21 @@ export async function executePublicationResultCommand(input: {
     metadata
   };
   const publicationResult = toPublicationResult(contextWithCalendar.signal, calendar, contextWithCalendar.content);
+  await recordOwnerActionAudit({
+    tenantId: input.tenantId,
+    action: `publication_result.${input.command}`,
+    targetType: "publication_result",
+    targetId: input.publicationResultId,
+    userId: input.userId ?? null,
+    source: "publication_result_command",
+    metadata: {
+      calendar_item_id: contextWithCalendar.calendar.id ?? null,
+      distribution_signal_id: contextWithCalendar.signal.id ?? null,
+      next_target_type: action.target_type,
+      next_target_id: action.target_id,
+      note: input.note ?? null
+    }
+  });
   return {
     action,
     target,

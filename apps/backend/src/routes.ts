@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { query } from "./db/client.js";
-import { insertJson } from "./modules/common/repository.js";
+import { insertJson, listRows } from "./modules/common/repository.js";
 import { approvalsRoutes } from "./modules/approvals/routes.js";
 import { registerCrudRoutes } from "./modules/common/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
@@ -63,6 +63,25 @@ export async function registerRoutes(app: FastifyInstance) {
       ? (result.rows[0].settings as Record<string, unknown>)
       : {};
     return { data: settings.dashboard_state ?? {} };
+  });
+
+  app.get("/owner-action-audit", async (request) => {
+    const rows = await listRows("integrations", { tenantId: request.tenantId, limit: 200 });
+    return {
+      data: rows
+        .filter((row) => row.provider === "owner_action_audit")
+        .map((row) => ({
+          id: row.id,
+          tenant_id: row.tenant_id,
+          action: row.config?.action ?? row.status,
+          target_type: row.config?.target_type ?? null,
+          target_id: row.config?.target_id ?? null,
+          user_id: row.config?.user_id ?? null,
+          source: row.config?.source ?? null,
+          metadata: row.config ?? {},
+          created_at: row.created_at
+        }))
+    };
   });
 
   registerCrudRoutes(app, { prefix: "/tenants", table: "tenants" });
