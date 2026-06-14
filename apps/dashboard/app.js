@@ -53,6 +53,8 @@ const RU = {
   "Publication Desk": "Публикационный стол",
   "Results Desk": "Стол результатов",
   "Knowledge Base": "База знаний",
+  "Waiting Live Check": "Проверка выхода",
+  "Published": "Опубликовано",
   "Operate": "Работа",
   "Control": "Контроль",
   "Planning archive": "Архив планирования",
@@ -391,9 +393,9 @@ const routeAliases = {
 };
 
 const publicationTabs = {
-  approvals: { route: "approvals", label: "Topics" },
-  calendar: { route: "publishing-calendar", label: "Release Queue" },
-  pack: { route: "manual-export", label: "Pack" }
+  approvals: { route: "approvals", label: "Release Queue" },
+  calendar: { route: "publishing-calendar", label: "Waiting Live Check" },
+  pack: { route: "manual-export", label: "Published" }
 };
 
 const publicationRoutes = Object.fromEntries(Object.entries(publicationTabs).map(([tab, item]) => [item.route, tab]));
@@ -5324,7 +5326,7 @@ async function markManagerQaPassed(id) {
   state.metrics.calendar_items = state.calendar.length;
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   showToast(text("QA passed. Text moved to the manager release queue.", "QA пройден. Текст поставлен в очередь выпуска менеджера."));
-  openPublicationTab("calendar");
+  openPublicationTab("approvals");
 }
 
 async function returnManagerQaRevision(id) {

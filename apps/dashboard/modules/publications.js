@@ -20,13 +20,13 @@ export function createPublicationsModule(ctx) {
 function renderPublications() {
   const tab = preferredPublicationTab(currentPublicationTab());
   const tabRenderers = {
-    approvals: renderApprovals,
-    calendar: renderPublishingCalendar,
-    pack: renderManualExport
+    approvals: renderReleaseQueueDesk,
+    calendar: renderWaitingLiveCheckDesk,
+    pack: renderPublishedDesk
   };
 
   return `
-    <section class="tabs-panel" aria-label="${escapeAttr(text("Publication workspace", "Работа с публикациями"))}">
+    <section class="tabs-panel publication-desk-tabs" aria-label="${escapeAttr(text("Publication Desk", "Публикационный стол"))}">
       <div class="segmented-tabs" role="tablist">
         ${Object.entries(publicationTabs).map(([key, item]) => `
           <button class="tab-button ${tab === key ? "active" : ""}" role="tab" aria-selected="${tab === key ? "true" : "false"}" data-action="set-publication-tab" data-id="${escapeAttr(key)}">
@@ -34,17 +34,32 @@ function renderPublications() {
           </button>
         `).join("")}
       </div>
-      ${tab === "approvals" ? "" : `<div class="tab-context">${publicationTabContext(tab)}</div>`}
+      <div class="tab-context">${publicationTabContext(tab)}</div>
+      ${publicationDeskPrimaryAction()}
     </section>
-    ${publicationPilotStrip()}
     ${tabRenderers[tab]()}
   `;
 }
 
+function publicationDeskPrimaryAction() {
+  if (state.calendar.some((item) => item.status === "handed_off")) {
+    const item = state.calendar.find((entry) => entry.status === "handed_off");
+    return `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item?.id || "")}">${escapeHtml(text("Confirm result", "Подтвердить результат"))}</button>`;
+  }
+  if (state.calendar.some((item) => item.status === "published")) {
+    return `<button class="button secondary table-button" data-action="go-analytics">${escapeHtml(text("Open results", "Открыть результаты"))}</button>`;
+  }
+  return "";
+}
+
 function preferredPublicationTab(tab) {
   const pending = state.approvals.some((item) => item.status === "pending");
-  const releaseQueue = state.calendar.some((item) => ["scheduled", "handed_off"].includes(item.status) && isReleaseQueueReadyItem(item));
-  if (tab === "approvals" && !pending && releaseQueue) return "calendar";
+  const releaseQueue = state.calendar.some((item) => item.status === "scheduled" && isReleaseQueueReadyItem(item));
+  const waitingLive = state.calendar.some((item) => item.status === "handed_off");
+  const published = state.calendar.some((item) => item.status === "published");
+  if (tab === "calendar" && !waitingLive && (pending || releaseQueue)) return "approvals";
+  if (tab === "calendar" && !waitingLive && published) return "pack";
+  if (tab === "pack" && !published && (pending || releaseQueue)) return "approvals";
   return tab;
 }
 
@@ -160,20 +175,206 @@ function publicationNextAction() {
 function publicationTabContext(tab) {
   const contexts = {
     approvals: [
-      text("Topics", "Темы"),
-      text("Owner approves boundaries once.", "Собственник один раз утверждает границы.")
+      text("Release Queue", "Очередь выпуска"),
+      text("Owner decisions and QA-ready items that can move to channel handoff.", "Решения собственника и QA-ready материалы для передачи в канал.")
     ],
     calendar: [
-      text("Release queue", "Очередь выпуска"),
-      text("After QA, release stays in the manager queue; owner confirms only the result.", "После QA выпуск в очереди менеджера; собственник подтверждает только результат.")
+      text("Waiting Live Check", "Проверка выхода"),
+      text("Handed-off materials waiting for URL, format, reactions, and result confirmation.", "Переданные материалы ждут URL, формат, реакции и подтверждение результата.")
     ],
     pack: [
-      text("Pack", "Пакет"),
-      text("Approved texts for manual channel release.", "Тексты для ручного выпуска в каналах.")
+      text("Published", "Опубликовано"),
+      text("Confirmed releases that should now feed Results and next content steps.", "Подтверждённые выпуски для Results и следующих контент-шагов.")
     ]
   };
   const [title, note] = contexts[tab] || contexts.approvals;
   return `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(note)}</span>`;
+}
+
+function renderReleaseQueueDesk() {
+  const pendingApprovals = state.approvals.filter((item) => item.status === "pending");
+  const readyItems = state.calendar.filter((item) => item.status === "scheduled" && isReleaseQueueReadyItem(item));
+  const rows = [
+    ...pendingApprovals.map((item) => releaseDecisionRow(item)),
+    ...readyItems.map((item) => releaseScheduledRow(item))
+  ];
+  return `
+    ${publicationDeskMetrics()}
+    ${weeklyTopicBatchPanel(pendingApprovals)}
+    <article class="panel full publication-desk-panel">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Release Queue", "Очередь выпуска")}</p>
+          <h3>${escapeHtml(text(`${rows.length} work items`, `${rows.length} рабочих пунктов`))}</h3>
+        </div>
+      </div>
+      ${publicationDeskTable(
+        [
+          text("Priority", "Приоритет"),
+          text("Item", "Объект"),
+          text("Channel", "Канал"),
+          text("Owner", "Роль"),
+          text("State", "Состояние"),
+          text("Evidence", "Доказательство"),
+          text("Action", "Действие")
+        ],
+        rows,
+        text("Release queue is clear.", "Очередь выпуска чистая.")
+      )}
+    </article>
+  `;
+}
+
+function renderWaitingLiveCheckDesk() {
+  const handedOff = state.calendar.filter((item) => item.status === "handed_off");
+  const rows = handedOff.map((item) => liveCheckRow(item));
+  return `
+    ${publicationDeskMetrics()}
+    <article class="panel full publication-desk-panel">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Waiting Live Check", "Проверка выхода")}</p>
+          <h3>${escapeHtml(text(`${rows.length} waiting for confirmation`, `${rows.length} ждут подтверждения`))}</h3>
+        </div>
+      </div>
+      ${publicationDeskTable(
+        [
+          text("Publication", "Публикация"),
+          text("Channel", "Канал"),
+          text("Handed off", "Передано"),
+          text("Release owner", "Ответственный"),
+          text("Expected source", "Источник"),
+          text("Action", "Действие")
+        ],
+        rows,
+        text("Nothing is waiting for live check.", "Ничего не ждёт проверки выхода.")
+      )}
+    </article>
+  `;
+}
+
+function renderPublishedDesk() {
+  const published = state.calendar.filter((item) => item.status === "published");
+  const rows = published.map((item) => publishedRow(item));
+  return `
+    ${publicationDeskMetrics()}
+    <article class="panel full publication-desk-panel">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Published", "Опубликовано")}</p>
+          <h3>${escapeHtml(text(`${rows.length} confirmed releases`, `${rows.length} подтверждённых выпусков`))}</h3>
+        </div>
+        <button class="button secondary table-button" data-action="go-analytics">${escapeHtml(text("Open results", "Открыть результаты"))}</button>
+      </div>
+      ${publicationDeskTable(
+        [
+          text("Publication", "Публикация"),
+          text("URL/source", "URL/источник"),
+          text("Channel", "Канал"),
+          text("Confirmed", "Подтверждено"),
+          text("Reactions", "Реакции"),
+          text("Next step", "Следующий шаг"),
+          text("Action", "Действие")
+        ],
+        rows,
+        text("Nothing published yet.", "Пока ничего не опубликовано.")
+      )}
+    </article>
+  `;
+}
+
+function publicationDeskMetrics() {
+  const pending = state.approvals.filter((item) => item.status === "pending").length;
+  const scheduled = state.calendar.filter((item) => item.status === "scheduled" && isReleaseQueueReadyItem(item)).length;
+  const handedOff = state.calendar.filter((item) => item.status === "handed_off").length;
+  const published = state.calendar.filter((item) => item.status === "published").length;
+  const metrics = [
+    [text("Owner decisions", "Решения"), pending, pending ? text("needs owner", "нужен собственник") : text("clear", "чисто")],
+    [text("Release queue", "Очередь"), scheduled, scheduled ? text("ready to hand off", "к передаче") : text("empty", "пусто")],
+    [text("Live check", "Проверка"), handedOff, handedOff ? text("confirm result", "подтвердить") : text("clear", "чисто")],
+    [text("Published", "Вышло"), published, published ? text("in results loop", "в контуре результатов") : text("no release", "нет выхода")]
+  ];
+  return `
+    <section class="publication-desk-metrics" aria-label="${escapeAttr(text("Publication Desk metrics", "Метрики публикационного стола"))}">
+      ${metrics.map(([label, value, note]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(String(value))}</strong>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function publicationDeskTable(headers, rows, emptyText) {
+  if (!rows.length) return `<p class="empty-note publication-desk-empty">${escapeHtml(emptyText)}</p>`;
+  return `
+    <div class="publication-desk-table" style="--publication-cols:${headers.length}">
+      ${headers.map((header) => `<div class="publication-table-head">${escapeHtml(header)}</div>`).join("")}
+      ${rows.map((row) => row.map((cell) => `<div class="publication-table-cell">${cell}</div>`).join("")).join("")}
+    </div>
+  `;
+}
+
+function releaseDecisionRow(item) {
+  const context = getApprovalContext(item);
+  return [
+    `<em class="queue-priority">P1</em>`,
+    `<button class="publication-row-title approval-item" type="button" data-action="select-approval" data-id="${escapeAttr(item.id)}"><strong>${escapeHtml(context.title)}</strong><span>${escapeHtml(item.summary || text("Owner boundary decision", "Решение по границе"))}</span></button>`,
+    escapeHtml(displayChannel(context.channel || "manual")),
+    escapeHtml(text("Owner", "Собственник")),
+    `<mark>${escapeHtml(text("Needs decision", "Ждёт решения"))}</mark>`,
+    escapeHtml(approvalRiskSummary(context.checklist)),
+    `<button class="button secondary table-button" data-action="go-approval" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Open", "Открыть"))}</button>`
+  ];
+}
+
+function releaseScheduledRow(item) {
+  const content = state.content.find((entry) => entry.id === item.content_item_id) || null;
+  return [
+    `<em class="queue-priority secondary">P2</em>`,
+    `<div class="publication-row-title release-queue-card"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(formatDate(item.scheduled_for))}</span></div>`,
+    escapeHtml(displayChannel(item.channel || "manual")),
+    escapeHtml(text("Release owner", "Ответственный")),
+    `<mark>${escapeHtml(text("Ready for handoff", "К передаче"))}</mark>`,
+    escapeHtml(managerReleaseQaEvidenceLabel(item, content)),
+    `<button class="button secondary table-button" data-action="mark-calendar-exported" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Move to live check", "К проверке выхода"))}</button>`
+  ];
+}
+
+function liveCheckRow(item) {
+  const profile = state.offer?.profile || {};
+  return [
+    `<div class="publication-row-title release-queue-card"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(displayChannel(item.channel || "manual"))}</span></div>`,
+    escapeHtml(displayChannel(item.channel || "manual")),
+    escapeHtml(formatDate(item.updated_at || item.scheduled_for)),
+    escapeHtml(stripTrailingPunctuation(profile.releaseOwner || text("Release owner", "Ответственный"))),
+    escapeHtml(stripTrailingPunctuation(profile.firstSignalSource || text("publication URL or channel reaction", "URL публикации или реакция канала"))),
+    `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item.id)}">${escapeHtml(text("Confirm result", "Подтвердить результат"))}</button>`
+  ];
+}
+
+function publishedRow(item) {
+  const result = item.metadata?.publication_result || {};
+  const reactions = result.reactions || {};
+  const reactionCount = Object.values(reactions).reduce((sum, value) => sum + Number(value || 0), 0);
+  return [
+    `<div class="publication-row-title release-queue-card"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(formatDate(item.scheduled_for || item.updated_at))}</span></div>`,
+    escapeHtml(result.publication_url || item.metadata?.publication_url || text("source recorded", "источник зафиксирован")),
+    escapeHtml(displayChannel(item.channel || "manual")),
+    escapeHtml(formatDate(result.confirmed_at || item.updated_at)),
+    escapeHtml(reactionCount ? text(`${reactionCount} reactions`, `${reactionCount} реакций`) : text("not recorded", "не зафиксированы")),
+    escapeHtml(publicationNextStepLabel(result.next_step || "leave")),
+    `<button class="button secondary table-button" data-action="go-analytics">${escapeHtml(text("Open results", "Открыть результаты"))}</button>`
+  ];
+}
+
+function publicationNextStepLabel(step = "leave") {
+  if (step === "reuse") return text("Reuse", "Переиспользовать");
+  if (step === "expand") return text("Expand", "Расширить");
+  if (step === "update") return text("Update", "Обновить");
+  return text("Leave", "Оставить");
 }
 
 function renderApprovals() {
