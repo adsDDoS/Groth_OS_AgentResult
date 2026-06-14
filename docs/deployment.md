@@ -298,7 +298,20 @@ is set locally.
 `npm run vps:agentresult-health:install-timer` installs a VPS-side systemd
 timer named `agentresult-vps-health.timer`. By default it runs every 15 minutes,
 writes full output to `/opt/agentresult-os/runtime/agentresult-vps-health.log`,
-and uses the repository checkout at `/opt/agentresult-os/app`.
+uses the repository checkout at `/opt/agentresult-os/app`, and sends a Telegram
+alert on failure.
+
+The timer reads alert settings from:
+
+```text
+/opt/agentresult-os/runtime/agentresult-vps-health.env
+```
+
+`AGENTRESULT_VPS_HEALTH_ALERT_CHAT_ID` should contain the Telegram user or chat
+id that receives failure alerts. The installer creates this file on first run
+from `TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID`, `AGENTRESULT_VPS_HEALTH_ALERT_CHAT_ID`,
+or the first `TELEGRAM_ALLOWED_USERS` value in `/opt/agentresult-os/app/.env`.
+Edit the runtime env file directly if alerts should go to another owner channel.
 
 There is also a manual GitHub Actions workflow named `AgentResult VPS health`.
 Configure repository secret `AGENTRESULT_VPS_SSH_KEY` with a private key that can
