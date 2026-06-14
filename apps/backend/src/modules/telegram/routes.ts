@@ -6,7 +6,9 @@ import { resetMemoryDemoStore } from "../../db/memory.js";
 import { createAgentTask } from "../agents/runner.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
+import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
+import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
 type TelegramButton = {
@@ -30,6 +32,7 @@ type OwnerBriefInput = {
   calendar: Row[];
   contentItems: Row[];
   latestSummary: Row;
+  publicationResults: Row[];
   tasks: Row[];
 };
 type TelegramExecutionContext = {
@@ -63,7 +66,7 @@ const telegramSendOwnerBriefSchema = z.object({
 });
 const telegramCommandSchema = z.object({
   command: z.string().min(1),
-  targetId: z.string().uuid().optional(),
+  targetId: z.string().min(1).optional(),
   note: z.string().optional()
 });
 const telegramSendCommandSchema = telegramCommandSchema.extend({
@@ -429,7 +432,7 @@ function telegramCommandKeyboard(buttons: TelegramCommandButton[] | undefined) {
 }
 
 function buildOwnerBrief(input: OwnerBriefInput) {
-  const { approvals, calendar, contentItems, latestSummary, tasks } = input;
+  const { approvals, calendar, contentItems, latestSummary, publicationResults, tasks } = input;
   const pendingApprovals = approvals.filter((row) => row.status === "pending");
   const handedOffItems = calendar.filter((row) => row.status === "handed_off");
   const publishedItems = calendar.filter((row) => row.status === "published");
@@ -498,6 +501,18 @@ function buildOwnerBrief(input: OwnerBriefInput) {
       leads: Number(latestSummary.leads ?? 0),
       recoveredPayments: Number(latestSummary.recovered_payments ?? 0)
     },
+    publishedResults: publicationResults.slice(0, 5).map((row) => ({
+      id: row.id,
+      title: ownerFacingText(row.title, "Опубликованный материал"),
+      channel: row.channel ?? "manual",
+      format: row.format ?? "publication",
+      publicationUrl: row.publication_url ?? null,
+      confirmedAt: row.confirmed_at ?? null,
+      primaryReactions: row.primary_reactions && typeof row.primary_reactions === "object" ? row.primary_reactions : {},
+      nextStep: row.next_step ?? "leave",
+      nextStepNote: row.next_step_note ?? "",
+      metadata: row.metadata ?? {}
+    })),
     telegramMessage: renderOwnerBriefMessage({
       contentItems,
       handedOffItems,
@@ -512,13 +527,14 @@ function buildOwnerBrief(input: OwnerBriefInput) {
 }
 
 async function loadOwnerBriefData(tenantId: string) {
-  const [approvalsResult, calendarResult, contentItemsResult, latestImport, tasksResult] = await Promise.all([
+  const [approvalsResult, calendarResult, contentItemsResult, latestImport, publicationResults, tasksResult] = await Promise.all([
     query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]),
     query("select * from content_items where tenant_id = $1 order by created_at desc limit 200", [tenantId]),
     query("select * from analytics_imports where tenant_id = $1 order by created_at desc limit $2", [tenantId, 1]).catch(() => ({
       rows: []
     })),
+    listPublicationResults(tenantId),
     query("select * from tasks where tenant_id = $1 order by updated_at desc limit 200", [tenantId])
   ]);
   const latestSummary = latestImport.rows[0]?.payload && typeof latestImport.rows[0].payload === "object"
@@ -530,6 +546,7 @@ async function loadOwnerBriefData(tenantId: string) {
     calendar: calendarResult.rows as Row[],
     contentItems: contentItemsResult.rows as Row[],
     latestSummary,
+    publicationResults: publicationResults as Row[],
     tasks: tasksResult.rows as Row[]
   };
 }
@@ -596,11 +613,12 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   }
 
   if (input.action === "publishing.confirm_live") {
-    const updated = await query(
-      "update publishing_calendar_items set status = $3, updated_at = now() where id = $1 and tenant_id = $2 returning *",
-      [input.targetId, context.tenantId, "published"]
-    );
-    result = updated.rows[0] ?? null;
+    result = await confirmPublishingCalendarLive({
+      id: input.targetId,
+      tenantId: context.tenantId,
+      userId: context.userId,
+      note: input.note || "Подтверждено из Telegram-контура"
+    });
   }
 
   const briefData = await loadOwnerBriefData(context.tenantId);
@@ -1197,6 +1215,14 @@ function renderPublishedStatusMessage(brief: OwnerBrief) {
     `Ждёт подтверждения выхода: ${brief.counts.handedOff}`
   ];
 
+  if (brief.publishedResults.length) {
+    lines.push("");
+    lines.push("Последний опубликованный материал:");
+    lines.push(...publicationResultCardLines(brief.publishedResults[0]));
+    lines.push("");
+    lines.push("Следующий шаг: переиспользовать, расширить или обновить материал.");
+  }
+
   if (brief.handoffs.length) {
     lines.push("");
     lines.push("Нужно подтвердить выход:");
@@ -1209,6 +1235,22 @@ function renderPublishedStatusMessage(brief: OwnerBrief) {
   }
 
   return lines.join("\n");
+}
+
+function publicationResultCardLines(result: Row) {
+  const reactions = result.primaryReactions && typeof result.primaryReactions === "object" ? result.primaryReactions as Row : {};
+  const reactionLine = [
+    Number(reactions.comments ?? 0) > 0 ? `комментарии ${reactions.comments}` : null,
+    Number(reactions.reposts ?? 0) > 0 ? `репосты ${reactions.reposts}` : null,
+    Number(reactions.saves ?? 0) > 0 ? `сохранения ${reactions.saves}` : null,
+    Number(reactions.reactions ?? 0) > 0 ? `реакции ${reactions.reactions}` : null
+  ].filter(Boolean).join(", ");
+  return [
+    `- ${truncateText(textValue(result.title, "Опубликованный материал"), 90)}`,
+    `Канал: ${channelLabel(result.channel)}`,
+    textValue(result.publicationUrl, "") ? `URL: ${result.publicationUrl}` : null,
+    reactionLine ? `Первичные реакции: ${reactionLine}` : "Первичные реакции: не зафиксированы"
+  ].filter((line): line is string => Boolean(line));
 }
 
 function renderMaterialPreparationStartedMessage(input: { channel: string; title: string }) {
@@ -1248,7 +1290,7 @@ function renderResultMessage(brief: OwnerBrief) {
     preparing: brief.preparing
   });
 
-  return [
+  const lines = [
     "AgentResult Growth Control — результат",
     "",
     ...telegramMetricLines({
@@ -1265,7 +1307,17 @@ function renderResultMessage(brief: OwnerBrief) {
       : priority.type === "preparing"
       ? "Следующий шаг: дождаться черновика и принять решение."
       : "Следующий шаг: поставить следующую тему в работу."
-  ].join("\n");
+  ];
+
+  if (brief.publishedResults.length) {
+    lines.push("");
+    lines.push("Опубликованный материал:");
+    lines.push(...publicationResultCardLines(brief.publishedResults[0]));
+    lines.push("");
+    lines.push("Можно запустить следующий контент-шаг.");
+  }
+
+  return lines.join("\n");
 }
 
 function renderHandoffMessage(input: { item: Row; ownerBrief: OwnerBrief }) {
@@ -1456,8 +1508,23 @@ function commandButton(command: string, label: string, targetId?: string | null)
   };
 }
 
+function primaryPublicationResultIdFromBrief(brief: OwnerBrief) {
+  return typeof brief.publishedResults[0]?.id === "string" ? brief.publishedResults[0].id : null;
+}
+
 function primaryDecisionIdFromBrief(brief: OwnerBrief) {
   return typeof brief.decisions[0]?.id === "string" ? brief.decisions[0].id : null;
+}
+
+function publicationResultCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
+  const targetId = primaryPublicationResultIdFromBrief(brief);
+  if (!targetId) return [commandButton("result", "Результат")];
+
+  return [
+    commandButton("reuse", "Переиспользовать", targetId),
+    commandButton("expand", "Расширить", targetId),
+    commandButton("update", "Обновить", targetId)
+  ];
 }
 
 function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
@@ -1698,11 +1765,104 @@ async function startNextMaterialPreparation(input: { rawText?: string }, context
   };
 }
 
+function publicationResultCommandFromText(command: string): "reuse" | "expand" | "update" | null {
+  if (["reuse", "repurpose", "переиспользовать", "переиспользуй"].includes(command)) return "reuse";
+  if (["expand", "article", "расширить", "расширь"].includes(command)) return "expand";
+  if (["update", "revise", "обновить", "обнови"].includes(command)) return "update";
+  return null;
+}
+
+function renderPublicationResultCommandMessage(input: {
+  command: "reuse" | "expand" | "update";
+  action: Row;
+  target: Row | null;
+}) {
+  if (input.command === "expand") {
+    return [
+      "Следующий контент-шаг создан: расширить материал.",
+      "",
+      `Новый материал: ${textValue(input.target?.title, "план статьи")}`,
+      "Он появился в очереди материалов."
+    ].join("\n");
+  }
+
+  if (input.command === "update") {
+    return [
+      "Следующий контент-шаг создан: обновить опубликованный материал.",
+      "",
+      `Задача: ${textValue((input.target?.payload as Row | undefined)?.title, "обновить материал")}`,
+      "Она появилась в очереди задач."
+    ].join("\n");
+  }
+
+  return [
+    "Следующий контент-шаг создан: переиспользовать материал.",
+    "",
+    `Новый материал: ${textValue(input.target?.title, "материал для переиспользования")}`,
+    "Он появился в очереди материалов."
+  ].join("\n");
+}
+
+async function executeTelegramPublicationResultCommand(
+  command: "reuse" | "expand" | "update",
+  input: TelegramCommandInput,
+  ownerBrief: OwnerBrief,
+  context: TelegramExecutionContext
+) {
+  const publicationResultId = input.targetId ?? primaryPublicationResultIdFromBrief(ownerBrief);
+
+  if (!publicationResultId) {
+    return {
+      command,
+      text: "Сейчас нет опубликованного материала, по которому можно запустить следующий контент-шаг.",
+      buttons: ownerControlButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  const result = await executePublicationResultCommand({
+    tenantId: context.tenantId,
+    userId: context.userId,
+    publicationResultId,
+    command,
+    note: input.note
+  });
+
+  if (!result) {
+    return {
+      command,
+      text: "Не нашёл опубликованный материал для этого действия.",
+      buttons: publicationResultCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  const updatedBriefData = await loadOwnerBriefData(context.tenantId);
+  const updatedBrief = buildOwnerBrief(updatedBriefData);
+
+  return {
+    command,
+    text: renderPublicationResultCommandMessage({
+      command,
+      action: result.action as Row,
+      target: result.target as Row | null
+    }),
+    buttons: publicationResultCommandButtons(updatedBrief),
+    ownerBrief: updatedBrief,
+    actionResult: result
+  };
+}
+
 async function executeTelegramCommand(input: TelegramCommandInput, context: TelegramExecutionContext) {
   const command = input.command.trim().toLowerCase().replace(/^\/+/, "");
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const primaryDecisionId = typeof ownerBrief.decisions[0]?.id === "string" ? ownerBrief.decisions[0].id : null;
+  const publicationResultCommand = publicationResultCommandFromText(command);
+
+  if (publicationResultCommand) {
+    return executeTelegramPublicationResultCommand(publicationResultCommand, input, ownerBrief, context);
+  }
 
   if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
     return {
@@ -1817,7 +1977,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return {
       command,
       text: renderPublishedStatusMessage(ownerBrief),
-      buttons: ownerControlButtons(ownerBrief),
+      buttons: publicationResultCommandButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -2055,7 +2215,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
       intent: "published_status",
       command: null,
       text: renderPublishedStatusMessage(ownerBrief),
-      buttons: ownerControlButtons(ownerBrief),
+      buttons: publicationResultCommandButtons(ownerBrief),
       ownerBrief
     };
   }
@@ -2075,6 +2235,33 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     return {
       ...commandResult,
       intent: "preparation_status",
+      command: null
+    };
+  }
+
+  if (includesAny(text, ["переиспользуй", "переиспользовать", "сделай ещё пост", "сделай еще пост", "возьми в следующий материал"])) {
+    const commandResult = await executeTelegramCommand({ command: "/reuse", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "publication_result_reuse",
+      command: null
+    };
+  }
+
+  if (includesAny(text, ["расширь", "расширить", "сделай статью", "разверни в статью", "сделай лонгрид"])) {
+    const commandResult = await executeTelegramCommand({ command: "/expand", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "publication_result_expand",
+      command: null
+    };
+  }
+
+  if (includesAny(text, ["обнови опубликованный", "обновить опубликованный", "обнови материал", "обновить материал по результату", "задача на обновление"])) {
+    const commandResult = await executeTelegramCommand({ command: "/update", note: input.note }, context);
+    return {
+      ...commandResult,
+      intent: "publication_result_update",
       command: null
     };
   }
@@ -2193,7 +2380,7 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
       intent: "result",
       command: null,
       text: renderResultMessage(ownerBrief),
-      buttons: ownerControlButtons(ownerBrief),
+      buttons: publicationResultCommandButtons(ownerBrief),
       ownerBrief
     };
   }

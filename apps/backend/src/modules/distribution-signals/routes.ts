@@ -85,12 +85,12 @@ async function listDistributionSignals(tenantId: string) {
   return rows.map(toDistributionSignal);
 }
 
-async function listPublicationResults(tenantId: string) {
+export async function listPublicationResults(tenantId: string) {
   const contexts = await listPublicationResultContexts(tenantId);
   return contexts.map((context) => context.publicationResult);
 }
 
-async function executePublicationResultCommand(input: {
+export async function executePublicationResultCommand(input: {
   tenantId: string;
   userId?: string | null;
   publicationResultId: string;

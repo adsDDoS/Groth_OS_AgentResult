@@ -299,7 +299,31 @@ async function main() {
 
   const published = await request("/telegram/intent", { text: "что вышло" });
   expectEquals(published.intent, "published_status", "published status intent");
+  expectIncludes(published.text, "Последний опубликованный материал", "published status card");
+  expectButtonLabels(published, ["Переиспользовать", "Расширить", "Обновить"], "published status next-step buttons");
   expectNoCommandUx(published, "published status");
+
+  const publicationResultId = published.ownerBrief.publishedResults?.[0]?.id;
+  if (!publicationResultId) throw new Error("published status should include a publication result id");
+  const contentBeforeReuse = await get("/content/items");
+  const reuse = await request("/telegram/commands", { command: "/reuse", targetId: publicationResultId });
+  expectIncludes(reuse.text, "переиспользовать материал", "publication result reuse");
+  expectNoCommandUx(reuse, "publication result reuse");
+  const contentAfterReuse = await get("/content/items");
+  expectEquals(contentAfterReuse.length, contentBeforeReuse.length + 1, "reuse should create content item");
+
+  const expand = await request("/telegram/intent", { text: "расширь опубликованный материал в статью" });
+  expectEquals(expand.intent, "publication_result_expand", "publication result expand intent");
+  expectIncludes(expand.text, "расширить материал", "publication result expand");
+  const contentAfterExpand = await get("/content/items");
+  const outline = contentAfterExpand.find((item) => item.content_type === "article_outline" && item.metadata?.source_publication_result === true);
+  if (!outline) throw new Error("expand should create article_outline content item");
+
+  const update = await request("/telegram/commands", { command: "/update", targetId: publicationResultId });
+  expectIncludes(update.text, "обновить опубликованный материал", "publication result update");
+  const tasks = await get("/tasks");
+  const updateTask = tasks.find((task) => task.task_type === "publication_result_update" && task.payload?.publicationResultId === publicationResultId);
+  if (!updateTask) throw new Error("update should create publication_result_update task");
 
   console.log("Telegram owner-control regression passed");
 }

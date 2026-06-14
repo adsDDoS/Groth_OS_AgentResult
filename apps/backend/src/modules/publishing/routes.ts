@@ -95,31 +95,17 @@ export async function publishingRoutes(app: FastifyInstance) {
   app.post("/publishing/items/:id/confirm-live", async (request) => {
     const { id } = idParams.parse(request.params);
     const body = confirmLiveBody.parse(request.body ?? {});
-    const now = new Date().toISOString();
     return {
-      data: await transitionCalendarItem({
+      data: await confirmPublishingCalendarLive({
         id,
         tenantId: request.tenantId,
-        status: "published",
-        metadata: {
-          result_note: body.note ?? "",
-          published_confirmed_by: request.userId ?? null,
-          published_confirmed_at: now,
-          publication_result: {
-            publication_url: body.publicationUrl ?? "",
-            format: body.format ?? "",
-            reactions: {
-              comments: Number(body.primaryReactions?.comments ?? 0),
-              reposts: Number(body.primaryReactions?.reposts ?? 0),
-              saves: Number(body.primaryReactions?.saves ?? 0),
-              reactions: Number(body.primaryReactions?.reactions ?? 0)
-            },
-            next_step: body.nextStep ?? "leave",
-            next_step_note: body.nextStepNote ?? "",
-            confirmed_at: now,
-            confirmed_by: request.userId ?? null
-          }
-        }
+        userId: request.userId,
+        note: body.note,
+        publicationUrl: body.publicationUrl,
+        format: body.format,
+        primaryReactions: body.primaryReactions,
+        nextStep: body.nextStep,
+        nextStepNote: body.nextStepNote
       })
     };
   });
@@ -127,6 +113,49 @@ export async function publishingRoutes(app: FastifyInstance) {
   app.patch("/publishing/items/:id", async (request) => {
     const { id } = idParams.parse(request.params);
     return { data: await patchJson("publishing_calendar_items", id, request.body as Record<string, unknown>, request.tenantId) };
+  });
+}
+
+export async function confirmPublishingCalendarLive(input: {
+  id: string;
+  tenantId: string;
+  userId?: string | null;
+  note?: string;
+  publicationUrl?: string;
+  format?: string;
+  primaryReactions?: {
+    comments?: number;
+    reposts?: number;
+    saves?: number;
+    reactions?: number;
+  };
+  nextStep?: "reuse" | "expand" | "update" | "leave";
+  nextStepNote?: string;
+}) {
+  const now = new Date().toISOString();
+  return transitionCalendarItem({
+    id: input.id,
+    tenantId: input.tenantId,
+    status: "published",
+    metadata: {
+      result_note: input.note ?? "",
+      published_confirmed_by: input.userId ?? null,
+      published_confirmed_at: now,
+      publication_result: {
+        publication_url: input.publicationUrl ?? "",
+        format: input.format ?? "",
+        reactions: {
+          comments: Number(input.primaryReactions?.comments ?? 0),
+          reposts: Number(input.primaryReactions?.reposts ?? 0),
+          saves: Number(input.primaryReactions?.saves ?? 0),
+          reactions: Number(input.primaryReactions?.reactions ?? 0)
+        },
+        next_step: input.nextStep ?? "leave",
+        next_step_note: input.nextStepNote ?? "",
+        confirmed_at: now,
+        confirmed_by: input.userId ?? null
+      }
+    }
   });
 }
 

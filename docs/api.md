@@ -197,6 +197,8 @@ Result body:
 
 `POST /telegram/commands` executes a predictable owner-facing command and returns ready-to-send text for Hermes Telegram. It is the preferred path for slash commands and short owner commands where model interpretation should be minimized.
 
+For published material cards, `/telegram/commands` supports `reuse`, `expand`, and `update` with `targetId` set to a `publication_result.id`. These commands call the canonical `/publication-results/:id/reuse|expand|update` domain workflow: create reusable material, create article outline, or create an update task. `POST /telegram/intent` also maps ordinary owner phrases such as "переиспользуй", "расширь опубликованный материал", and "обнови материал" to the same backend commands.
+
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 
 The same intent router can be used by the backend owner-control polling middleware. Enable it with `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` only after disabling Hermes polling for the same bot token. The middleware uses the Telegram allowlist, routes owner text through backend intent logic, and sends back only owner-facing text.
