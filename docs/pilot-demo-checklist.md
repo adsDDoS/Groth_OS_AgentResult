@@ -14,6 +14,12 @@ Intake перед пилотом:
 docs/pilot-onboarding-intake.md
 ```
 
+Week-1 execution board:
+
+```text
+docs/pilot-week-1-execution-board.md
+```
+
 Canonical script:
 
 ```text
