@@ -548,6 +548,7 @@ const state = {
   distributionSignals: [],
   publicationResults: [],
   publicationResultsSource: "derived",
+  selectedPublicationResultId: "",
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -2913,24 +2914,200 @@ function renderAgents() {
 }
 
 function renderAnalytics() {
-  const metrics = deriveMetrics(state.metrics);
-  const hasBlockingLoopAction = Boolean(ownerLoopBlockingAction());
+  const results = publicationResultsForDesk();
+  const selected = results.find((item) => item.id === state.selectedPublicationResultId) || results[0] || null;
   return `
-    ${resultSignalContractPanel(metrics)}
-    ${resultConfirmationClarityPanel()}
-    ${publicationResultsPanel()}
-    ${resultFlowPanel(metrics)}
-    ${hasBlockingLoopAction ? "" : `
-      <article class="panel full">
-        <div class="panel-heading">
+    ${resultsDeskMetrics(results)}
+    <section class="results-desk-layout" aria-label="${escapeAttr(text("Results Desk", "Стол результатов"))}">
+      <article class="panel full results-desk-table-panel">
+        <div class="panel-heading compact">
           <div>
-            <p class="eyebrow">${text("Next work", "Следующая работа")}</p>
-            <h3>${text("What to fix next", "Что исправить дальше")}</h3>
+            <p class="eyebrow">${text("Publication results", "Результаты публикаций")}</p>
+            <h3>${escapeHtml(text(`${results.length} confirmed publications`, `${results.length} подтверждённых публикаций`))}</h3>
           </div>
         </div>
-        ${resultActionList(metrics)}
+        ${resultsDeskTable(results)}
       </article>
-    `}
+      ${resultsDeskDetail(selected)}
+    </section>
+  `;
+}
+
+function publicationResultsForDesk() {
+  const rawResults = state.publicationResults.length
+    ? state.publicationResults
+    : derivePublicationResults(state.distributionSignals, state.calendar, state.content);
+  return rawResults.map((item) => normalizePublicationResultForDesk(item));
+}
+
+function normalizePublicationResultForDesk(item = {}) {
+  const calendarItem = state.calendar.find((entry) => String(entry.id || "") === String(item.calendar_item_id || item.calendarItemId || ""));
+  const contentItem = state.content.find((entry) => String(entry.id || "") === String(item.content_item_id || item.contentItemId || calendarItem?.content_item_id || ""));
+  const calendarMeta = calendarItem?.metadata || {};
+  const resultMeta = calendarMeta.publication_result || {};
+  const itemMeta = item.metadata || {};
+  const reactionSource = item.primary_reactions || item.primaryReactions || resultMeta.reactions || itemMeta.primary_reactions || itemMeta.reactions || {};
+  const reactions = {
+    comments: Number(reactionSource.comments ?? item.comments ?? resultMeta.comments ?? 0),
+    reposts: Number(reactionSource.reposts ?? item.reposts ?? resultMeta.reposts ?? 0),
+    saves: Number(reactionSource.saves ?? item.saves ?? resultMeta.saves ?? 0),
+    reactions: Number(reactionSource.reactions ?? reactionSource.reactions_count ?? item.reactions ?? item.reactions_count ?? resultMeta.reactions_count ?? 0)
+  };
+  const rawNextStep = item.next_step || item.nextStep || resultMeta.next_step || itemMeta.next_step || "leave";
+  const nextStep = ["reuse", "expand", "update", "leave"].includes(rawNextStep) ? rawNextStep : "leave";
+  const publicationUrl = item.publication_url || item.publicationUrl || resultMeta.publication_url || calendarMeta.publication_url || itemMeta.publication_url || "";
+  return {
+    ...item,
+    id: item.id || `publication-result-${calendarItem?.id || item.calendar_item_id || item.content_item_id || "untracked"}`,
+    calendar_item_id: item.calendar_item_id || item.calendarItemId || calendarItem?.id || "",
+    content_item_id: item.content_item_id || item.contentItemId || calendarItem?.content_item_id || contentItem?.id || "",
+    title: item.title || calendarItem?.title || contentItem?.title || text("Confirmed publication", "Подтверждённая публикация"),
+    channel: item.channel || calendarItem?.channel || item.source || itemMeta.source || "manual",
+    format: item.format || resultMeta.format || calendarMeta.format || contentItem?.content_type || "publication",
+    publication_url: publicationUrl,
+    confirmed_at: item.confirmed_at || item.confirmedAt || resultMeta.confirmed_at || calendarMeta.published_confirmed_at || item.created_at || calendarItem?.updated_at || "",
+    primary_reactions: reactions,
+    next_step: nextStep,
+    next_step_note: item.next_step_note || item.nextStepNote || resultMeta.next_step_note || itemMeta.next_step_note || "",
+    evidence: {
+      ...(item.evidence || {}),
+      has_url: Boolean(publicationUrl),
+      has_reactions: Object.values(reactions).some((value) => Number(value) > 0)
+    }
+  };
+}
+
+function resultsDeskMetrics(results = []) {
+  const withUrl = results.filter((item) => Boolean(item.publication_url)).length;
+  const reactionTotal = results.reduce((sum, item) => {
+    const reactions = item.primary_reactions || {};
+    return sum + Object.values(reactions).reduce((inner, value) => inner + Number(value || 0), 0);
+  }, 0);
+  const nextSteps = results.filter((item) => item.next_step && item.next_step !== "leave").length;
+  const channels = new Set(results.map((item) => item.channel || "manual"));
+  const metrics = [
+    [text("Confirmed", "Подтверждено"), results.length, text("publication results", "результатов публикаций")],
+    [text("With URL", "С URL"), withUrl, text("source attached", "источник прикреплён")],
+    [text("Primary reactions", "Первичные реакции"), reactionTotal, text("comments, saves, reposts", "комментарии, сохранения, репосты")],
+    [text("Next steps", "Следующие шаги"), nextSteps, text("reuse, expand, update", "переиспользовать, расширить, обновить")],
+    [text("Channels", "Каналы"), channels.size, text("distribution surfaces", "площадки дистрибуции")]
+  ];
+  return `
+    <section class="results-desk-metrics" aria-label="${escapeAttr(text("Results Desk metrics", "Метрики стола результатов"))}">
+      ${metrics.map(([label, value, note]) => `
+        <article>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(String(value))}</strong>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function resultsDeskTable(results = []) {
+  if (!results.length) {
+    return `
+      <div class="results-desk-empty">
+        <strong>${escapeHtml(text("No publication results yet", "Результатов публикаций пока нет"))}</strong>
+        <p>${escapeHtml(text("Confirm a live release in Publication Desk to create the first result.", "Подтвердите выход в Публикационном столе, чтобы создать первый результат."))}</p>
+        <button class="button secondary table-button" data-action="go-calendar">${escapeHtml(text("Open Publication Desk", "Открыть Публикационный стол"))}</button>
+      </div>
+    `;
+  }
+  const headers = [
+    text("Publication", "Публикация"),
+    text("URL", "URL"),
+    text("Channel", "Канал"),
+    text("Format", "Формат"),
+    text("Reactions", "Реакции"),
+    text("Next step", "Следующий шаг"),
+    text("Actions", "Действия")
+  ];
+  return `
+    <div class="results-desk-table" style="--results-cols:${headers.length}">
+      ${headers.map((header) => `<div class="results-table-head">${escapeHtml(header)}</div>`).join("")}
+      ${results.map((item) => resultsDeskRow(item).join("")).join("")}
+    </div>
+  `;
+}
+
+function resultsDeskRow(item) {
+  const reactions = publicationReactionSummary(item.primary_reactions || {});
+  const url = item.publication_url || text("not attached", "не прикреплён");
+  const isSelected = item.id === state.selectedPublicationResultId || (!state.selectedPublicationResultId && publicationResultsForDesk()[0]?.id === item.id);
+  return [
+    `<div class="results-table-cell result-title-cell"><button class="result-title-button ${isSelected ? "active" : ""}" data-action="select-publication-result" data-id="${escapeAttr(item.id)}"><strong>${escapeHtml(item.title || text("Confirmed publication", "Подтверждённая публикация"))}</strong><span>${escapeHtml(formatDate(item.confirmed_at || item.created_at || ""))}</span></button></div>`,
+    `<div class="results-table-cell"><span class="result-url">${escapeHtml(url)}</span></div>`,
+    `<div class="results-table-cell">${escapeHtml(displayChannel(item.channel || "manual"))}</div>`,
+    `<div class="results-table-cell">${escapeHtml(labelize(item.format || "publication"))}</div>`,
+    `<div class="results-table-cell">${escapeHtml(reactions)}</div>`,
+    `<div class="results-table-cell"><mark>${escapeHtml(publicationNextStepLabel(item.next_step))}</mark></div>`,
+    `<div class="results-table-cell"><div class="button-row compact">${publicationResultActions(item)}</div></div>`
+  ];
+}
+
+function resultsDeskDetail(item) {
+  if (!item) {
+    return `
+      <aside class="panel results-desk-detail" aria-label="${escapeAttr(text("Publication result detail", "Детали результата публикации"))}">
+        <div class="empty-state">
+          <h3>${escapeHtml(text("No result selected", "Результат не выбран"))}</h3>
+          <p>${escapeHtml(text("Publication details appear after the first confirmed release.", "Детали появятся после первого подтверждённого выпуска."))}</p>
+        </div>
+      </aside>
+    `;
+  }
+  const reactions = item.primary_reactions || {};
+  const reactionRows = [
+    [text("Comments", "Комментарии"), reactions.comments || 0],
+    [text("Reposts", "Репосты"), reactions.reposts || 0],
+    [text("Saves", "Сохранения"), reactions.saves || 0],
+    [text("Reactions", "Реакции"), reactions.reactions || 0]
+  ];
+  return `
+    <aside class="panel results-desk-detail" aria-label="${escapeAttr(text("Publication result detail", "Детали результата публикации"))}">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Publication result", "Результат публикации")}</p>
+          <h3>${escapeHtml(item.title || text("Confirmed publication", "Подтверждённая публикация"))}</h3>
+        </div>
+      </div>
+      <div class="result-detail-grid">
+        <div><span>${escapeHtml(text("URL", "URL"))}</span><strong>${escapeHtml(item.publication_url || text("not attached", "не прикреплён"))}</strong></div>
+        <div><span>${escapeHtml(text("Channel", "Канал"))}</span><strong>${escapeHtml(displayChannel(item.channel || "manual"))}</strong></div>
+        <div><span>${escapeHtml(text("Format", "Формат"))}</span><strong>${escapeHtml(labelize(item.format || "publication"))}</strong></div>
+        <div><span>${escapeHtml(text("Confirmed", "Подтверждено"))}</span><strong>${escapeHtml(formatDate(item.confirmed_at || ""))}</strong></div>
+      </div>
+      <div class="result-reaction-grid">
+        ${reactionRows.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join("")}
+      </div>
+      <div class="result-next-step-box">
+        <span>${escapeHtml(text("Next content step", "Следующий контент-шаг"))}</span>
+        <strong>${escapeHtml(publicationNextStepLabel(item.next_step))}</strong>
+        <div class="button-row compact">${publicationResultActions(item)}</div>
+      </div>
+    </aside>
+  `;
+}
+
+function publicationReactionSummary(reactions = {}) {
+  return [
+    [text("comments", "комм."), reactions.comments],
+    [text("reposts", "репосты"), reactions.reposts],
+    [text("saves", "сохр."), reactions.saves],
+    [text("reactions", "реакции"), reactions.reactions]
+  ].filter(([, value]) => Number(value) > 0)
+    .map(([label, value]) => `${value} ${label}`)
+    .join(" · ") || text("No primary reactions yet", "Первичных реакций пока нет");
+}
+
+function publicationResultActions(item) {
+  return `
+    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
+    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
+    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
+    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
   `;
 }
 
@@ -4284,6 +4461,10 @@ async function handleAction(action, id) {
     "export-calendar": exportCalendarCsv,
     "mark-calendar-published": () => openPublicationResultModal(id),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
+    "select-publication-result": () => {
+      state.selectedPublicationResultId = id;
+      render();
+    },
     "set-publication-result-step": () => setPublicationResultStep(id),
     "confirm-handed-off": confirmHandedOffCalendarItems,
     "edit-calendar-note": () => openFormModal("calendarNote", { itemId: id }),
