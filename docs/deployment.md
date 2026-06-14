@@ -310,6 +310,17 @@ Quick cutover verification:
 npm run telegram:production-smoke
 ```
 
+Before larger product or visual changes, run the local Content Factory Core gate:
+
+```bash
+npm run content-factory:check
+```
+
+It verifies approval side effects, publishing commands, publication results,
+Telegram owner-control regression, the polling/webhook invariant, and the
+dashboard publication flow. For a backend-only pass, set
+`CONTENT_FACTORY_SKIP_DASHBOARD_SMOKE=1`.
+
 ## Backups
 
 ```bash
