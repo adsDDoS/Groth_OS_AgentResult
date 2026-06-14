@@ -287,12 +287,23 @@ Optional recurring monitor:
 
 ```bash
 npm run telegram:production-monitor
+npm run vps:agentresult-health:install-timer
 ```
 
-It runs the same production smoke on the VPS, appends a timestamped line to
-`/opt/agentresult-os/runtime/telegram-owner-control-monitor.log`, and can send a
-short Telegram alert when `TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID` is set locally.
-Use it from cron or a systemd timer after the owner-control contour is live.
+`npm run telegram:production-monitor` runs the full VPS health guard, appends a
+timestamped line to `/opt/agentresult-os/runtime/telegram-owner-control-monitor.log`,
+and can send a short Telegram alert when `TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID`
+is set locally.
+
+`npm run vps:agentresult-health:install-timer` installs a VPS-side systemd
+timer named `agentresult-vps-health.timer`. By default it runs every 15 minutes,
+writes full output to `/opt/agentresult-os/runtime/agentresult-vps-health.log`,
+and uses the repository checkout at `/opt/agentresult-os/app`.
+
+There is also a manual GitHub Actions workflow named `AgentResult VPS health`.
+Configure repository secret `AGENTRESULT_VPS_SSH_KEY` with a private key that can
+SSH into the VPS, then run the workflow manually from Actions. The optional
+`expected_owner_image_tag` input turns on strict image-tag checking.
 
 Expected state:
 

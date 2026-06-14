@@ -1,0 +1,56 @@
+name: AgentResult VPS health
+
+on:
+  workflow_dispatch:
+    inputs:
+      vps_host:
+        description: "SSH host, for example root@91.103.140.101"
+        required: false
+        default: "root@91.103.140.101"
+      expected_owner_image_tag:
+        description: "Optional strict owner-control image tag"
+        required: false
+        default: ""
+
+jobs:
+  vps-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure SSH key
+        env:
+          AGENTRESULT_VPS_SSH_KEY: ${{ secrets.AGENTRESULT_VPS_SSH_KEY }}
+          VPS_HOST_INPUT: ${{ inputs.vps_host }}
+        run: |
+          test -n "$AGENTRESULT_VPS_SSH_KEY"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$AGENTRESULT_VPS_SSH_KEY" > ~/.ssh/agentresult_vps
+          chmod 600 ~/.ssh/agentresult_vps
+          host="${VPS_HOST_INPUT#*@}"
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+          {
+            echo "Host *"
+            echo "  IdentityFile ~/.ssh/agentresult_vps"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Run VPS invariant guard
+        env:
+          VPS_HOST: ${{ inputs.vps_host }}
+          EXPECTED_OWNER_IMAGE_TAG: ${{ inputs.expected_owner_image_tag }}
+        run: npm run vps:agentresult-health

@@ -7,7 +7,7 @@ LOG_FILE="${LOG_FILE:-/opt/agentresult-os/runtime/telegram-owner-control-monitor
 ALERT_CHAT_ID="${TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID:-}"
 
 set +e
-output="$(CONTAINER_NAME="$CONTAINER_NAME" VPS_HOST="$VPS_HOST" npm run telegram:production-smoke 2>&1)"
+output="$(OWNER_CONTAINER="$CONTAINER_NAME" VPS_HOST="$VPS_HOST" npm run vps:agentresult-health 2>&1)"
 status=$?
 set -e
 
@@ -49,13 +49,13 @@ if (!response.ok) process.exit(1);
 }
 
 if [ "$STATUS" -eq 0 ]; then
-  append_log "ok telegram-owner-control invariant healthy"
+  append_log "ok agentresult-vps invariant healthy"
   exit 0
 fi
 
-append_log "fail telegram-owner-control invariant failed"
+append_log "fail agentresult-vps invariant failed"
 
-alert_text="AgentResult Telegram owner-control monitor failed on $(hostname): polling/webhook/token invariant is broken. Run npm run telegram:production-smoke locally."
+alert_text="AgentResult VPS health monitor failed on $(hostname): owner-control/systemd/webhook/token invariant is broken. Run npm run vps:agentresult-health locally."
 send_alert "$alert_text" || append_log "warn alert delivery failed"
 REMOTE
 
