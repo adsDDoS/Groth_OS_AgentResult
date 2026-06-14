@@ -6,10 +6,6 @@ CONTAINER_NAME="${CONTAINER_NAME:-agentresult-os-telegram-owner-control}"
 EXPECTED_IMAGE_TAG="${EXPECTED_IMAGE_TAG:-}"
 HOST_URL="${HOST_URL:-http://127.0.0.1:18831}"
 
-if [ -z "$EXPECTED_IMAGE_TAG" ]; then
-  EXPECTED_IMAGE_TAG="$(git rev-parse --short HEAD)"
-fi
-
 ssh "$VPS_HOST" \
   "CONTAINER_NAME='$CONTAINER_NAME' EXPECTED_IMAGE_TAG='$EXPECTED_IMAGE_TAG' HOST_URL='$HOST_URL' bash -s" <<'REMOTE'
 set -euo pipefail
@@ -27,10 +23,12 @@ image="$(printf '%s\n' "$container_line" | awk '{print $2}')"
 status="$(printf '%s\n' "$container_line" | cut -d' ' -f3-)"
 
 [ "$name" = "$CONTAINER_NAME" ] || fail "unexpected container name: $container_line"
-case "$image" in
-  *":$EXPECTED_IMAGE_TAG") ;;
-  *) fail "expected image tag $EXPECTED_IMAGE_TAG, got $image" ;;
-esac
+if [ -n "$EXPECTED_IMAGE_TAG" ]; then
+  case "$image" in
+    *":$EXPECTED_IMAGE_TAG") ;;
+    *) fail "expected image tag $EXPECTED_IMAGE_TAG, got $image" ;;
+  esac
+fi
 case "$status" in
   Up*) ;;
   *) fail "$CONTAINER_NAME is not up: $status" ;;

@@ -25,6 +25,7 @@
     "telegram:polling-invariant": "node scripts/telegram-polling-invariant-check.mjs",
     "telegram:production-smoke": "bash scripts/smoke-telegram-publication-result-vps.sh",
     "telegram:production-monitor": "bash scripts/monitor-telegram-owner-control-vps.sh",
+    "vps:agentresult-health": "bash scripts/agentresult-vps-health.sh",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",

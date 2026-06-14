@@ -277,7 +277,11 @@ Required checks:
 
 ```bash
 npm run telegram:production-smoke
+npm run vps:agentresult-health
 ```
+
+For a deploy-specific image tag gate, run either check with
+`EXPECTED_IMAGE_TAG=<git-short-sha>`.
 
 Optional recurring monitor:
 
@@ -343,7 +347,7 @@ Fast inspection:
 ```bash
 ssh root@91.103.140.101 'docker ps --format "{{.Names}} {{.Image}} {{.Status}} {{.Ports}}" | grep -E "agentresult-os-(backend|telegram-owner-control)"'
 ssh root@91.103.140.101 'systemctl is-enabled agentresult-client-owner-updates.service && systemctl is-active agentresult-client-owner-updates.service'
-npm run telegram:production-smoke
+npm run vps:agentresult-health
 ```
 
 Restore deleted owner-control container:
@@ -361,8 +365,8 @@ Restore disabled owner update service:
 ssh root@91.103.140.101 'systemctl enable --now agentresult-client-owner-updates.service'
 ```
 
-After recovery, `npm run telegram:production-smoke` must print
-`telegram publication-result production smoke passed`.
+After recovery, `npm run vps:agentresult-health` must print
+`agentresult vps health passed`.
 
 Before larger product or visual changes, run the local Content Factory Core gate:
 
