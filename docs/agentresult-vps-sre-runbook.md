@@ -58,6 +58,12 @@ Run the production Telegram result-flow smoke:
 npm run telegram:production-smoke
 ```
 
+Rotate the owner-control Telegram token after BotFather returns a new token:
+
+```bash
+NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token
+```
+
 Deploy or refresh only the owner-control container:
 
 ```bash
