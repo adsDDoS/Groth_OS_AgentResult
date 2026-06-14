@@ -8,6 +8,12 @@ Canonical script:
 docs/pilot-demo-script.md
 ```
 
+One-page operator card:
+
+```text
+docs/demo-operator-card.md
+```
+
 Stable dashboard:
 
 ```text
