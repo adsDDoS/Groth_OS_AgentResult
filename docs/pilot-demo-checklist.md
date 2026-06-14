@@ -14,6 +14,12 @@ One-page operator card:
 docs/demo-operator-card.md
 ```
 
+Pilot call packet:
+
+```text
+docs/pilot-call-packet.md
+```
+
 Pre-call dry run:
 
 ```text

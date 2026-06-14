@@ -2,6 +2,12 @@
 
 Шпаргалка для первого client-safe показа. Держать созвон в 7 минутах.
 
+Call script:
+
+```text
+docs/pilot-call-packet.md
+```
+
 ## Ссылка
 
 https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
