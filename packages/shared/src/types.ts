@@ -1,29 +1,4 @@
-export const CONTENT_STATUSES = [
-  "idea",
-  "research",
-  "brief",
-  "draft",
-  "review",
-  "approved",
-  "scheduled",
-  "published",
-  "improving",
-  "archived",
-  "blocked"
-] as const;
-
-export type ContentStatus = (typeof CONTENT_STATUSES)[number];
-
-export const APPROVAL_SCOPES = [
-  "publish",
-  "live_update",
-  "newsletter_send",
-  "social_post",
-  "bulk_programmatic_pages",
-  "sensitive_claim"
-] as const;
-
-export type ApprovalScope = (typeof APPROVAL_SCOPES)[number];
+export * from "./domain.js";
 
 export type Channel =
   | "website"

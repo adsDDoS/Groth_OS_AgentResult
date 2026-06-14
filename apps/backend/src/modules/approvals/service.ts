@@ -1,18 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { APPROVAL_SCOPES, type ApprovalScope } from "@ai-growth-os/shared";
 import { query } from "../../db/client.js";
 
-const protectedApprovalScopes = new Set([
-  "publish",
-  "live_update",
-  "newsletter_send",
-  "social_post",
-  "bulk_programmatic_pages",
-  "sensitive_claim"
-]);
+const protectedApprovalScopes = new Set<string>(APPROVAL_SCOPES);
 
 export async function createApprovalRequest(input: {
   tenantId: string;
-  scope: string;
+  scope: ApprovalScope | string;
   targetType: string;
   targetId: string;
   requestedBy?: string;

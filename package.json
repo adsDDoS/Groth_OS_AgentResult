@@ -16,6 +16,7 @@
     "local:agentresult:demo": "node scripts/local-agentresult.mjs --reset-demo",
     "dashboard:smoke": "node scripts/dashboard-smoke.mjs",
     "agent-system:check": "node scripts/dev-agent-system-check.mjs",
+    "domain:check": "npm run build -w packages/shared && node scripts/domain-state-machine-check.mjs",
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --cwd apps/dashboard",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",
