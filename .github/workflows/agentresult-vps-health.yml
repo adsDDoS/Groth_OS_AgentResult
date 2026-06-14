@@ -56,4 +56,9 @@ jobs:
         env:
           VPS_HOST: ${{ inputs.vps_host }}
           EXPECTED_OWNER_IMAGE_TAG: ${{ inputs.expected_owner_image_tag }}
-        run: npm run vps:agentresult-health
+        run: |
+          if [ -n "$EXPECTED_OWNER_IMAGE_TAG" ]; then
+            ssh "$VPS_HOST" "EXPECTED_OWNER_IMAGE_TAG=$EXPECTED_OWNER_IMAGE_TAG"
+          else
+            ssh "$VPS_HOST"
+          fi

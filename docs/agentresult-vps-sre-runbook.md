@@ -107,11 +107,13 @@ Recommended GitHub secret setup:
   forced-command key:
 
 ```text
-restrict,command="cd /opt/agentresult-os/app && AGENTRESULT_VPS_HEALTH_LOCAL=1 npm run vps:agentresult-health" ssh-ed25519 <public-key> agentresult-vps-health-github-actions-forced-command
+restrict,command="/opt/agentresult-os/app/scripts/agentresult-vps-health-forced-command.sh" ssh-ed25519 <public-key> agentresult-vps-health-github-actions-forced-command
 ```
 
 This makes the GitHub workflow useful as an external health control without
 granting a general-purpose root shell to GitHub Actions.
+The wrapper permits only the default invariant check or
+`EXPECTED_OWNER_IMAGE_TAG=<safe-tag>` for strict deploy verification.
 
 ## Recovery
 
