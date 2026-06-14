@@ -9,3 +9,4 @@ coverage/
 exports/
 *.log
 tmp/
+.vercel
