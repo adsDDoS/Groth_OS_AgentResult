@@ -107,7 +107,8 @@ process.stdin.on("end", () => {
     || fail "owner-control bot token is also present in: $(printf '%s' "$unexpected_same_token_containers" | paste -sd ',' -)"
   echo "token isolation ok"
 
-  docker logs "$OWNER_CONTAINER" 2>&1 \
+  owner_logs="$(docker logs "$OWNER_CONTAINER" 2>&1)"
+  printf '%s\n' "$owner_logs" \
     | grep -q 'Telegram owner-control polling middleware is enabled' \
     || fail "$OWNER_CONTAINER logs do not show owner-control polling middleware"
   echo "polling log marker ok"
