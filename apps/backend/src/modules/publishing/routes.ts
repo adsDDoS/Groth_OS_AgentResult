@@ -2,13 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query } from "../../db/client.js";
 import { insertJson, patchJson } from "../common/repository.js";
-import { createApprovalRequest, requireApproval } from "../approvals/service.js";
+import { createApprovalRequest, reconcileApprovedCalendarApprovals, requireApproval } from "../approvals/service.js";
 
 const idParams = z.object({ id: z.string().uuid() });
 const statusBody = z.object({ status: z.enum(["draft", "review", "scheduled", "published", "handed_off", "archived", "rejected"]) });
 
 export async function publishingRoutes(app: FastifyInstance) {
   app.get("/publishing/calendar", async (request) => {
+    await reconcileApprovedCalendarApprovals(request.tenantId);
     const result = await query(
       "select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300",
       [request.tenantId]

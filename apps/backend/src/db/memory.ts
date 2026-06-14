@@ -741,7 +741,24 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
     return persistedResult(updateStatus("publishing_calendar_items", values[0], values[1], "archived") as T[]);
   }
 
+  if (normalized.startsWith("update publishing_calendar_items calendar")) {
+    const rows = reconcileApprovedCalendarApprovals(values[0]);
+    return persistedResult(rows as T[]);
+  }
+
   if (normalized.startsWith("update publishing_calendar_items set status = $3")) {
+    if (normalized.includes("jsonb_build_object")) {
+      const rows = updateApprovedCalendarApprovalTarget({
+        id: values[0],
+        tenantId: values[1],
+        status: values[2],
+        approvalId: values[3],
+        decisionNote: values[4],
+        decidedBy: values[5],
+        decidedAt: values[6]
+      });
+      return persistedResult(rows as T[]);
+    }
     return persistedResult(updateStatus("publishing_calendar_items", values[0], values[1], values[2]) as T[]);
   }
 
@@ -1050,6 +1067,53 @@ function updateStatus(table: string, id: unknown, currentTenantId: unknown, stat
   row.status = status;
   row.updated_at = new Date().toISOString();
   return [row];
+}
+
+function updateApprovedCalendarApprovalTarget(input: {
+  id: unknown;
+  tenantId: unknown;
+  status: unknown;
+  approvalId: unknown;
+  decisionNote: unknown;
+  decidedBy: unknown;
+  decidedAt: unknown;
+}) {
+  const row = tenantRows("publishing_calendar_items", input.tenantId).find((item) => item.id === input.id);
+  if (!row || !["draft", "review"].includes(String(row.status))) return [];
+  row.status = input.status;
+  row.updated_at = new Date().toISOString();
+  row.metadata = {
+    ...metadataObject(row.metadata),
+    approval_id: input.approvalId ?? null,
+    decision_note: input.decisionNote ?? "",
+    decided_by: input.decidedBy ?? null,
+    decided_at: input.decidedAt ?? row.updated_at
+  };
+  return [row];
+}
+
+function reconcileApprovedCalendarApprovals(currentTenantId: unknown) {
+  const updated: Row[] = [];
+  const approvals = tenantRows("approvals", currentTenantId).filter((approval) =>
+    approval.target_type === "publishing_calendar_item" && approval.status === "approved"
+  );
+  for (const approval of approvals) {
+    const rows = updateApprovedCalendarApprovalTarget({
+      id: approval.target_id,
+      tenantId: currentTenantId,
+      status: "scheduled",
+      approvalId: approval.id,
+      decisionNote: approval.decision_note,
+      decidedBy: approval.decided_by,
+      decidedAt: approval.decided_at
+    });
+    updated.push(...rows);
+  }
+  return updated;
+}
+
+function metadataObject(value: unknown): Row {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Row : {};
 }
 
 function withTimestamps(row: Row) {

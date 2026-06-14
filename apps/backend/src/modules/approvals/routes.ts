@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { query } from "../../db/client.js";
-import { createApprovalRequest, decideApproval } from "./service.js";
+import { createApprovalRequest, decideApproval, reconcileApprovedCalendarApprovals } from "./service.js";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 const noteSchema = z.object({ note: z.string().optional() });
@@ -15,6 +15,7 @@ const createBodySchema = z.object({
 
 export async function approvalsRoutes(app: FastifyInstance) {
   app.get("/approvals", async (request) => {
+    await reconcileApprovedCalendarApprovals(request.tenantId);
     const result = await query("select * from approvals where tenant_id = $1 order by created_at desc limit 200", [
       request.tenantId
     ]);

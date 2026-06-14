@@ -772,6 +772,7 @@ async function persistWorkspaceState(partial = {}) {
 }
 
 async function reconcileWorkflowConsistency() {
+  if (!shouldUseLocalWorkspaceFallback()) return;
   await reconcileApprovedCalendarApprovals();
 
   for (const contentItem of state.content) {
@@ -5151,7 +5152,6 @@ async function decideApproval(item, action, note = "") {
     item.status = nextStatus;
     item.decision_note = note;
     item.decided_at = new Date().toISOString();
-    await applyDecisionToSource(item, nextStatus);
     appendAudit(item, nextStatus, note);
     state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
@@ -5189,7 +5189,6 @@ async function approveWeeklyTopicBatch() {
       item.status = "approved";
       item.decision_note = note;
       item.decided_at = new Date().toISOString();
-      await applyDecisionToSource(item, "approved");
       appendAudit(item, "approved", note);
     } catch {
       showToast(text("Could not approve the full weekly batch.", "Не удалось согласовать весь пакет недели."));
