@@ -359,7 +359,7 @@ export default async function handler(req, res) {
   if (route === "owner-action-audit") return send(res, 200, { data: ownerActionAudit() });
   if (route === "content/items") return send(res, 200, { data: content });
   if (route === "publishing/calendar") return send(res, 200, { data: calendar });
-  if (route === "tasks") return send(res, 200, { data: [] });
+  if (route === "tasks" && req.method === "GET") return send(res, 200, { data: [] });
   if (route === "workspace/state" && req.method === "GET") return send(res, 200, { data: workspaceState });
   if (route === "workspace/state" && req.method === "PUT") {
     workspaceState = { ...workspaceState, ...(await readBody(req)) };
