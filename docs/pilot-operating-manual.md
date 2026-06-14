@@ -12,7 +12,8 @@
 | Day 7 review | `docs/pilot-day-7-review-template.md` | Go / Narrow / Repair / No-go. | Week 2, repair или stop. |
 | Week 2 expansion | `docs/pilot-week-2-expansion-board.md` | Same loop / narrow expansion / channel test / repair week. | Final decision. |
 | Decision | This manual | Continue / narrow / repair / stop. | Closeout report. |
-| Closeout | `docs/pilot-closeout-report-template.md` | Commercial next step. | Extend / paid pilot / repair / stop. |
+| Closeout | `docs/pilot-closeout-report-template.md` | Commercial next step. | Offer or stop. |
+| Offer | `docs/pilot-pricing-offer-one-pager.md` | Paid pilot / narrow loop / repair sprint. | Start paid scope or close. |
 
 ## Operating Rules
 
@@ -73,4 +74,10 @@ docs/pilot-demo-checklist.md
 
 ```text
 docs/pilot-closeout-report-template.md
+```
+
+Если есть коммерческий next step, собрать предложение:
+
+```text
+docs/pilot-pricing-offer-one-pager.md
 ```

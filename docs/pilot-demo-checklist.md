@@ -44,6 +44,12 @@ Closeout report:
 docs/pilot-closeout-report-template.md
 ```
 
+Pricing / offer one-pager:
+
+```text
+docs/pilot-pricing-offer-one-pager.md
+```
+
 Canonical script:
 
 ```text

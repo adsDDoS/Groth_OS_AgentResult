@@ -76,6 +76,12 @@ date:
 - Запланировать repair sprint.
 - Закрыть без продажи.
 
+Если выбран платный или repair next step, использовать offer one-pager:
+
+```text
+docs/pilot-pricing-offer-one-pager.md
+```
+
 ```text
 commercial_next_step:
 price_or_scope:
