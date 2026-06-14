@@ -26,6 +26,12 @@ Day 7 review:
 docs/pilot-day-7-review-template.md
 ```
 
+Week-2 expansion board:
+
+```text
+docs/pilot-week-2-expansion-board.md
+```
+
 Canonical script:
 
 ```text
