@@ -243,6 +243,9 @@ Operational guardrails:
 
 Run Telegram owner-control as a separate backend container from the read-only Vercel demo backend.
 
+Start with the one-page SRE runbook for any VPS operation:
+[`docs/agentresult-vps-sre-runbook.md`](agentresult-vps-sre-runbook.md).
+
 Current container split:
 
 - `agentresult-os-backend`: Vercel demo API, `127.0.0.1:18830`, no Telegram polling.
