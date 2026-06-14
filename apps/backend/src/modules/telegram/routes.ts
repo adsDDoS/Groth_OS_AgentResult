@@ -2927,6 +2927,7 @@ export function startTelegramOwnerControlPolling(app: FastifyInstance) {
   let offset = 0;
   let stopped = false;
   let timer: NodeJS.Timeout | null = null;
+  let backoffScheduled = false;
 
   const schedule = () => {
     if (stopped) return;
@@ -2934,6 +2935,7 @@ export function startTelegramOwnerControlPolling(app: FastifyInstance) {
   };
 
   const poll = async () => {
+    backoffScheduled = false;
     try {
       const updates = await telegramApiRequest<TelegramUpdate[]>("getUpdates", {
         offset,
@@ -2950,8 +2952,18 @@ export function startTelegramOwnerControlPolling(app: FastifyInstance) {
       }
     } catch (error) {
       app.log.error({ error }, "Telegram owner-control polling failed");
+      const errorCode = (error as { details?: { error_code?: number } })?.details?.error_code;
+      if (errorCode === 409) {
+        app.log.warn("Got 409 Conflict from getUpdates, backing off 5-10s before retry");
+        if (!stopped) {
+          timer = setTimeout(poll, 5000 + Math.random() * 5000);
+        }
+        backoffScheduled = true;
+      }
     } finally {
-      schedule();
+      if (!stopped && !backoffScheduled) {
+        schedule();
+      }
     }
   };
 
