@@ -1087,10 +1087,11 @@ function renderRouteModal() {
 function renderChrome() {
   document.querySelector(".brand-lockup h1").textContent = tr("Growth Control");
   const helpButton = document.querySelector("#helpButton");
-  helpButton.textContent = state.online ? text("Online", "Онлайн") : text("Demo", "Демо");
+  const showOnline = state.online && !IS_PRODUCTION_DEMO;
+  helpButton.textContent = showOnline ? text("Online", "Онлайн") : text("Demo", "Демо");
   helpButton.hidden = false;
-  helpButton.setAttribute("aria-label", state.online ? text("Backend online", "Backend online") : text("Demo mode", "Demo mode"));
-  helpButton.classList.toggle("online", state.online);
+  helpButton.setAttribute("aria-label", showOnline ? text("Backend online", "Backend online") : text("Demo mode", "Demo mode"));
+  helpButton.classList.toggle("online", showOnline);
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLang);
   });

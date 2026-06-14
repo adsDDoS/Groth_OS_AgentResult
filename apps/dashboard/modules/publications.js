@@ -42,10 +42,6 @@ function renderPublications() {
 }
 
 function publicationDeskPrimaryAction() {
-  if (state.calendar.some((item) => item.status === "handed_off")) {
-    const item = state.calendar.find((entry) => entry.status === "handed_off");
-    return `<button class="button primary table-button" data-action="mark-calendar-published" data-id="${escapeAttr(item?.id || "")}">${escapeHtml(text("Confirm result", "Подтвердить результат"))}</button>`;
-  }
   if (state.calendar.some((item) => item.status === "published")) {
     return `<button class="button secondary table-button" data-action="go-analytics">${escapeHtml(text("Open results", "Открыть результаты"))}</button>`;
   }
