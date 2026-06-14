@@ -48,6 +48,10 @@ The Visual Dashboard v1 blueprint is documented in
 navigation, layout, tables, drawers, publication screens, results screens, or
 visual hierarchy.
 
+The current production-readiness boundary is documented in
+`docs/production-readiness-checklist.md`. Use it before making customer,
+pilot, deploy, Telegram owner-control, demo, or dashboard-readiness claims.
+
 The product language is:
 
 - money
