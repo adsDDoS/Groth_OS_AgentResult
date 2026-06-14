@@ -38,6 +38,12 @@ Week-2 expansion board:
 docs/pilot-week-2-expansion-board.md
 ```
 
+Closeout report:
+
+```text
+docs/pilot-closeout-report-template.md
+```
+
 Canonical script:
 
 ```text
