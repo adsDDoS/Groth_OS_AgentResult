@@ -2,6 +2,12 @@
 
 Use this before a first client-safe GrothOS demo.
 
+Квалификация перед показом:
+
+```text
+docs/pilot-qualification-note.md
+```
+
 Canonical script:
 
 ```text
