@@ -25,6 +25,7 @@
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
     "telegram:polling-invariant": "node scripts/telegram-polling-invariant-check.mjs",
     "telegram:production-smoke": "bash scripts/smoke-telegram-publication-result-vps.sh",
+    "pilot-demo:owner-flow-smoke": "bash scripts/smoke-pilot-demo-owner-flow-vps.sh",
     "telegram:production-monitor": "bash scripts/monitor-telegram-owner-control-vps.sh",
     "vps:agentresult-health": "bash scripts/agentresult-vps-health.sh",
     "vps:agentresult-health:install-timer": "bash scripts/install-agentresult-vps-health-timer.sh",

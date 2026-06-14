@@ -145,7 +145,35 @@ Send:
 Expected:
 
 ```text
-Выход подтверждён. Материал учтён в результатах.
+Пришлите URL публикации.
+```
+
+Send:
+
+```text
+https://t.me/agentresult/300
+```
+
+Expected: AgentResult asks for format.
+
+Send:
+
+```text
+telegram_post
+```
+
+Expected: AgentResult asks for primary reactions.
+
+Send:
+
+```text
+комментарии 2, репосты 1, сохранения 3, реакции 8
+```
+
+Expected:
+
+```text
+Данные результата сохранены.
 ```
 
 ### 4. Результаты

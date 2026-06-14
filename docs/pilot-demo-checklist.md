@@ -12,10 +12,13 @@ docs/customer-demo-contract.md
 
 - Demo tenant reset is complete.
 - Dashboard opens on the demo tenant.
-- Telegram/API answers `что готово`.
+- Telegram/API full owner-flow smoke passes.
 - Main pilot tenant was not reset.
 - No owner-facing copy says Hermes.
 - No Growth Control screen shows `Деньги: 0`.
+- Telegram owner-control uses ordinary phrases, not slash-command training.
+- The old Telegram bot token is allowed only for internal demo/pre-production;
+  rotate it before any client pilot.
 
 ## Demo Path
 
@@ -26,7 +29,26 @@ docs/customer-demo-contract.md
 5. Send `согласую`.
 6. Send `передал в выпуск`.
 7. Send `вышло`.
-8. Open `Результаты` or send `что по результату`.
+8. Send publication URL.
+9. Send format.
+10. Send primary reactions.
+11. Open `Результаты` or send `что по результату`.
+
+## Verify
+
+```bash
+npm run content-factory:check
+npm run pilot-demo:owner-flow-smoke
+npm run telegram:production-smoke
+npm run vps:agentresult-health
+bash scripts/smoke-demo-api-proxy-vps.sh
+```
+
+Stable dashboard link:
+
+```text
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot#/overview
+```
 
 ## Say
 
@@ -50,3 +72,4 @@ AgentResult готовит работу, собственник принимае
 - autopublishing as default
 - money metrics without a real source
 - long dashboard walkthrough
+- leaked or pasted token values
