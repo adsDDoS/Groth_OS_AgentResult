@@ -28,6 +28,7 @@
     "vps:agentresult-health": "bash scripts/agentresult-vps-health.sh",
     "vps:agentresult-health:install-timer": "bash scripts/install-agentresult-vps-health-timer.sh",
     "vps:agentresult-health:monitor": "bash scripts/run-agentresult-vps-health-monitor.sh",
+    "vps:agentresult-health:drill": "bash scripts/drill-agentresult-vps-health-alert.sh",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",
     "start": "npm run start -w apps/backend",
     "db:migrate": "npm run db:migrate -w apps/backend",

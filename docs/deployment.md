@@ -313,6 +313,18 @@ from `TELEGRAM_OWNER_CONTROL_ALERT_CHAT_ID`, `AGENTRESULT_VPS_HEALTH_ALERT_CHAT_
 or the first `TELEGRAM_ALLOWED_USERS` value in `/opt/agentresult-os/app/.env`.
 Edit the runtime env file directly if alerts should go to another owner channel.
 
+Run a safe alert drill without stopping real services:
+
+```bash
+npm run vps:agentresult-health:drill
+```
+
+The drill forces a fake failing health command, writes to
+`/opt/agentresult-os/runtime/agentresult-vps-health-drill.log`, requires the
+failure marker and dry-run alert marker, and then runs the real health guard.
+It does not stop containers, disable systemd units, change webhooks, or send a
+real Telegram message.
+
 There is also a manual GitHub Actions workflow named `AgentResult VPS health`.
 Configure repository secret `AGENTRESULT_VPS_SSH_KEY` with a private key that can
 SSH into the VPS, then run the workflow manually from Actions. The optional
