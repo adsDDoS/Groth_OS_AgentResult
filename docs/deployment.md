@@ -310,6 +310,60 @@ Quick cutover verification:
 npm run telegram:production-smoke
 ```
 
+### VPS recovery checklist
+
+Use this checklist after any manual VPS work, cross-project deploy, disk cleanup,
+or accidental SSH change.
+
+Required AgentResult OS state:
+
+- `agentresult-os-backend` is running on `127.0.0.1:18830` without Telegram
+  polling env.
+- `agentresult-os-telegram-owner-control` is running on `127.0.0.1:18831`
+  with `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`.
+- `agentresult-client-owner-updates.service` is `enabled` and `active` unless a
+  deliberate owner-notification migration replaces it.
+- Telegram webhook URL for the owner-control bot is empty. This contour uses
+  polling, not webhook delivery.
+- The owner-control bot token exists only in
+  `agentresult-os-telegram-owner-control`; no demo backend or Hermes gateway
+  container may share it.
+
+Do not do these during unrelated VPS work:
+
+- Do not remove `agentresult-os-telegram-owner-control`.
+- Do not disable `agentresult-client-owner-updates.service`.
+- Do not call Telegram `setWebhook` for the owner-control bot.
+- Do not put `TELEGRAM_BOT_TOKEN` into `agentresult-os-backend`.
+- Do not start classic `agentresult-agent-*` Telegram polling containers with
+  the same owner-control bot token.
+
+Fast inspection:
+
+```bash
+ssh root@91.103.140.101 'docker ps --format "{{.Names}} {{.Image}} {{.Status}} {{.Ports}}" | grep -E "agentresult-os-(backend|telegram-owner-control)"'
+ssh root@91.103.140.101 'systemctl is-enabled agentresult-client-owner-updates.service && systemctl is-active agentresult-client-owner-updates.service'
+npm run telegram:production-smoke
+```
+
+Restore deleted owner-control container:
+
+```bash
+CONTAINER_NAME=agentresult-os-telegram-owner-control \
+HOST_PORT=18831 \
+AGENTRESULT_ENV_SOURCE=file \
+scripts/deploy-backend-vps.sh
+```
+
+Restore disabled owner update service:
+
+```bash
+ssh root@91.103.140.101 'systemctl enable --now agentresult-client-owner-updates.service'
+```
+
+After recovery, `npm run telegram:production-smoke` must print
+`telegram publication-result production smoke passed`.
+
 Before larger product or visual changes, run the local Content Factory Core gate:
 
 ```bash
