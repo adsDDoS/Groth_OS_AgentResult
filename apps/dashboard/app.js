@@ -1,5 +1,5 @@
 import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-121";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-130";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-132";
 import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-121";
 
 const params = new URLSearchParams(window.location.search);
