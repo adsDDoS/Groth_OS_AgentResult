@@ -142,6 +142,7 @@ They cannot publish, update live website content, send newsletters, post to soci
 - [Codex Agent Instructions](AGENTS.md)
 - [GrothOS Pilot Packet Index](docs/pilot-packet-index.md) - safe entrypoint for pilot docs, access labels, and client-call routing.
 - [GrothOS Pilot Kit v1](docs/client-facing-pilot-kit-v1.md) - clean client-facing intake, review, and closeout packet.
+- [GrothOS Client-Facing Pilot Kit Exports](docs/client-facing/README.md) - send-ready DOCX/PDF artifacts and QA status.
 - [Product](docs/product.md)
 - [Commercial Product Roadmap](docs/commercial-product-roadmap.md)
 - [Architecture](docs/architecture.md)

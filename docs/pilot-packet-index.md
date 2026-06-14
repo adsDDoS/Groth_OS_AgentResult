@@ -13,6 +13,7 @@
 | Step | Access | Use | Document |
 | --- | --- | --- | --- |
 | 0 | `client-facing` | Send one clean pilot packet after qualification. | [GrothOS Pilot Kit v1](client-facing-pilot-kit-v1.md) |
+| 0a | `client-facing` | Send export-ready DOCX/PDF artifacts. | [GrothOS Client-Facing Pilot Kit Exports](client-facing/README.md) |
 | 1 | `operator-only` | Decide who is qualified for pilot. | [Pilot Qualification Note](pilot-qualification-note.md) |
 | 2 | `client-facing` | Collect channel, roles, cadence, format, claims, result source. | [Pilot Onboarding Intake](pilot-onboarding-intake.md) |
 | 3 | `operator-only` | Run first week: setup, topics, draft, QA, release, confirmation, review. | [Pilot Week-1 Execution Board](pilot-week-1-execution-board.md) |
@@ -61,3 +62,5 @@ docs/pilot-demo-checklist.md
 If screen-sharing documents with a client, use only `client-facing` documents or the live dashboard. Keep `operator-only` and `internal-only` documents off-screen.
 
 If sending a document to a client, send `docs/client-facing-pilot-kit-v1.md` instead of separate internal repo links.
+
+For an attachment, use the files listed in `docs/client-facing/README.md`.
