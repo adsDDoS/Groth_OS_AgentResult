@@ -37,7 +37,7 @@ const checks = [
     file: "docs/dev-agent-system/task-packets/domain-state-machine-v1.md",
     tokens: [
       "approval -> content_item -> publishing_calendar_item -> result_signal",
-      "`result_signal` is not yet a first-class table",
+      "`result_signal` is now an explicit backend contract",
       "approved publishing_calendar_item approval",
       "Option A, then Option B",
       "Repo Archaeologist",

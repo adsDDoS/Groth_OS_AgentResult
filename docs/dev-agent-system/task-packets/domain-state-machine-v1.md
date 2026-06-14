@@ -48,7 +48,7 @@ Current workflow docs:
 
 `approval`, `content_item`, and `publishing_calendar_item` exist as first-class tables.
 
-`result_signal` is not yet a first-class table. Result data currently lives across analytics and publishing tables:
+`result_signal` is now an explicit backend contract, but not yet a first-class table. Result data currently lives across analytics and publishing tables:
 
 - `conversion_events` for business events;
 - `published_urls` for live material records;
@@ -57,7 +57,7 @@ Current workflow docs:
 
 Domain State Machine v1 should either:
 
-- formalize `result_signal` as a view/contract over current tables; or
+- keep `result_signal` as a view/contract over current tables; or
 - introduce a dedicated `result_signals` table in a later implementation packet.
 
 This packet does not require a database migration. It defines the contract that the next implementation must follow.
@@ -349,4 +349,3 @@ Option A, then Option B.
 ```
 
 Reason: status constants and state-machine tests reduce product ambiguity before backend side effects are moved out of demo/dashboard logic.
-

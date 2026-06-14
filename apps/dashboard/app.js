@@ -531,6 +531,7 @@ const state = {
   content: demo.content,
   approvals: demo.approvals,
   calendar: demo.calendar,
+  resultSignals: [],
   agents: demo.agents,
   tasks: [],
   metrics: {
@@ -540,6 +541,7 @@ const state = {
     tasks_created: 0,
     approvals_total: demo.approvals.length,
     published_materials: shippedCalendarCount(demo.calendar),
+    result_signals: 0,
     leads: 3,
     receivables_in_progress: 0,
     promised_payments: 0,
@@ -673,7 +675,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, workspaceState] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, resultSignals, workspaceState] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -682,6 +684,7 @@ async function loadData() {
       api("/analytics/overview"),
       api("/content/items"),
       api("/publishing/calendar"),
+      api("/result-signals").catch(() => ({ data: [] })),
       api("/workspace/state").catch(() => ({ data: {} }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
@@ -693,6 +696,7 @@ async function loadData() {
     state.agents = agents.data?.length ? agents.data : demo.agents;
     state.content = Array.isArray(content.data) ? content.data : state.content;
     state.calendar = Array.isArray(calendar.data) ? calendar.data : state.calendar;
+    state.resultSignals = Array.isArray(resultSignals.data) ? resultSignals.data : state.resultSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
@@ -702,7 +706,8 @@ async function loadData() {
       calendar_items: state.calendar.length,
       content_items: state.content.length,
       approvals_total: state.approvals.length,
-      published_materials: shippedCalendarCount(state.calendar)
+      published_materials: shippedCalendarCount(state.calendar),
+      result_signals: state.resultSignals.length
     };
   } catch {
     setBackendStatus(false);
@@ -713,7 +718,8 @@ async function loadData() {
       calendar_items: state.calendar.length,
       pending_approvals: state.approvals.filter((item) => item.status === "pending").length,
       approvals_total: state.approvals.length,
-      published_materials: shippedCalendarCount(state.calendar)
+      published_materials: shippedCalendarCount(state.calendar),
+      result_signals: state.resultSignals.length
     };
   }
 
@@ -920,6 +926,7 @@ function deriveMetrics(source = {}) {
     tasks_created: Number(safeSource.tasks_created ?? safeSource.tasks ?? 0),
     approvals_total: Number(safeSource.approvals_total ?? safeSource.approvals ?? state.approvals.length),
     published_materials: Number(safeSource.published_materials ?? shippedCalendarCount(state.calendar)),
+    result_signals: Number(safeSource.result_signals ?? state.resultSignals.length ?? 0),
     leads: Number(safeSource.leads ?? 0),
     receivables_in_progress: Number(safeSource.receivables_in_progress ?? 0),
     promised_payments: Number(safeSource.promised_payments ?? 0),
@@ -2793,6 +2800,13 @@ function primaryBusinessSignal(metrics) {
       value: String(metrics.recovered_payments),
       title: text("Money returned", "Деньги вернулись"),
       note: text("Recovered payments are counted only after confirmation.", "Возврат денег считается только после подтверждения.")
+    };
+  }
+  if (metrics.result_signals) {
+    return {
+      value: String(metrics.result_signals),
+      title: text("Result signal confirmed", "Сигнал результата подтверждён"),
+      note: text("Confirmed release created a result signal.", "Подтверждённый выпуск создал сигнал результата.")
     };
   }
   if (metrics.published_materials) {

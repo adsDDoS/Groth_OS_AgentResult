@@ -88,6 +88,12 @@ Publishing creates jobs only after required approval exists.
 - `POST /analytics/import`
 - `POST /analytics/generate-improvement-tasks`
 
+## Result Signals
+
+- `GET /result-signals`
+
+`GET /result-signals` returns the explicit result-signal contract derived from `conversion_events`. `POST /publishing/items/:id/confirm-live` creates the first confirmed result signal for that calendar item.
+
 ## Agents / Tasks
 
 - `GET /agents`

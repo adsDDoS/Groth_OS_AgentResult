@@ -785,6 +785,15 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
     );
   }
 
+  if (normalized.startsWith("select * from conversion_events where tenant_id = $1 and event_type = $2")) {
+    return result(
+      tenantRows("conversion_events", values[0])
+        .filter((row) => row.event_type === values[1])
+        .sort((a, b) => String(b.occurred_at ?? "").localeCompare(String(a.occurred_at ?? "")))
+        .slice(0, 200) as T[]
+    );
+  }
+
   if (normalized.startsWith("select * from content_comments where content_item_id = $1 and tenant_id = $2 order by created_at desc")) {
     return result(
       tenantRows("content_comments", values[1]).filter((row) => row.content_item_id === values[0]).sort(sortCreatedDesc) as T[]
@@ -798,6 +807,7 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
   if (normalized.includes("select count(*) from content_items")) {
     const approvals = tenantRows("approvals", values[0]);
     const calendar = tenantRows("publishing_calendar_items", values[0]);
+    const resultSignals = tenantRows("conversion_events", values[0]).filter((row) => row.event_type === "result_signal.confirmed");
     const latestImport = tenantRows("analytics_imports", values[0]).sort(sortCreatedDesc)[0];
     const summary = isRecord(latestImport?.payload) ? latestImport.payload : {};
     return result([
@@ -807,6 +817,7 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
         pending_approvals: approvals.filter((row) => row.status === "pending").length,
         approvals_total: approvals.length,
         published_materials: calendar.filter((row) => row.status === "published" || row.status === "handed_off").length,
+        result_signals: resultSignals.length,
         tasks_created: tenantRows("tasks", values[0]).length,
         leads: Number(summary.leads ?? 0),
         receivables_in_progress: Number(summary.receivables_in_progress ?? 0),

@@ -4,6 +4,7 @@ import { canTransition, isKnownStatus, type PublishingCalendarStatus } from "@ai
 import { query } from "../../db/client.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { createApprovalRequest, reconcileApprovedCalendarApprovals, requireApproval } from "../approvals/service.js";
+import { ensurePublishedResultSignal } from "../result-signals/routes.js";
 
 const idParams = z.object({ id: z.string().uuid() });
 const statusBody = z.object({ status: z.enum(["draft", "review", "scheduled", "published", "handed_off", "archived", "rejected"]) });
@@ -124,6 +125,17 @@ async function transitionCalendarItem(input: {
   const item = await patchJson("publishing_calendar_items", input.id, { status: input.status, metadata }, input.tenantId);
   if (item?.content_item_id) {
     await syncLinkedContentStatus(String(item.content_item_id), input.tenantId, input.status);
+  }
+  if (item && input.status === "published") {
+    await ensurePublishedResultSignal({
+      tenantId: input.tenantId,
+      contentItemId: typeof item.content_item_id === "string" ? item.content_item_id : null,
+      calendarItemId: input.id,
+      channel: typeof item.channel === "string" ? item.channel : null,
+      title: typeof item.title === "string" ? item.title : null,
+      note: typeof input.metadata?.result_note === "string" ? input.metadata.result_note : "",
+      confirmedBy: typeof input.metadata?.published_confirmed_by === "string" ? input.metadata.published_confirmed_by : null
+    });
   }
   return item;
 }

@@ -241,10 +241,12 @@ function routeFromUrl(req) {
 }
 
 function metrics() {
+  const signals = resultSignals();
   return {
     tasks_created: 0,
     approvals_total: approvals.length,
     published_materials: calendar.filter((item) => item.status === "published").length,
+    result_signals: signals.length,
     leads: 3,
     receivables_in_progress: 0,
     promised_payments: 0,
@@ -256,6 +258,30 @@ function metrics() {
     calendar_items: calendar.length,
     pending_approvals: approvals.filter((item) => item.status === "pending").length
   };
+}
+
+function resultSignals() {
+  return calendar
+    .filter((item) => item.status === "published")
+    .map((item) => ({
+      id: `signal-${item.id}`,
+      tenant_id: tenantId,
+      content_item_id: item.content_item_id || null,
+      calendar_item_id: item.id,
+      status: "confirmed",
+      source: item.channel || "manual",
+      signal_type: "result_signal.confirmed",
+      title: item.title,
+      note: item.metadata?.result_note || "Confirmed release",
+      value: null,
+      occurred_at: item.updated_at || item.scheduled_for,
+      confirmed_by: item.metadata?.published_confirmed_by || ownerId,
+      metadata: {
+        calendar_item_id: item.id,
+        title: item.title,
+        status: "confirmed"
+      }
+    }));
 }
 
 export default async function handler(req, res) {
@@ -280,6 +306,7 @@ export default async function handler(req, res) {
   if (route === "approvals") return send(res, 200, { data: approvals });
   if (route === "agents") return send(res, 200, { data: agents });
   if (route === "analytics/overview") return send(res, 200, { data: metrics() });
+  if (route === "result-signals") return send(res, 200, { data: resultSignals() });
   if (route === "content/items") return send(res, 200, { data: content });
   if (route === "publishing/calendar") return send(res, 200, { data: calendar });
   if (route === "tasks") return send(res, 200, { data: [] });

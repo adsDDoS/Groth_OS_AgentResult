@@ -93,6 +93,22 @@ try {
   const contentRows = await query("select * from content_items where id = $1 and tenant_id = $2", [content.id, tenantId]);
   assert(contentRows.rows[0]?.status === "published", `linked content should be published, saw ${contentRows.rows[0]?.status}`);
 
+  const resultSignals = await app.inject({
+    method: "GET",
+    url: "/result-signals"
+  });
+  assert(resultSignals.statusCode === 200, `result-signals failed: ${resultSignals.statusCode} ${resultSignals.body}`);
+  const signal = resultSignals.json().data.find((item) => item.calendar_item_id === calendar.id);
+  assert(signal?.status === "confirmed", `result signal should be confirmed, saw ${signal?.status}`);
+  assert(signal?.note === "Owner confirmed live result", "result signal note missing");
+
+  const analytics = await app.inject({
+    method: "GET",
+    url: "/analytics/overview"
+  });
+  assert(analytics.statusCode === 200, `analytics overview failed: ${analytics.statusCode} ${analytics.body}`);
+  assert(Number(analytics.json().data.result_signals) >= 1, "analytics should count result_signals");
+
   console.log("Publishing commands check passed");
 } finally {
   await app.close();
