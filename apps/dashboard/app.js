@@ -4857,9 +4857,7 @@ async function submitPublicationResultForm() {
   };
   state.formModal = null;
   await updateCalendarStatus(id, "published", { payload, metadata });
-  const updatedItem = state.calendar.find((entry) => entry.id === id) || item;
-  await executePublicationNextStep(updatedItem, nextStep);
-  goRoute("analytics");
+  setRoute("analytics");
 }
 
 async function confirmHandedOffCalendarItems() {

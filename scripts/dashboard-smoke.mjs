@@ -217,10 +217,8 @@ async function run() {
     assert(afterExport.resultConfirmActions >= 1, "Result confirmation action is missing after live-check handoff");
 
     await confirmPublicationResult(page);
-    await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/content-pipeline`);
-    await page.waitForFunction(() => document.body.innerText.includes("Переиспользовать:") || document.body.innerText.includes("Reuse:"));
-    const afterNextCycle = await pageState(page);
-    assert(afterNextCycle.hasReuseMaterial, "Reuse next step should create a new content item");
+    await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/analytics`);
+    await page.waitForSelector(".results-desk-layout");
     await page.goto(`${baseUrl}/?v=${smokeVersion}#/publications`);
     await page.waitForSelector(".tabs-panel");
     const afterPublish = await pageState(page);
@@ -262,11 +260,11 @@ async function run() {
     await page.waitForSelector('[data-action="mark-calendar-exported"]');
     await clickUnique(page, '[data-action="mark-calendar-exported"]');
     await confirmPublicationResult(page);
-    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/content-pipeline`);
+    await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/analytics`);
     await page.reload();
     await page.waitForSelector("#screenRoot");
-    const afterReuseReload = await pageState(page);
-    assert(afterReuseReload.hasReuseMaterial, "Reload lost the reuse content item");
+    const afterResultReload = await pageState(page);
+    assert(afterResultReload.hasPublicationResults, "Reload lost the publication result");
     await page.goto(`${baseUrl}/?v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");
     const afterReload = await pageState(page);
