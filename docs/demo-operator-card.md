@@ -4,7 +4,7 @@
 
 ## Ссылка
 
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
 
 ## 3 Экрана
 
@@ -50,9 +50,9 @@ https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
 
 3. Открыть экраны напрямую:
 
-   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
-   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/publications
-   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/analytics
+   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
+   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/publications
+   - https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/analytics
 
 4. Закрыть фразой:
 

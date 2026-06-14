@@ -14,10 +14,16 @@ One-page operator card:
 docs/demo-operator-card.md
 ```
 
+Pre-call dry run:
+
+```text
+docs/pre-call-dry-run.md
+```
+
 Stable dashboard:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
 ```
 
 ## Show

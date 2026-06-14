@@ -5,7 +5,7 @@ Purpose: show a serious content-ops control surface in 7 minutes without turning
 Stable dashboard:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
 ```
 
 One-line positioning:
@@ -50,7 +50,7 @@ Say:
 Then open:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/overview
 ```
 
 ## Screen 1: Сегодня
@@ -88,7 +88,7 @@ Transition:
 Open:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/publications
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/publications
 ```
 
 Say:
@@ -138,7 +138,7 @@ Transition:
 Open:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=visual-pass#/analytics
+https://dashboard-orpin-mu-26.vercel.app/?demo=pilot&v=precall-dryrun#/analytics
 ```
 
 Say:

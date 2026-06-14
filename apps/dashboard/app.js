@@ -462,7 +462,7 @@ const demo = {
     { id: "d4", title: "AgentResult Growth Control для B2B-компаний", item_type: "product_page", intent: "commercial", audience: "Собственники и маркетинг B2B-компаний", priority: 84, status: "draft" }
   ],
   content: [
-    { id: "c1", title: "Почему одного AI-агента недостаточно, чтобы наладить продажи", content_type: "telegram_post", channel: "telegram", status: "review", owner: "Egor" },
+    { id: "c1", title: "Почему контент-ферме нужен операционный контур, а не один AI-агент", content_type: "telegram_post", channel: "telegram", status: "review", owner: "Egor" },
     { id: "c2", title: "AgentResult Growth Control для B2B-компаний", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
     { id: "c3", title: "Почему B2B-компаниям нужна агентная операционная система, а не только CRM", content_type: "article_outline", channel: "website", status: "brief", owner: "Egor" },
     { id: "c4", title: "Email: безопасный запуск AgentResult Growth Control", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
@@ -471,7 +471,7 @@ const demo = {
   approvals: [
     {
       id: "a1",
-      summary: "Согласовать Telegram-пост про контур продаж и контроль собственника",
+      summary: "Согласовать Telegram-пост про контур производства текста",
       scope: "social_post",
       target_type: "content_item",
       target_id: "c1",
@@ -479,7 +479,7 @@ const demo = {
       status: "pending",
       risk_flags: ["public claim", "channel publishing"],
       requested_by: "AgentResult",
-      preview: "Сам по себе AI не двигает продажи. Нужен операционный контур: задачи, CRM, согласования, Telegram-контроль и история действий."
+      preview: "Сам по себе AI не делает контент-ферму управляемой. Нужен контур: темы, тексты, согласования, выпуск и подтверждённый результат."
     },
     {
       id: "a2",
