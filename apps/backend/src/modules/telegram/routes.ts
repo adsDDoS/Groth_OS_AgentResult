@@ -2796,6 +2796,13 @@ async function answerTelegramCallbackQuery(callbackQueryId: string | undefined, 
   }).catch(() => null);
 }
 
+async function ensureTelegramOwnerControlPollingMode(app: FastifyInstance) {
+  await telegramApiRequest<boolean>("deleteWebhook", {
+    drop_pending_updates: false
+  });
+  app.log.info("Telegram webhook is cleared for owner-control polling");
+}
+
 function telegramOwnerControlAllowedUsers() {
   return new Set(
     config.telegramAllowedUsers
@@ -2973,7 +2980,11 @@ export function startTelegramOwnerControlPolling(app: FastifyInstance) {
   });
 
   app.log.info("Telegram owner-control polling middleware is enabled");
-  schedule();
+  ensureTelegramOwnerControlPollingMode(app)
+    .catch((error) => {
+      app.log.error({ error }, "Failed to clear Telegram webhook before owner-control polling");
+    })
+    .finally(schedule);
 }
 
 export async function telegramRoutes(app: FastifyInstance) {

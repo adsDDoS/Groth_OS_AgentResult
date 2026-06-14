@@ -248,6 +248,12 @@ Current container split:
 - `agentresult-os-backend`: Vercel demo API, `127.0.0.1:18830`, no Telegram polling.
 - `agentresult-os-telegram-owner-control`: Telegram polling backend, `127.0.0.1:18831`, same Postgres state, `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`.
 
+The owner-control bot token must stay polling-only in this contour. When
+`AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1`, backend startup clears the
+Telegram webhook with `drop_pending_updates=false` before polling. Do not add a
+deploy step that calls Telegram `setWebhook` for the same token unless the
+owner-control container is deliberately switched out of polling mode.
+
 The Telegram owner-control container should use the same pilot tenant that Vercel demo opens:
 
 ```text
