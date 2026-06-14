@@ -135,6 +135,49 @@ try {
   assert(Number(publicationResult?.primary_reactions?.comments) === 2, "publication result comments mismatch");
   assert(publicationResult?.next_step === "reuse", `publication result next step mismatch: ${publicationResult?.next_step}`);
 
+  const reuse = await app.inject({
+    method: "POST",
+    url: `/publication-results/${publicationResult.id}/reuse`,
+    payload: { note: "Reuse as Telegram follow-up." }
+  });
+  assert(reuse.statusCode === 200, `publication result reuse failed: ${reuse.statusCode} ${reuse.body}`);
+  const reuseData = reuse.json().data;
+  assert(reuseData.action?.type === "reuse", "reuse action type mismatch");
+  assert(reuseData.action?.target_type === "content_item", "reuse target type mismatch");
+  assert(reuseData.target?.content_type === "telegram_post", `reuse content type mismatch: ${reuseData.target?.content_type}`);
+  assert(reuseData.publication_result?.metadata?.calendar?.publication_result?.next_step_action?.target_id === reuseData.target.id, "reuse action not persisted");
+
+  const reuseAgain = await app.inject({
+    method: "POST",
+    url: `/publication-results/${publicationResult.id}/reuse`,
+    payload: { note: "Should not duplicate." }
+  });
+  assert(reuseAgain.statusCode === 200, `publication result reuse idempotency failed: ${reuseAgain.statusCode} ${reuseAgain.body}`);
+  assert(reuseAgain.json().data.action?.target_id === reuseData.target.id, "reuse command should be idempotent");
+
+  const expand = await app.inject({
+    method: "POST",
+    url: `/publication-results/${publicationResult.id}/expand`,
+    payload: { note: "Expand into a longer article." }
+  });
+  assert(expand.statusCode === 200, `publication result expand failed: ${expand.statusCode} ${expand.body}`);
+  const expandData = expand.json().data;
+  assert(expandData.action?.type === "expand", "expand action type mismatch");
+  assert(expandData.target?.content_type === "article_outline", `expand content type mismatch: ${expandData.target?.content_type}`);
+  assert(expandData.target?.channel === "website", `expand channel mismatch: ${expandData.target?.channel}`);
+
+  const update = await app.inject({
+    method: "POST",
+    url: `/publication-results/${publicationResult.id}/update`,
+    payload: { note: "Update the published material with first reactions." }
+  });
+  assert(update.statusCode === 200, `publication result update failed: ${update.statusCode} ${update.body}`);
+  const updateData = update.json().data;
+  assert(updateData.action?.type === "update", "update action type mismatch");
+  assert(updateData.action?.target_type === "task", "update target type mismatch");
+  assert(updateData.target?.task_type === "publication_result_update", `update task type mismatch: ${updateData.target?.task_type}`);
+  assert(updateData.target?.payload?.publicationResultId === publicationResult.id, "update task should reference publication result");
+
   const analytics = await app.inject({
     method: "GET",
     url: "/analytics/overview"

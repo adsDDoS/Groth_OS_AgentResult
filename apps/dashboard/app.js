@@ -4598,11 +4598,12 @@ async function executePublicationNextStep(item, nextStep = "leave") {
     return existingAction;
   }
 
-  const action = nextStep === "update"
+  const backendAction = await executePublicationNextStepCommand(item, nextStep);
+  const action = backendAction || (nextStep === "update"
     ? await createPublicationUpdateTask(item)
-    : await createPublicationFollowupContent(item, nextStep);
+    : await createPublicationFollowupContent(item, nextStep));
   if (!action) return null;
-  await savePublicationNextStepAction(item, nextStep, action);
+  if (!backendAction) await savePublicationNextStepAction(item, nextStep, action);
   if (action.target_type === "content_item") {
     showToast(nextStep === "expand"
       ? text("Article outline created from the publication result.", "План статьи создан из результата публикации.")
@@ -4613,6 +4614,39 @@ async function executePublicationNextStep(item, nextStep = "leave") {
     setRoute("overview");
   }
   return action;
+}
+
+async function executePublicationNextStepCommand(item, nextStep) {
+  if (!state.online || String(item.id || "").startsWith("local-calendar")) return null;
+  const publicationResult = state.publicationResults.find((entry) => entry.calendar_item_id === item.id);
+  const publicationResultId = publicationResult?.id || item.id;
+  try {
+    const response = await api(`/publication-results/${publicationResultId}/${nextStep}`, {
+      method: "POST",
+      body: JSON.stringify({
+        note: item.metadata?.publication_result?.next_step_note || publicationNextStepLabel(nextStep)
+      })
+    });
+    const data = response?.data || {};
+    if (data.calendar_item) {
+      state.calendar = mergeLocalItems(state.calendar, [data.calendar_item]);
+      item.metadata = data.calendar_item.metadata || item.metadata;
+      item.updated_at = data.calendar_item.updated_at || item.updated_at;
+    }
+    if (data.publication_result) state.publicationResults = mergeLocalItems(state.publicationResults, [data.publication_result]);
+    if (data.target_type === "content_item" && data.target) {
+      state.content = mergeLocalItems(state.content, [data.target]);
+      state.metrics.content_items = state.content.length;
+    }
+    if (data.target_type === "task" && data.target) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
+      state.metrics.tasks_created = state.tasks.length;
+    }
+    refreshPublicationResults();
+    return data.action || null;
+  } catch {
+    return null;
+  }
 }
 
 async function createPublicationFollowupContent(item, nextStep) {

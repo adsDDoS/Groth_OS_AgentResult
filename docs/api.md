@@ -91,10 +91,15 @@ Publishing creates jobs only after required approval exists.
 ## Distribution Signals
 
 - `GET /publication-results`
+- `POST /publication-results/:id/reuse`
+- `POST /publication-results/:id/expand`
+- `POST /publication-results/:id/update`
 - `GET /distribution-signals`
 - `GET /result-signals`
 
 `GET /publication-results` returns the owner-facing content-ops result contract: publication URL, channel, format, primary reactions, and next content step. It is derived from `distribution_signal` plus publishing calendar/content metadata until a dedicated table is introduced.
+
+`POST /publication-results/:id/reuse|expand|update` runs the next content action as a backend domain command. `reuse` creates a new reusable `content_item`, `expand` creates an `article_outline` content item, and `update` creates a `publication_result_update` task. Each command stores `next_step_action` in the linked calendar item's `publication_result` metadata and is idempotent per action type.
 
 `GET /distribution-signals` returns the canonical content-ops distribution-signal contract derived from `conversion_events`. `GET /result-signals` is a compatibility alias. `POST /publishing/items/:id/confirm-live` creates the first confirmed distribution signal for that calendar item.
 
