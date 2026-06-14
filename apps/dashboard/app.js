@@ -4210,23 +4210,31 @@ function downloadPack() {
 async function updateCalendarStatus(id, status) {
   const item = state.calendar.find((entry) => entry.id === id);
   if (!item) return;
-  item.status = status;
-  item.updated_at = new Date().toISOString();
-  let persisted = false;
   if (state.online && !String(id).startsWith("local-calendar")) {
-    const result = await api(`/publishing/items/${id}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ status })
+    const endpoint = status === "handed_off"
+      ? `/publishing/items/${id}/handoff`
+      : status === "published"
+        ? `/publishing/items/${id}/confirm-live`
+        : `/publishing/items/${id}/status`;
+    const result = await api(endpoint, {
+      method: status === "handed_off" || status === "published" ? "POST" : "PATCH",
+      body: JSON.stringify(status === "handed_off" || status === "published" ? {} : { status })
     }).catch(() => null);
-    persisted = Boolean(result?.data);
-    if (result?.data) state.calendar = mergeLocalItems(state.calendar, [result.data]);
-  }
-  if (!persisted) upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
-  const linkedContent = state.content.find((entry) => entry.id === item.content_item_id);
-  if (linkedContent && isShippedStatus(status)) {
-    linkedContent.status = status === "published" ? "published" : "scheduled";
-    linkedContent.updated_at = new Date().toISOString();
-    await persistContentState(linkedContent);
+    if (!result?.data) {
+      showToast(text("Could not update release status.", "Не удалось обновить статус выпуска."));
+      return;
+    }
+    await loadData();
+  } else {
+    item.status = status;
+    item.updated_at = new Date().toISOString();
+    upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
+    const linkedContent = state.content.find((entry) => entry.id === item.content_item_id);
+    if (linkedContent && isShippedStatus(status)) {
+      linkedContent.status = status === "published" ? "published" : "handed_off";
+      linkedContent.updated_at = new Date().toISOString();
+      await persistContentState(linkedContent);
+    }
   }
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   addActivity("Контроль выпуска", `Updated publication status: ${item.title} -> ${labelize(status)}`);

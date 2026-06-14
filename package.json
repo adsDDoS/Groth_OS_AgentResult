@@ -18,6 +18,7 @@
     "agent-system:check": "node scripts/dev-agent-system-check.mjs",
     "domain:check": "npm run build -w packages/shared && node scripts/domain-state-machine-check.mjs",
     "approval-side-effects:check": "npm run build && node scripts/approval-side-effects-check.mjs",
+    "publishing-commands:check": "npm run build && node scripts/publishing-commands-check.mjs",
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --cwd apps/dashboard",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
     "build": "npm run build -w packages/shared && npm run build -w apps/backend",

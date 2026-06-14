@@ -691,6 +691,11 @@ export async function memoryQuery<T extends Row = Row>(sql: string, values: unkn
     return result(selectTenantById("content_items", values[0], values[1]) as T[]);
   }
 
+  const selectByIdMatch = normalized.match(/^select \* from ([a-z_]+) where id = \$1 and tenant_id = \$2/);
+  if (selectByIdMatch) {
+    return result(selectTenantById(selectByIdMatch[1], values[0], values[1]) as T[]);
+  }
+
   if (normalized.startsWith("update content_items set status = 'archived'")) {
     return persistedResult(updateStatus("content_items", values[0], values[1], "archived") as T[]);
   }
