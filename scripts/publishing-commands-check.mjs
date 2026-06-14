@@ -83,12 +83,26 @@ try {
   const confirmLive = await app.inject({
     method: "POST",
     url: `/publishing/items/${calendar.id}/confirm-live`,
-    payload: { note: "Owner confirmed live result" }
+    payload: {
+      note: "Owner confirmed live result",
+      publicationUrl: "https://t.me/agentresult/100",
+      format: "telegram_post",
+      primaryReactions: {
+        comments: 2,
+        reposts: 1,
+        saves: 3,
+        reactions: 8
+      },
+      nextStep: "reuse",
+      nextStepNote: "Reuse the strongest angle in the next material."
+    }
   });
   assert(confirmLive.statusCode === 200, `confirm-live command failed: ${confirmLive.statusCode} ${confirmLive.body}`);
   const published = confirmLive.json().data;
   assert(published.status === "published", `confirm-live status mismatch: ${published.status}`);
   assert(published.metadata?.result_note === "Owner confirmed live result", "result note missing");
+  assert(published.metadata?.publication_result?.publication_url === "https://t.me/agentresult/100", "publication URL missing");
+  assert(published.metadata?.publication_result?.next_step === "reuse", "publication next step missing");
 
   const contentRows = await query("select * from content_items where id = $1 and tenant_id = $2", [content.id, tenantId]);
   assert(contentRows.rows[0]?.status === "published", `linked content should be published, saw ${contentRows.rows[0]?.status}`);
@@ -117,7 +131,9 @@ try {
   const publicationResult = publicationResults.json().data.find((item) => item.calendar_item_id === calendar.id);
   assert(publicationResult?.channel === "telegram", `publication result channel mismatch: ${publicationResult?.channel}`);
   assert(publicationResult?.format === "telegram_post", `publication result format mismatch: ${publicationResult?.format}`);
-  assert(publicationResult?.next_step === "leave", `publication result default next step mismatch: ${publicationResult?.next_step}`);
+  assert(publicationResult?.publication_url === "https://t.me/agentresult/100", `publication result URL mismatch: ${publicationResult?.publication_url}`);
+  assert(Number(publicationResult?.primary_reactions?.comments) === 2, "publication result comments mismatch");
+  assert(publicationResult?.next_step === "reuse", `publication result next step mismatch: ${publicationResult?.next_step}`);
 
   const analytics = await app.inject({
     method: "GET",

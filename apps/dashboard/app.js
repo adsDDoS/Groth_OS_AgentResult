@@ -1174,6 +1174,7 @@ function renderModal() {
 function renderFormModal() {
   const modal = state.formModal || {};
   const scheduleContent = state.content.find((item) => item.id === modal.contentId) || state.content[0] || null;
+  const publicationResultItem = state.calendar.find((item) => item.id === modal.itemId) || null;
   const configs = {
     demand: {
       eyebrow: text("Strategy", "Стратегия"),
@@ -1282,6 +1283,13 @@ function renderFormModal() {
       submit: "submit-calendar-note-form",
       button: text("Save", "Сохранить"),
       body: calendarNoteForm(modal.itemId)
+    },
+    publicationResult: {
+      eyebrow: text("Publication result", "Результат публикации"),
+      title: text("Confirm publication result", "Подтвердить результат публикации"),
+      submit: "submit-publication-result-form",
+      button: text("Confirm result", "Подтвердить результат"),
+      body: publicationResultForm(publicationResultItem)
     },
     contentDetail: {
       eyebrow: text("Material", "Материал"),
@@ -1409,6 +1417,39 @@ function calendarNoteForm(itemId) {
       <span>${escapeHtml(displayChannel(item.channel || "manual"))} · ${escapeHtml(formatDate(item.scheduled_for))}</span>
     </div>
     ${textarea(text("Note", "Заметка"), "calendarNoteBody", publishingOwnerNote(item))}
+  `;
+}
+
+function publishingOwnerNote(item) {
+  return String(item?.metadata?.handoff_note || item?.metadata?.owner_note || item?.metadata?.result_note || "").trim();
+}
+
+function publicationResultForm(item) {
+  const result = item?.metadata?.publication_result || {};
+  const reactions = result.reactions || {};
+  return `
+    <input id="publicationResultCalendarId" type="hidden" value="${escapeAttr(item?.id || "")}" />
+    <div class="decision-context">
+      <strong>${escapeHtml(item?.title || text("Publication", "Публикация"))}</strong>
+      <span>${escapeHtml(displayChannel(item?.channel || "manual"))} · ${escapeHtml(text("Confirm only after the material is visible.", "Подтверждайте только после видимого выхода."))}</span>
+    </div>
+    ${field(text("Publication URL", "URL публикации"), "publicationResultUrl", result.publication_url || "")}
+    <div class="form-grid two-col">
+      ${field(text("Format", "Формат"), "publicationResultFormat", result.format || item?.metadata?.format || "")}
+      ${selectField(text("Next content step", "Следующий контент-шаг"), "publicationResultNextStep", [
+        ["reuse", text("Reuse", "Переиспользовать")],
+        ["expand", text("Expand", "Расширить")],
+        ["update", text("Update", "Обновить")],
+        ["leave", text("Leave", "Оставить")]
+      ], result.next_step || "reuse")}
+    </div>
+    <div class="form-grid two-col">
+      ${numberField(text("Comments", "Комментарии"), "publicationResultComments", reactions.comments || 0)}
+      ${numberField(text("Reposts", "Репосты"), "publicationResultReposts", reactions.reposts || 0)}
+      ${numberField(text("Saves", "Сохранения"), "publicationResultSaves", reactions.saves || 0)}
+      ${numberField(text("Reactions", "Реакции"), "publicationResultReactions", reactions.reactions || 0)}
+    </div>
+    ${textarea(text("Next step note", "Заметка к следующему шагу"), "publicationResultNextStepNote", result.next_step_note || "")}
   `;
 }
 
@@ -4045,6 +4086,7 @@ async function handleAction(action, id) {
     "submit-content-comment": () => submitContentComment(id),
     "submit-schedule-form": () => submitScheduleForm(),
     "submit-calendar-note-form": () => submitCalendarNoteForm(),
+    "submit-publication-result-form": () => submitPublicationResultForm(),
     "content-from-demand": () => createContentFromDemand(id),
     "task-from-demand": () => createTaskFromDemand(id),
     "publish-from-demand": () => publishFromDemand(id),
@@ -4061,7 +4103,7 @@ async function handleAction(action, id) {
     "open-content-detail": () => openContentDetail(id),
     "schedule-item": () => openFormModal("schedule"),
     "export-calendar": exportCalendarCsv,
-    "mark-calendar-published": () => updateCalendarStatus(id, "published"),
+    "mark-calendar-published": () => openPublicationResultModal(id),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
     "set-publication-result-step": () => setPublicationResultStep(id),
     "confirm-handed-off": confirmHandedOffCalendarItems,
@@ -4369,7 +4411,7 @@ function downloadPack() {
   showToast(text("Pack downloaded as TXT.", "Пакет скачан как TXT."));
 }
 
-async function updateCalendarStatus(id, status) {
+async function updateCalendarStatus(id, status, options = {}) {
   const item = state.calendar.find((entry) => entry.id === id);
   if (!item) return;
   if (state.online && !String(id).startsWith("local-calendar")) {
@@ -4380,7 +4422,7 @@ async function updateCalendarStatus(id, status) {
         : `/publishing/items/${id}/status`;
     const result = await api(endpoint, {
       method: status === "handed_off" || status === "published" ? "POST" : "PATCH",
-      body: JSON.stringify(status === "handed_off" || status === "published" ? {} : { status })
+      body: JSON.stringify(status === "handed_off" || status === "published" ? (options.payload || {}) : { status })
     }).catch(() => null);
     if (!result?.data) {
       showToast(text("Could not update release status.", "Не удалось обновить статус выпуска."));
@@ -4390,6 +4432,12 @@ async function updateCalendarStatus(id, status) {
   } else {
     item.status = status;
     item.updated_at = new Date().toISOString();
+    if (options.metadata) {
+      item.metadata = {
+        ...(item.metadata || {}),
+        ...options.metadata
+      };
+    }
     upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item);
     const linkedContent = state.content.find((entry) => entry.id === item.content_item_id);
     if (linkedContent && isShippedStatus(status)) {
@@ -4406,6 +4454,47 @@ async function updateCalendarStatus(id, status) {
     ? text("Result confirmed and counted.", "Результат подтверждён и учтён.")
     : text("Release status updated.", "Статус выпуска обновлён."));
   openPublicationTab("calendar");
+}
+
+async function submitPublicationResultForm() {
+  const id = document.querySelector("#publicationResultCalendarId")?.value || "";
+  const item = state.calendar.find((entry) => entry.id === id);
+  if (!item) {
+    showToast(text("Select a publication first.", "Сначала выберите публикацию."));
+    return;
+  }
+  const nextStep = document.querySelector("#publicationResultNextStep")?.value || "reuse";
+  const nextStepNote = document.querySelector("#publicationResultNextStepNote")?.value.trim() || publicationNextStepLabel(nextStep);
+  const payload = {
+    note: nextStepNote,
+    publicationUrl: document.querySelector("#publicationResultUrl")?.value.trim() || "",
+    format: document.querySelector("#publicationResultFormat")?.value.trim() || item.channel || "publication",
+    primaryReactions: {
+      comments: numberValue("#publicationResultComments"),
+      reposts: numberValue("#publicationResultReposts"),
+      saves: numberValue("#publicationResultSaves"),
+      reactions: numberValue("#publicationResultReactions")
+    },
+    nextStep,
+    nextStepNote
+  };
+  const now = new Date().toISOString();
+  const metadata = {
+    result_note: payload.note,
+    published_confirmed_by: state.me.userId || state.me.name || null,
+    published_confirmed_at: now,
+    publication_result: {
+      publication_url: payload.publicationUrl,
+      format: payload.format,
+      reactions: payload.primaryReactions,
+      next_step: payload.nextStep,
+      next_step_note: payload.nextStepNote,
+      confirmed_at: now,
+      confirmed_by: state.me.userId || state.me.name || null
+    }
+  };
+  state.formModal = null;
+  await updateCalendarStatus(id, "published", { payload, metadata });
 }
 
 async function confirmHandedOffCalendarItems() {
@@ -4679,6 +4768,17 @@ function openFormModal(type, payload = {}) {
   state.batchApprovalModal = false;
   state.formModal = { type, ...payload };
   render();
+}
+
+function openPublicationResultModal(id = "") {
+  const item = state.calendar.find((entry) => entry.id === id)
+    || state.calendar.find((entry) => entry.status === "handed_off")
+    || null;
+  if (!item) {
+    showToast(text("No release is waiting for result confirmation.", "Нет выпуска в ожидании подтверждения результата."));
+    return;
+  }
+  openFormModal("publicationResult", { itemId: item.id });
 }
 
 function openWeeklyBatchApprovalModal() {

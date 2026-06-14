@@ -62,6 +62,20 @@ async function clickUnique(page, selector) {
   await locator.click();
 }
 
+async function confirmPublicationResult(page) {
+  await page.locator('[data-action="mark-calendar-published"]').first().click();
+  await page.waitForSelector("#publicationResultUrl");
+  await page.fill("#publicationResultUrl", "https://t.me/agentresult/100");
+  await page.fill("#publicationResultFormat", "telegram_post");
+  await page.fill("#publicationResultComments", "2");
+  await page.fill("#publicationResultReposts", "1");
+  await page.fill("#publicationResultSaves", "3");
+  await page.fill("#publicationResultReactions", "8");
+  await page.selectOption("#publicationResultNextStep", "reuse");
+  await page.fill("#publicationResultNextStepNote", "Переиспользовать тезисы в следующем материале.");
+  await clickUnique(page, '[data-action="submit-publication-result-form"]');
+}
+
 async function pageState(page) {
   return page.evaluate(() => {
     const releaseHeads = [...document.querySelectorAll(".release-queue-head")].map((node) => node.textContent.trim());
@@ -83,6 +97,8 @@ async function pageState(page) {
         || document.body.innerText.includes("Publication results")
         || document.body.innerText.includes("PUBLICATION RESULTS"),
       publicationResultStepActions: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
+      hasPublicationResultUrl: document.body.innerText.includes("https://t.me/agentresult/100"),
+      hasPublicationResultReactions: document.body.innerText.includes("2 комм.") || document.body.innerText.includes("2 comments"),
       publishedCount: publishedColumn?.querySelector(".release-queue-head em")?.textContent?.trim() || "",
       releaseHeads
     };
@@ -169,7 +185,7 @@ async function run() {
     const afterExport = await pageState(page);
     assert(afterExport.resultConfirmActions >= 1, "Result confirmation action is missing after live-check handoff");
 
-    await page.locator('[data-action="mark-calendar-published"]').first().click();
+    await confirmPublicationResult(page);
     const afterPublish = await pageState(page);
     assert(afterPublish.releaseQueueActions === 0, "Release queue should be empty after result confirmation");
     assert(afterPublish.hasOpenResults, "Next action should open Results after confirmation");
@@ -179,6 +195,8 @@ async function run() {
     const analyticsState = await pageState(page);
     assert(analyticsState.hasPublicationResults, "Results screen should show publication results");
     assert(analyticsState.publicationResultStepActions >= 3, "Publication result next-step actions are missing");
+    assert(analyticsState.hasPublicationResultUrl, "Publication result URL is missing from Results");
+    assert(analyticsState.hasPublicationResultReactions, "Publication result reactions are missing from Results");
 
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector(".tabs-panel");
@@ -192,7 +210,7 @@ async function run() {
     await page.waitForURL(`${baseUrl}/?v=${smokeVersion}-persist#/publications`);
     await page.waitForSelector('[data-action="mark-calendar-exported"]');
     await clickUnique(page, '[data-action="mark-calendar-exported"]');
-    await page.locator('[data-action="mark-calendar-published"]').first().click();
+    await confirmPublicationResult(page);
     await page.reload();
     await page.waitForSelector(".tabs-panel");
     const afterReload = await pageState(page);

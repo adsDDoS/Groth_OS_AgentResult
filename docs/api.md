@@ -98,6 +98,18 @@ Publishing creates jobs only after required approval exists.
 
 `GET /distribution-signals` returns the canonical content-ops distribution-signal contract derived from `conversion_events`. `GET /result-signals` is a compatibility alias. `POST /publishing/items/:id/confirm-live` creates the first confirmed distribution signal for that calendar item.
 
+`POST /publishing/items/:id/confirm-live` accepts optional publication-result data:
+
+```json
+{
+  "publicationUrl": "https://t.me/channel/100",
+  "format": "telegram_post",
+  "primaryReactions": { "comments": 2, "reposts": 1, "saves": 3, "reactions": 8 },
+  "nextStep": "reuse",
+  "nextStepNote": "Reuse the strongest angle in the next material."
+}
+```
+
 ## Agents / Tasks
 
 - `GET /agents`
