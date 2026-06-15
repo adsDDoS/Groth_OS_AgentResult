@@ -29,6 +29,7 @@
 | Access | Use | Document |
 | --- | --- | --- |
 | `internal-only` | Pre-call checklist with commands, security notes, and smoke gates. | [Pilot Demo Checklist](pilot-demo-checklist.md) |
+| `operator-only` | Current `?demo=client` route, three screens, five phrases, and stop-list for the first client-safe dashboard showing. | [Client Demo Route Script](client-demo-route-script.md) |
 | `operator-only` | Seven-minute client script. | [Pilot Demo Script](pilot-demo-script.md) |
 | `operator-only` | Call opening, transitions, closing and follow-up. | [Pilot Call Packet](pilot-call-packet.md) |
 | `operator-only` | Operator one-page card for the call. | [Demo Operator Card](demo-operator-card.md) |
@@ -56,7 +57,7 @@ docs/pilot-operating-manual.md
 If preparing a client call, use:
 
 ```text
-docs/pilot-demo-checklist.md
+docs/client-demo-route-script.md
 ```
 
 If screen-sharing documents with a client, use only `client-facing` documents or the live dashboard. Keep `operator-only` and `internal-only` documents off-screen.
