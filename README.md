@@ -140,6 +140,7 @@ They cannot publish, update live website content, send newsletters, post to soci
 
 - [AgentResult OS Knowledge](knowledge.md)
 - [Codex Agent Instructions](AGENTS.md)
+- [GrothOS Next Chat Handoff](docs/next-chat-handoff.md) - current state, production demo URL, pilot packet, guardrails, and recommended next step.
 - [GrothOS Pilot Packet Index](docs/pilot-packet-index.md) - safe entrypoint for pilot docs, access labels, and client-call routing.
 - [GrothOS Client Demo Route Script](docs/client-demo-route-script.md) - exact `?demo=client` link, three screens, five phrases, and stop-list for the first dashboard showing.
 - [GrothOS Pilot Kit v1](docs/client-facing-pilot-kit-v1.md) - clean client-facing intake, review, and closeout packet.
