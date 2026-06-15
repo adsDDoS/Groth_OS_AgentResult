@@ -7,7 +7,7 @@ Date: 2026-06-15
 Production URL:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
 ```
 
 Script:
@@ -29,7 +29,7 @@ Checked directly on production:
 - `Сегодня` opens with the client-demo state and no console errors.
 - `Публикации` opens with one owner decision, one published result counted, and no console errors.
 - `Результаты` opens with one publication result, URL, channel, reactions, next content step, and no console errors.
-- Direct routes preserve `?demo=client&v=client-demo-v1`.
+- Direct routes preserve `?demo=client&v=client-demo-v2`.
 
 ## Fixed During Rehearsal
 

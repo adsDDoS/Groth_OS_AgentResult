@@ -7,15 +7,15 @@ Access: `operator-only`
 ## Exact Link
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
 ```
 
 Direct routes:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/overview
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/publications
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/analytics
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/publications
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/analytics
 ```
 
 ## 3 Screens
@@ -74,7 +74,7 @@ Do not promise:
 Reload the exact link:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v1#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
 ```
 
 If the browser blocks automation or asks for a Vercel check, use the normal signed-in browser and continue with direct routes.
