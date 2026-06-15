@@ -6,10 +6,11 @@ const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
 const isPilotDemo = demoMode === "pilot";
 const isClientDemo = demoMode === "client";
+const isPilotExecutionDemo = demoMode === "pilot-execution";
 const PILOT_DEMO_TENANT_ID = "10000000-0000-4000-8000-000000000001";
 const PRODUCTION_API_BASE = "/api/agentresult-os-demo";
 
-if (demoMode === "reset" || isPilotDemo || isClientDemo) {
+if (demoMode === "reset" || isPilotDemo || isClientDemo || isPilotExecutionDemo) {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {
     const key = localStorage.key(index);
     if (key?.startsWith("aiGrowthOs")) localStorage.removeItem(key);
@@ -25,7 +26,7 @@ if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
 const IS_PRODUCTION_DEMO = isPilotDemo || isClientDemo || (!isLocalHost && !configuredApiBase);
-const IS_CLIENT_SAFE_DEMO = IS_PRODUCTION_DEMO || demoMode === "reset";
+const IS_CLIENT_SAFE_DEMO = (IS_PRODUCTION_DEMO && !isPilotExecutionDemo) || demoMode === "reset";
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
   rawTenantId && rawTenantId !== "null" && rawTenantId !== "undefined"
@@ -769,6 +770,7 @@ async function loadData() {
   normalizePilotProfileDefaults();
   normalizeAgentResultLanguageArtifacts();
   applyClientDemoSeed();
+  applyPilotExecutionSeed();
   state.exportAssembled = state.workspaceState.exportAssembled === true || state.exportAssembled === true;
   if (Array.isArray(state.workspaceState.activity) && state.workspaceState.activity.length) {
     state.activity = state.workspaceState.activity;
@@ -795,7 +797,7 @@ function mergeLocalItems(remoteItems, localItems) {
 }
 
 function shouldUseLocalWorkspaceFallback() {
-  return !state.online || IS_PRODUCTION_DEMO;
+  return !state.online || IS_PRODUCTION_DEMO || isPilotExecutionDemo;
 }
 
 async function persistWorkspaceState(partial = {}) {
@@ -972,6 +974,230 @@ function applyClientDemoSeed() {
   state.resultSignals = state.distributionSignals;
   state.publicationResultsSource = "derived";
   state.selectedPublicationResultId = "publication-result-client-demo-signal-p1";
+}
+
+function applyPilotExecutionSeed() {
+  if (!isPilotExecutionDemo) return;
+
+  const materialId = "pilot-execution-material-week-1";
+  const releaseId = "pilot-execution-release-week-1";
+  const reviewId = "pilot-execution-day-7-review";
+  const livePublishedAt = "2026-06-20 10:00";
+  const liveUrl = "https://t.me/founder_channel/42";
+  const liveReactions = {
+    comments: 3,
+    reposts: 1,
+    saves: 7,
+    reactions: 19
+  };
+
+  state.offer = {
+    ...state.offer,
+    profile: {
+      ...(state.offer?.profile || {}),
+      icp: "Founder-led B2B service or expert team that sells complex work through trust content.",
+      channels: "Week 1: Telegram founder channel only. Second channel is intentionally out of scope until Day 7.",
+      approvalOwner: "Founder / managing partner approves topic boundary within 24 hours.",
+      releaseOwner: "Content operator or chief of staff owns QA, handoff, manual Telegram release, URL confirmation.",
+      firstSignalSource: "Telegram post URL, comments, reposts, saves, reactions, and owner mark after 24 hours.",
+      forbiddenClaims: "No guaranteed leads, no guaranteed revenue, no fake ROI, no named clients or competitor mentions without owner approval.",
+      authorVoiceContract: "Фразы автора: рабочий контур, без каши, через решение. Стоп-слова: гарантированные лиды, магия, автоматические продажи. AI-шаблоны: убрать общие вступления и пустые benefit lists. Прямота: practical founder voice. Proof/risk: no numbers or client names without approval. Решение QA: похоже / не похоже на автора."
+    }
+  };
+
+  state.demand = [
+    {
+      id: "pilot-execution-icp",
+      title: "Founder-led B2B service / expert team",
+      item_type: "icp",
+      intent: "pilot",
+      audience: "Owner who sells complex work through trust content",
+      priority: 100,
+      status: "approved",
+      metadata: {
+        reason: "Expert knowledge exists but gets stuck across voice notes, chats, drafts, QA, and release."
+      }
+    }
+  ];
+
+  state.content = [
+    {
+      id: materialId,
+      title: "Как не терять выпуск контента между идеей и публикацией",
+      content_type: "telegram_post",
+      channel: "telegram",
+      status: "published",
+      owner: "Content operator",
+      metadata: {
+        owner: "Content operator",
+        audience: "Founder-led B2B service or expert team",
+        brief: [
+          "Angle: большинство команд проигрывают не потому, что не могут написать текст, а потому что тема, черновик, QA, выпуск и результат живут в разных чатах.",
+          "Structure: operational pain -> broken flow -> controlled flow -> practical conclusion.",
+          "Required flow: topic boundary -> draft -> QA -> release -> URL -> next step.",
+          "Forbidden: AI writes everything by itself; guaranteed leads; fake metrics; named clients without approval."
+        ].join("\n"),
+        body: "Большинство команд не теряют контент на этапе написания. Он теряется между идеей, голосовым, черновиком, QA, выпуском и проверкой результата.\n\nРабочий контур проще: тема и граница согласованы, черновик подготовлен, QA проверил факты и стиль, менеджер выпустил, URL зафиксирован, следующий шаг выбран.",
+        quality_gate: {
+          status: "passed",
+          checked_by: "QA/release owner",
+          checked_at: "2026-06-19 16:00",
+          summary: "QA passed: facts, founder voice, owner boundaries, no forbidden claims, Telegram format."
+        },
+        publication_result: {
+          publication_url: liveUrl,
+          format: "telegram_post",
+          confirmed_at: livePublishedAt,
+          reactions: liveReactions,
+          next_step: "expand",
+          next_step_note: "Day 7: expand into a larger article if comments/saves hold; otherwise reuse strongest paragraph as the second post."
+        }
+      }
+    }
+  ];
+
+  state.approvals = [
+    {
+      id: "pilot-execution-topic-approval",
+      summary: "Согласовать тему недели: как не терять выпуск контента",
+      scope: "social_post",
+      target_type: "content_item",
+      target_id: materialId,
+      content_item_id: materialId,
+      status: "approved",
+      risk_flags: ["channel publishing", "public claim"],
+      requested_by: "AgentResult",
+      decided_by: "founder",
+      decision_note: "Topic boundary approved: production control, no revenue or lead promises, no client names.",
+      preview: "Тема: как контент теряется между идеей, черновиком, QA, выпуском и подтверждённым URL."
+    }
+  ];
+
+  state.calendar = [
+    {
+      id: "pilot-execution-day-0",
+      title: "Day 0: setup intake, one channel, one format, three owners",
+      channel: "telegram",
+      scheduled_for: "2026-06-16 10:00",
+      status: "published",
+      metadata: { result_note: "Pilot context ready: Telegram founder channel, Telegram post, founder/operator/result owners." }
+    },
+    {
+      id: "pilot-execution-day-1",
+      title: "Day 1: approve topic boundary",
+      content_item_id: materialId,
+      channel: "telegram",
+      scheduled_for: "2026-06-17 12:00",
+      status: "published",
+      metadata: { result_note: "Approved topic boundary: no revenue/lead promise; no client names." }
+    },
+    {
+      id: "pilot-execution-day-2",
+      title: "Day 2: prepare Telegram draft in founder voice",
+      content_item_id: materialId,
+      channel: "telegram",
+      scheduled_for: "2026-06-18 18:00",
+      status: "published",
+      metadata: { result_note: "Draft ready for QA: practical lesson, one example, no forbidden claims." }
+    },
+    {
+      id: "pilot-execution-day-3",
+      title: "Day 3: QA facts, voice, claims, channel format",
+      content_item_id: materialId,
+      channel: "telegram",
+      scheduled_for: "2026-06-19 16:00",
+      status: "published",
+      metadata: { result_note: "QA passed 5/5." }
+    },
+    {
+      id: releaseId,
+      title: "Day 4/5: Telegram post released and URL confirmed",
+      content_item_id: materialId,
+      channel: "telegram",
+      scheduled_for: "2026-06-20 10:00",
+      status: "published",
+      updated_at: livePublishedAt,
+      metadata: {
+        format: "telegram_post",
+        publication_url: liveUrl,
+        published_confirmed_at: livePublishedAt,
+        published_confirmed_by: "result owner",
+        publication_result: {
+          publication_url: liveUrl,
+          format: "telegram_post",
+          confirmed_at: livePublishedAt,
+          reactions: liveReactions,
+          next_step: "expand",
+          next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
+        }
+      }
+    },
+    {
+      id: reviewId,
+      title: "Day 7: review next content step and week-2 scope",
+      content_item_id: materialId,
+      channel: "manual_export",
+      scheduled_for: "2026-06-23 12:00",
+      status: "scheduled",
+      metadata: {
+        handoff_note: "Review what went out, where published, primary reactions, owner response time, QA rework, manual publishing delay, URL confirmation delay.",
+        next_step: "expand / reuse / update / leave",
+        week_2_gate: "No second channel unless the first loop is clean."
+      }
+    }
+  ];
+
+  state.tasks = [
+    {
+      id: "pilot-execution-day-7-task",
+      title: "Day 7 review: choose expand / reuse / update / leave",
+      owner: "Founder + operator",
+      status: "queued",
+      note: "Default: expand if comments/saves appear; otherwise reuse strongest paragraph as second post.",
+      source: "pilot_execution"
+    }
+  ];
+
+  state.distributionSignals = [{
+    id: "pilot-execution-signal-week-1",
+    calendar_item_id: releaseId,
+    content_item_id: materialId,
+    status: "confirmed",
+    source: "telegram",
+    signal_type: "distribution_signal.confirmed",
+    title: "Telegram-пост: как не терять выпуск контента",
+    note: "URL, reactions, and Day-7 next-step decision are ready for review.",
+    occurred_at: livePublishedAt,
+    confirmed_by: "result owner",
+    metadata: {
+      publication_url: liveUrl,
+      format: "telegram_post",
+      reactions: liveReactions,
+      next_step: "expand",
+      next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
+    }
+  }];
+  state.resultSignals = state.distributionSignals;
+  state.publicationResultsSource = "derived";
+  state.selectedPublicationResultId = "publication-result-pilot-execution-signal-week-1";
+  state.activity = [
+    { at: "Day 7 12:00", actor: "Founder + operator", event: "Review next content step and week-2 scope" },
+    { at: "Day 5 10:00", actor: "Result owner", event: "Confirmed Telegram URL and primary reactions" },
+    { at: "Day 4 12:00", actor: "QA/release owner", event: "Published manually in Telegram after handoff" },
+    { at: "Day 3 16:00", actor: "QA/release owner", event: "QA passed 5/5" },
+    { at: "Day 1 12:00", actor: "Founder", event: "Approved topic boundary" }
+  ];
+  state.metrics = {
+    ...state.metrics,
+    content_items: state.content.length,
+    calendar_items: state.calendar.length,
+    pending_approvals: 0,
+    approvals_total: state.approvals.length,
+    published_materials: shippedCalendarCount(state.calendar),
+    distribution_signals: state.distributionSignals.length,
+    result_signals: state.distributionSignals.length,
+    leads: 0
+  };
 }
 
 function normalizeAgentResultLanguageArtifacts() {
@@ -2297,9 +2523,29 @@ function renderContentPipeline() {
         ${compactMaterialMetric(text("Release queue", "Очередь выпуска"), summary.release)}
       </div>
     </section>
+    ${pilotExecutionBriefPanel(nextItem || state.content[0])}
     ${managerWorkspace()}
     <section class="material-queue-grid">
       ${queues.map(materialQueueColumn).join("")}
+    </section>
+  `;
+}
+
+function pilotExecutionBriefPanel(item) {
+  if (!isPilotExecutionDemo || !item?.metadata?.brief) return "";
+  const reviewItem = state.calendar.find((entry) => entry.id === "pilot-execution-day-7-review");
+  return `
+    <section class="panel full pilot-execution-brief-panel" aria-label="${escapeAttr(text("First material brief", "Бриф первого материала"))}">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("First material brief", "Бриф первого материала")}</p>
+          <h3>${escapeHtml(item.title)}</h3>
+        </div>
+        <span class="status-chip">${escapeHtml(text("Week-1 pilot", "Пилот week-1"))}</span>
+      </div>
+      <pre class="asset-preview-text">${escapeHtml(item.metadata.brief)}</pre>
+      ${item.metadata.quality_gate?.summary ? `<p class="empty-note">${escapeHtml(item.metadata.quality_gate.summary)}</p>` : ""}
+      ${reviewItem ? `<p class="empty-note">${escapeHtml(reviewItem.title)} · ${escapeHtml(reviewItem.metadata?.handoff_note || "")}</p>` : ""}
     </section>
   `;
 }
@@ -3198,6 +3444,7 @@ function resultsDeskDetail(item) {
       <div class="result-next-step-box">
         <span>${escapeHtml(text("Next content step", "Следующий контент-шаг"))}</span>
         <strong>${escapeHtml(publicationNextStepLabel(item.next_step))}</strong>
+        ${item.next_step_note ? `<p>${escapeHtml(item.next_step_note)}</p>` : ""}
         <div class="button-row compact">${publicationResultActions(item)}</div>
       </div>
     </aside>
@@ -3706,6 +3953,11 @@ function renderTechnicalSettings() {
       note: pendingApprovals
         ? approvalWaitNote(pendingApprovals)
         : text("No owner wait.", "Собственник не блокирует.")
+    },
+    {
+      label: text("Approval owner", "Владелец решения"),
+      value: profile.approvalOwner ? text("Assigned", "Назначен") : text("Missing", "Не назначен"),
+      note: profile.approvalOwner || text("Owner approves topic boundaries.", "Собственник согласует границы темы.")
     },
     {
       label: text("Manager QA", "Менеджер QA"),

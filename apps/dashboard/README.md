@@ -29,6 +29,7 @@ Open:
 
 ```text
 http://localhost:4173/?demo=reset&v=local#/publications
+http://localhost:4173/?demo=pilot-execution&v=local#/overview
 ```
 
 ## Publications Smoke

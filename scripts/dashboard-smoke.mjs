@@ -211,6 +211,71 @@ async function assertClientDemoSeed(page) {
   await assertNoConsoleErrors(page);
 }
 
+async function assertPilotExecutionSeed(page) {
+  await page.goto(`${baseUrl}/?demo=pilot-execution&v=${smokeVersion}-pilot-execution#/overview`, { timeout: waitTimeoutMs });
+  await page.waitForSelector("#screenRoot", { timeout: waitTimeoutMs });
+  const overview = await page.evaluate(() => ({
+    commandTitle: document.querySelector(".command-center-head h3")?.textContent?.trim() || "",
+    nav: [...document.querySelectorAll(".nav-link")].map((node) => node.textContent.trim()),
+    hasDay7Task: document.body.innerText.includes("Day 7: review"),
+    hasNoLeadLanguage: !/guaranteed leads|guaranteed revenue/i.test(document.body.innerText),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(overview.commandTitle === "Выпуск у менеджера: Day 7: review next content step and week-2 scope", `Pilot execution Today action mismatch: ${overview.commandTitle}`);
+  assert(overview.nav.join("|") === "Сегодня|Материалы|Публикации|Результаты|База|Настройки", `Pilot execution nav is not operator-complete: ${overview.nav.join("|")}`);
+  assert(overview.hasDay7Task, "Pilot execution Today does not show Day-7 review path");
+  assert(overview.hasNoLeadLanguage, "Pilot execution seed shows forbidden guarantee language");
+  assert(overview.width <= overview.viewport + 2, `Pilot execution overview overflows: ${overview.width} > ${overview.viewport}`);
+
+  await page.goto(`${baseUrl}/?demo=pilot-execution&v=${smokeVersion}-pilot-execution#/content-pipeline`, { timeout: waitTimeoutMs });
+  await page.waitForSelector(".material-command", { timeout: waitTimeoutMs });
+  const materials = await page.evaluate(() => ({
+    hasFirstBrief: document.body.innerText.includes("Как не терять выпуск контента между идеей и публикацией"),
+    hasBriefAngle: document.body.innerText.includes("тема, черновик, QA, выпуск и результат живут в разных чатах"),
+    hasQa: document.body.innerText.includes("QA passed") || document.body.innerText.includes("QA пройден"),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(materials.hasFirstBrief, "Pilot execution first material title is missing");
+  assert(materials.hasBriefAngle, "Pilot execution material brief angle is missing");
+  assert(materials.hasQa, "Pilot execution QA path is missing");
+  assert(materials.width <= materials.viewport + 2, `Pilot execution materials overflow: ${materials.width} > ${materials.viewport}`);
+
+  await page.goto(`${baseUrl}/?demo=pilot-execution&v=${smokeVersion}-pilot-execution#/settings`, { timeout: waitTimeoutMs });
+  await page.waitForSelector("#screenRoot", { timeout: waitTimeoutMs });
+  const roles = await page.evaluate(() => ({
+    hasApprovalOwner: document.body.innerText.includes("Founder / managing partner"),
+    hasReleaseOwner: document.body.innerText.includes("Content operator or chief of staff"),
+    hasResultSource: document.body.innerText.includes("Telegram post URL"),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(roles.hasApprovalOwner, "Pilot execution approval owner role is missing");
+  assert(roles.hasReleaseOwner, "Pilot execution release owner role is missing");
+  assert(roles.hasResultSource, "Pilot execution result source is missing");
+  assert(roles.width <= roles.viewport + 2, `Pilot execution settings overflow: ${roles.width} > ${roles.viewport}`);
+
+  await page.goto(`${baseUrl}/?demo=pilot-execution&v=${smokeVersion}-pilot-execution#/analytics`, { timeout: waitTimeoutMs });
+  await page.waitForSelector(".results-desk-layout", { timeout: waitTimeoutMs });
+  const results = await page.evaluate(() => ({
+    actionCount: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
+    hasUrl: document.body.innerText.includes("https://t.me/founder_channel/42"),
+    hasReactions: document.body.innerText.includes("3 комм.") || document.body.innerText.includes("3 comments"),
+    hasDay7Path: document.body.innerText.includes("Day 7 review path"),
+    hasNoGuaranteedLeadLanguage: !/guaranteed leads|guaranteed revenue/i.test(document.body.innerText),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(results.actionCount >= 4, `Pilot execution result actions should remain operator-active: ${results.actionCount}`);
+  assert(results.hasUrl, "Pilot execution publication result URL is missing");
+  assert(results.hasReactions, "Pilot execution publication reactions are missing");
+  assert(results.hasDay7Path, "Pilot execution Day-7 review path is missing from Results");
+  assert(results.hasNoGuaranteedLeadLanguage, "Pilot execution Results shows forbidden guarantee language");
+  assert(results.width <= results.viewport + 2, `Pilot execution Results overflows: ${results.width} > ${results.viewport}`);
+  await assertNoConsoleErrors(page);
+}
+
 async function run() {
   await waitForDashboard();
   const browser = await chromium.launch();
@@ -229,6 +294,7 @@ async function run() {
 
   try {
     await assertClientDemoSeed(page);
+    await assertPilotExecutionSeed(page);
 
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`, { timeout: waitTimeoutMs });
     await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
