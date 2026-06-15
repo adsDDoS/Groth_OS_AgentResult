@@ -29,6 +29,7 @@
 | Access | Use | Document |
 | --- | --- | --- |
 | `internal-only` | Pre-call checklist with commands, security notes, and smoke gates. | [Pilot Demo Checklist](pilot-demo-checklist.md) |
+| `operator-only` | Final 7-minute `?demo=client` opening, route, closing, and follow-up for the first call. | [Client Demo Call Dry Run v3](client-demo-call-dry-run-v3.md) |
 | `operator-only` | Current `?demo=client` route, three screens, five phrases, and stop-list for the first client-safe dashboard showing. | [Client Demo Route Script](client-demo-route-script.md) |
 | `internal-only` | Latest production rehearsal notes, fixed friction, and remaining first-call risks for `?demo=client`. | [Client Demo Rehearsal](client-demo-rehearsal.md) |
 | `operator-only` | Seven-minute client script. | [Pilot Demo Script](pilot-demo-script.md) |

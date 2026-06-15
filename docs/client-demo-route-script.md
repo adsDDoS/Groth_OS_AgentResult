@@ -4,6 +4,12 @@ Access: `operator-only`
 
 Короткий маршрут для первого client-safe показа dashboard. Держать открытым у оператора, не шарить как документ.
 
+Final call dry run:
+
+```text
+docs/client-demo-call-dry-run-v3.md
+```
+
 ## Exact Link
 
 ```text
