@@ -171,7 +171,7 @@ function publicationNextAction() {
 function publicationTabContext(tab) {
   const contexts = {
     approvals: [
-      text("Release Queue", "Очередь выпуска"),
+      text("Release Workboard", "Рабочие пункты выпуска"),
       text("Owner decisions and QA-ready items that can move to channel handoff.", "Решения собственника и QA-ready материалы для передачи в канал.")
     ],
     calendar: [
@@ -200,7 +200,7 @@ function renderReleaseQueueDesk() {
     <article class="panel full publication-desk-panel">
       <div class="panel-heading compact">
         <div>
-          <p class="eyebrow">${text("Release Queue", "Очередь выпуска")}</p>
+          <p class="eyebrow">${text("Release Workboard", "Рабочие пункты выпуска")}</p>
           <h3>${escapeHtml(text(`${rows.length} work items`, `${rows.length} рабочих пунктов`))}</h3>
         </div>
       </div>
@@ -215,7 +215,7 @@ function renderReleaseQueueDesk() {
           text("Action", "Действие")
         ],
         rows,
-        text("Release queue is clear.", "Очередь выпуска чистая.")
+        text("No release work items.", "Нет рабочих пунктов выпуска.")
       )}
     </article>
   `;
