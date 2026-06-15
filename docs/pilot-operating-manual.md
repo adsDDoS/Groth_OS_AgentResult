@@ -68,7 +68,13 @@ Stop:
 Для первого показа использовать:
 
 ```text
-docs/pilot-demo-checklist.md
+docs/client-demo-call-dry-run-v3.md
+```
+
+Для первого готового execution example использовать:
+
+```text
+docs/pilot-first-icp-execution-example.md
 ```
 
 ## Closeout

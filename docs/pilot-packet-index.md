@@ -24,6 +24,12 @@
 | 8 | `operator-only` | Convert closeout decision into an offer. | [Pilot Pricing / Offer One-Pager](pilot-pricing-offer-one-pager.md) |
 | 9 | `operator-only` | Send the correct follow-up message. | [Pilot Sales Follow-Up Templates](pilot-sales-follow-up-templates.md) |
 
+## Execution Examples
+
+| Access | Use | Document |
+| --- | --- | --- |
+| `operator-only` | First ICP segment, filled intake, and concrete week-1 board for a founder-led B2B content pilot. | [First ICP Pilot Execution Example](pilot-first-icp-execution-example.md) |
+
 ## Demo And Call Support
 
 | Access | Use | Document |
