@@ -408,6 +408,21 @@
   gap: 8px;
 }
 
+.result-next-step-readonly {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
 .results-desk-empty {
   display: grid;
   gap: 8px;

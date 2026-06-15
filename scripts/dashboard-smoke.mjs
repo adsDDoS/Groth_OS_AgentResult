@@ -185,7 +185,7 @@ async function assertClientDemoSeed(page) {
     viewport: window.innerWidth
   }));
   assert(overview.commandTitle === "Согласовать тему недели", `Client demo Today action is not concise: ${overview.commandTitle}`);
-  assert(overview.nav.join("|") === "Сегодня|Материалы|Публикации|Результаты", `Client demo nav is not client-safe: ${overview.nav.join("|")}`);
+  assert(overview.nav.join("|") === "Сегодня|Публикации|Результаты", `Client demo nav is not client-safe: ${overview.nav.join("|")}`);
   assert(!overview.hasInternalText, "Client demo overview shows internal demo text");
   assert(overview.width <= overview.viewport + 2, `Client demo overview overflows: ${overview.width} > ${overview.viewport}`);
 
@@ -193,6 +193,7 @@ async function assertClientDemoSeed(page) {
   await page.waitForSelector(".results-desk-layout", { timeout: waitTimeoutMs });
   const results = await page.evaluate(() => ({
     actionCount: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
+    hasReadonlyStep: Boolean(document.querySelector(".result-next-step-readonly")),
     hasUrl: document.body.innerText.includes("https://t.me/grothos_content/128"),
     hasReactions: document.body.innerText.includes("4 комм.") || document.body.innerText.includes("4 comments"),
     hasNextStep: document.body.innerText.includes("расширить в большой материал") || document.body.innerText.includes("expand into a larger text"),
@@ -200,7 +201,8 @@ async function assertClientDemoSeed(page) {
     width: document.documentElement.scrollWidth,
     viewport: window.innerWidth
   }));
-  assert(results.actionCount >= 4, `Client demo result actions are missing: ${results.actionCount}`);
+  assert(results.actionCount === 0, `Client demo result actions should be hidden: ${results.actionCount}`);
+  assert(results.hasReadonlyStep, "Client demo readonly next-step marker is missing");
   assert(results.hasUrl, "Client demo publication result URL is missing");
   assert(results.hasReactions, "Client demo publication reactions are missing");
   assert(results.hasNextStep, "Client demo next content step is missing");

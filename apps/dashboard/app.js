@@ -377,7 +377,7 @@ function text(en, ru) {
 
 const navItems = [
   { route: "overview", title: "Command Center", group: "operate", primary: true },
-  { route: "content-pipeline", title: "Content Pipeline", group: "operate" },
+  { route: "content-pipeline", title: "Content Pipeline", group: "operate", clientDemoHidden: true },
   { route: "publications", title: "Publication Desk", group: "operate" },
   { route: "analytics", title: "Results Desk", group: "operate" },
   { route: "offer-brain", title: "Knowledge Base", group: "control", clientHidden: true },
@@ -1597,7 +1597,11 @@ function defaultScheduleDate() {
 
 function renderNav() {
   const activeRoute = canonicalRoute();
-  const visibleItems = IS_CLIENT_SAFE_DEMO ? navItems.filter((item) => !item.clientHidden) : navItems;
+  const visibleItems = navItems.filter((item) => {
+    if (isClientDemo && item.clientDemoHidden) return false;
+    if (IS_CLIENT_SAFE_DEMO && item.clientHidden) return false;
+    return true;
+  });
   const groups = [
     [text("Operate", "Работа"), visibleItems.filter((item) => item.group === "operate")],
     [text("Control", "Контроль"), visibleItems.filter((item) => item.group === "control")]
@@ -3212,6 +3216,9 @@ function publicationReactionSummary(reactions = {}) {
 }
 
 function publicationResultActions(item) {
+  if (isClientDemo) {
+    return `<span class="result-next-step-readonly">${escapeHtml(text("Next step selected for the pilot", "Следующий шаг выбран для пилота"))}</span>`;
+  }
   return `
     <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переиспользовать"))}</button>
     <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
@@ -3265,10 +3272,7 @@ function publicationResultRow(item) {
         <p>${escapeHtml(`${reactionSummary}. ${text("Next:", "Дальше:")} ${nextLabel}`)}</p>
       </div>
       <div class="button-row compact">
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переиспользовать"))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
+        ${publicationResultActions(item)}
       </div>
     </article>
   `;

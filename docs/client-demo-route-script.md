@@ -7,15 +7,15 @@ Access: `operator-only`
 ## Exact Link
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
 ```
 
 Direct routes:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/publications
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/analytics
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/publications
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/analytics
 ```
 
 ## 3 Screens
@@ -27,6 +27,8 @@ https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/analytic
 | `Результаты` | 2 min | Publication result records URL, channel, reactions, and next content step. |
 
 Do not exceed 7 minutes before asking qualification questions.
+
+Client-demo navigation intentionally shows only these three screens. `Материалы`, `База`, and `Настройки` stay out of the first-call surface.
 
 ## 5 Phrases
 
@@ -74,7 +76,7 @@ Do not promise:
 Reload the exact link:
 
 ```text
-https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v2#/overview
+https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
 ```
 
 If the browser blocks automation or asks for a Vercel check, use the normal signed-in browser and continue with direct routes.
