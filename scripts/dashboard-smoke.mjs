@@ -174,6 +174,41 @@ async function assertResponsiveShell(page) {
   }
 }
 
+async function assertClientDemoSeed(page) {
+  await page.goto(`${baseUrl}/?demo=client&v=${smokeVersion}-client#/overview`, { timeout: waitTimeoutMs });
+  await page.waitForSelector("#screenRoot", { timeout: waitTimeoutMs });
+  const overview = await page.evaluate(() => ({
+    commandTitle: document.querySelector(".command-center-head h3")?.textContent?.trim() || "",
+    hasInternalText: /demo|демо|reset|github|vps|token/i.test(document.body.innerText),
+    nav: [...document.querySelectorAll(".nav-link")].map((node) => node.textContent.trim()),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(overview.commandTitle === "Согласовать тему недели", `Client demo Today action is not concise: ${overview.commandTitle}`);
+  assert(overview.nav.join("|") === "Сегодня|Материалы|Публикации|Результаты", `Client demo nav is not client-safe: ${overview.nav.join("|")}`);
+  assert(!overview.hasInternalText, "Client demo overview shows internal demo text");
+  assert(overview.width <= overview.viewport + 2, `Client demo overview overflows: ${overview.width} > ${overview.viewport}`);
+
+  await page.goto(`${baseUrl}/?demo=client&v=${smokeVersion}-client#/analytics`, { timeout: waitTimeoutMs });
+  await page.waitForSelector(".results-desk-layout", { timeout: waitTimeoutMs });
+  const results = await page.evaluate(() => ({
+    actionCount: document.querySelectorAll('[data-action="set-publication-result-step"]').length,
+    hasUrl: document.body.innerText.includes("https://t.me/grothos_content/128"),
+    hasReactions: document.body.innerText.includes("4 комм.") || document.body.innerText.includes("4 comments"),
+    hasNextStep: document.body.innerText.includes("расширить в большой материал") || document.body.innerText.includes("expand into a larger text"),
+    hasInternalText: /demo|демо|reset|github|vps|token/i.test(document.body.innerText),
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth
+  }));
+  assert(results.actionCount >= 4, `Client demo result actions are missing: ${results.actionCount}`);
+  assert(results.hasUrl, "Client demo publication result URL is missing");
+  assert(results.hasReactions, "Client demo publication reactions are missing");
+  assert(results.hasNextStep, "Client demo next content step is missing");
+  assert(!results.hasInternalText, "Client demo Results shows internal demo text");
+  assert(results.width <= results.viewport + 2, `Client demo Results overflows: ${results.width} > ${results.viewport}`);
+  await assertNoConsoleErrors(page);
+}
+
 async function run() {
   await waitForDashboard();
   const browser = await chromium.launch();
@@ -191,6 +226,8 @@ async function run() {
   });
 
   try {
+    await assertClientDemoSeed(page);
+
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`, { timeout: waitTimeoutMs });
     await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
 
@@ -203,6 +240,7 @@ async function run() {
     await clickUnique(page, '[data-action="approve-weekly-batch"]');
     await clickUnique(page, '[data-action="confirm-weekly-batch-approval"]');
     await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/content-pipeline`);
+    await page.waitForSelector('[data-action="mark-manager-qa-passed"]', { timeout: waitTimeoutMs });
     await clickUnique(page, '[data-action="mark-manager-qa-passed"]');
     await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`);
     await page.waitForSelector('[data-action="mark-calendar-exported"]');

@@ -5,10 +5,11 @@ import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentre
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
 const isPilotDemo = demoMode === "pilot";
+const isClientDemo = demoMode === "client";
 const PILOT_DEMO_TENANT_ID = "10000000-0000-4000-8000-000000000001";
 const PRODUCTION_API_BASE = "/api/agentresult-os-demo";
 
-if (demoMode === "reset" || isPilotDemo) {
+if (demoMode === "reset" || isPilotDemo || isClientDemo) {
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {
     const key = localStorage.key(index);
     if (key?.startsWith("aiGrowthOs")) localStorage.removeItem(key);
@@ -23,7 +24,7 @@ if (queryApiBase) localStorage.setItem("aiGrowthOsApiBase", queryApiBase);
 if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
-const IS_PRODUCTION_DEMO = isPilotDemo || (!isLocalHost && !configuredApiBase);
+const IS_PRODUCTION_DEMO = isPilotDemo || isClientDemo || (!isLocalHost && !configuredApiBase);
 const IS_CLIENT_SAFE_DEMO = IS_PRODUCTION_DEMO || demoMode === "reset";
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
@@ -767,6 +768,7 @@ async function loadData() {
   }
   normalizePilotProfileDefaults();
   normalizeAgentResultLanguageArtifacts();
+  applyClientDemoSeed();
   state.exportAssembled = state.workspaceState.exportAssembled === true || state.exportAssembled === true;
   if (Array.isArray(state.workspaceState.activity) && state.workspaceState.activity.length) {
     state.activity = state.workspaceState.activity;
@@ -778,6 +780,8 @@ async function loadData() {
   state.metrics.approvals_total = state.approvals.length;
   state.metrics.published_materials = shippedCalendarCount(state.calendar);
   state.metrics.tasks_created = state.tasks.length;
+  state.metrics.distribution_signals = state.distributionSignals.length;
+  state.metrics.result_signals = state.distributionSignals.length;
   refreshPublicationResults();
 
   if (!state.selectedApprovalId && state.approvals[0]) state.selectedApprovalId = state.approvals[0].id;
@@ -872,6 +876,102 @@ function normalizePilotProfileDefaults() {
       ...(state.offer?.profile || {})
     }
   };
+}
+
+function applyClientDemoSeed() {
+  if (!isClientDemo) return;
+
+  const livePublishedAt = "2026-06-12 10:00";
+  const liveUrl = "https://t.me/grothos_content/128";
+  const liveReactions = {
+    comments: 4,
+    reposts: 2,
+    saves: 11,
+    reactions: 28
+  };
+
+  state.approvals = state.approvals.map((item) => item.id === "a1"
+    ? {
+      ...item,
+      summary: "Согласовать тему недели",
+      preview: "Тема: как не терять выпуск контента между идеей, текстом, QA и публикацией."
+    }
+    : item);
+
+  state.content = state.content.map((item) => {
+    if (item.id === "c1") {
+      return {
+        ...item,
+        title: "Как не терять выпуск контента между идеей и публикацией",
+        status: "review"
+      };
+    }
+    if (item.id === "c2") {
+      return {
+        ...item,
+        title: "GrothOS Content Ops: контур регулярного выпуска",
+        status: "approved"
+      };
+    }
+    return item;
+  });
+
+  state.calendar = state.calendar.map((item) => {
+    if (item.id === "p1") {
+      return {
+        ...item,
+        content_item_id: "c1",
+        title: "Telegram-пост: как не терять выпуск контента",
+        status: "published",
+        updated_at: livePublishedAt,
+        metadata: {
+          ...(item.metadata || {}),
+          format: "telegram_post",
+          publication_url: liveUrl,
+          published_confirmed_at: livePublishedAt,
+          publication_result: {
+            publication_url: liveUrl,
+            format: "telegram_post",
+            confirmed_at: livePublishedAt,
+            reactions: liveReactions,
+            next_step: "expand",
+            next_step_note: "Развернуть тему в статью для vc.ru с примером недельного цикла."
+          }
+        }
+      };
+    }
+    if (item.id === "p2") {
+      return {
+        ...item,
+        title: "Страница сайта: GrothOS Content Ops",
+        status: "scheduled"
+      };
+    }
+    return item;
+  });
+
+  state.distributionSignals = [{
+    id: "client-demo-signal-p1",
+    calendar_item_id: "p1",
+    content_item_id: "c1",
+    status: "confirmed",
+    source: "telegram",
+    signal_type: "distribution_signal.confirmed",
+    title: "Telegram-пост: как не терять выпуск контента",
+    note: "URL и первичные реакции зафиксированы для решения следующего контент-шага.",
+    occurred_at: livePublishedAt,
+    confirmed_by: "owner",
+    metadata: {
+      publication_url: liveUrl,
+      format: "telegram_post",
+      reactions: liveReactions,
+      next_step: "expand",
+      next_step_note: "Развернуть тему в статью для vc.ru с примером недельного цикла."
+    }
+  }];
+  state.resultSignals = state.distributionSignals;
+  state.publicationResultsSource = "derived";
+  state.selectedPublicationResultId = "publication-result-client-demo-signal-p1";
 }
 
 function normalizeAgentResultLanguageArtifacts() {
@@ -1804,6 +1904,15 @@ function ownerCommandPriority(pending) {
   const pendingApproval = pending[0] || null;
   if (pendingApproval) {
     const context = getApprovalContext(pendingApproval);
+    if (isClientDemo) {
+      return {
+        title: text("Approve the weekly topic", "Согласовать тему недели"),
+        note: text("One owner decision unlocks the next draft and manager QA.", "Одно решение собственника запускает черновик и QA менеджера."),
+        action: "go-approval",
+        id: pendingApproval.id,
+        label: text("Approve topic", "Согласовать тему")
+      };
+    }
     return {
       title: text(`Approve weekly topic: ${context.title}`, `Согласовать тему недели: ${context.title}`),
       note: text("Approve the topic and boundary once. Then the system drafts; manager QA moves it to release.", "Согласовать тему и границу один раз. Дальше система готовит текст; менеджер QA ведёт к выпуску."),
