@@ -24,6 +24,7 @@ if (queryTenantId) localStorage.setItem("aiGrowthOsTenantId", queryTenantId);
 const configuredApiBase = localStorage.getItem("aiGrowthOsApiBase");
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3000" : "");
 const IS_PRODUCTION_DEMO = isPilotDemo || (!isLocalHost && !configuredApiBase);
+const IS_CLIENT_SAFE_DEMO = IS_PRODUCTION_DEMO || demoMode === "reset";
 const rawTenantId = localStorage.getItem("aiGrowthOsTenantId");
 const TENANT_ID =
   rawTenantId && rawTenantId !== "null" && rawTenantId !== "undefined"
@@ -43,6 +44,8 @@ const RU = {
   "Materials": "Материалы",
   "Topics": "Темы",
   "Release Queue": "Очередь выпуска",
+  "Queue": "Очередь",
+  "Live Check": "Проверка",
   "Pack": "Пакет",
   "Automation": "Автоматизация",
   "Preparation rules": "Правила подготовки",
@@ -171,7 +174,7 @@ const RU = {
   "Collect 3 proof assets": "Собрать 3 доказательства",
   "Before/after story, screenshot checklist, approved metric source.": "История до/после, чеклист скриншотов, утверждённый источник метрик.",
   "Prepare one weekly content pack": "Подготовить недельный контент-пакет",
-  "SEO page, Telegram posts, VC outline, email, lead magnet.": "Страница сайта, посты в Telegram, план статьи для VC, email, лид-магнит.",
+  "SEO page, Telegram posts, VC outline, email, checklist.": "Страница сайта, посты в Telegram, план статьи для VC, email, чеклист.",
   "Import first metrics": "Импортировать первые метрики",
   "Start feedback loop for pages, channels and conversion events.": "Запустить обратную связь по страницам, каналам и конверсиям.",
   "Company profile": "Компания",
@@ -228,7 +231,7 @@ const RU = {
   "Channels": "Каналы",
   "SEO pages": "SEO-страницы",
   "Email": "Email",
-  "Lead magnet": "Лид-магнит",
+  "Lead magnet": "Чеклист",
   "Package contents": "Состав пакета",
   "Product mode": "Режим продукта",
   "Manager-controlled": "Через менеджера",
@@ -238,7 +241,7 @@ const RU = {
   "connected": "подключён",
   "not connected": "не подключён",
   "Backend online": "Сервис онлайн",
-  "Demo mode": "Демо-режим",
+  "Demo mode": "Пилотный режим",
   "Content velocity": "Скорость контента",
   "Assets in the system": "Материалов в системе",
   "Approval load": "Нагрузка согласований",
@@ -343,7 +346,7 @@ const RU = {
   "Just now": "Только что",
   "Today": "Сегодня",
   "Target channel: telegram.": "Целевой канал: Telegram.",
-  "AI Growth OS launch post": "Launch-пост AgentResult Growth Control",
+  "AI Growth OS launch post": "Launch-пост GrothOS Content Ops",
   "telegram": "Telegram",
   "website": "сайт",
   "email": "email",
@@ -376,8 +379,8 @@ const navItems = [
   { route: "content-pipeline", title: "Content Pipeline", group: "operate" },
   { route: "publications", title: "Publication Desk", group: "operate" },
   { route: "analytics", title: "Results Desk", group: "operate" },
-  { route: "offer-brain", title: "Knowledge Base", group: "control" },
-  { route: "settings", title: "Settings", group: "control" }
+  { route: "offer-brain", title: "Knowledge Base", group: "control", clientHidden: true },
+  { route: "settings", title: "Settings", group: "control", clientHidden: true }
 ];
 
 const routeAliases = {
@@ -393,8 +396,8 @@ const routeAliases = {
 };
 
 const publicationTabs = {
-  approvals: { route: "approvals", label: "Release Queue" },
-  calendar: { route: "publishing-calendar", label: "Waiting Live Check" },
+  approvals: { route: "approvals", label: "Queue" },
+  calendar: { route: "publishing-calendar", label: "Live Check" },
   pack: { route: "manual-export", label: "Published" }
 };
 
@@ -439,7 +442,7 @@ const demo = {
       pains:
         "Материалы готовятся, но не выходят; заявки и ответы теряются; решения собственника запаздывают; команда работает в чатах; результат после выпуска не фиксируется.",
       proof:
-        "Рабочий WebApp-прототип AgentResult, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, прототип Growth Control и build-in-public история, где AgentResult строит AgentResult на AgentResult.",
+        "Рабочий WebApp-прототип GrothOS, собранная архитектура рабочий контур -> хранилище -> Telegram/WebApp, прототип Content Ops и build-in-public история продукта.",
       forbiddenClaims:
         "No guaranteed revenue growth, no guaranteed debt recovery, no 'replace the whole sales team', no error-free autonomy, no legal actions without approval, no automatic publishing or sending without approval.",
       tone: "Фразы автора: 'меньше каши', 'через решение', 'похоже на рабочий контур'. Стоп-слова: революционный, магия, гарантированный рост. Убрать AI-шаблон: 'в современном мире', длинные вступления, пустые списки преимуществ. Прямота: коротко, рабоче, без канцелярита. Proof/risk: не обещать магию и гарантированный рост. Решение QA: похоже / не похоже на автора.",
@@ -447,7 +450,7 @@ const demo = {
       competitors:
         "CRM integrators, Bitrix24 and amoCRM implementers, AI automation shops, performance agencies, no-code automators, internal operators, generic AI tools and SDR services.",
       products:
-        "AgentResult Growth Control — контур решений, выпуска и результата\nAgentResult Sales OS — AI-agent sales system / CRM automation\nAgentResult Collect — отдельный контур денежных сигналов",
+        "GrothOS Content Ops — контур тем, текстов, выпуска и результата\nGrothOS Owner Control — Telegram-контур решений\nGrothOS Knowledge Base — база оффера, доказательств и авторского голоса",
       domains: "agentresult-crm.vercel.app\nagentresult.ru\napp.agentresult.ru\napi.agentresult.ru\nagentresult.online",
       channels: "Telegram-контур управления, website/CMS, email, Bitrix24/amoCRM later, CSV/XLSX fallback",
       approvalOwner: "Owner approves public publishing, risky claims, client names, competitor comparisons and money-sensitive actions.",
@@ -459,14 +462,14 @@ const demo = {
     { id: "d1", title: "AI-агенты для B2B-продаж", item_type: "product_page", intent: "commercial", audience: "Собственники B2B-компаний", priority: 100, status: "brief" },
     { id: "d2", title: "Telegram CRM для собственника", item_type: "use_case_page", intent: "problem-aware", audience: "Собственники, которым не хочется жить внутри CRM", priority: 92, status: "brief" },
     { id: "d3", title: "Почему материалы не должны зависать в чатах", item_type: "pain_page", intent: "problem-aware", audience: "Собственники и руководители роста", priority: 88, status: "research" },
-    { id: "d4", title: "AgentResult Growth Control для B2B-компаний", item_type: "product_page", intent: "commercial", audience: "Собственники и маркетинг B2B-компаний", priority: 84, status: "draft" }
+    { id: "d4", title: "GrothOS Content Ops для B2B-контента", item_type: "product_page", intent: "commercial", audience: "Собственники и маркетинг B2B-компаний", priority: 84, status: "draft" }
   ],
   content: [
     { id: "c1", title: "Почему контент-ферме нужен операционный контур, а не один AI-агент", content_type: "telegram_post", channel: "telegram", status: "review", owner: "Egor" },
-    { id: "c2", title: "AgentResult Growth Control для B2B-компаний", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
+    { id: "c2", title: "GrothOS Content Ops для B2B-контента", content_type: "landing_page", channel: "website", status: "draft", owner: "Egor" },
     { id: "c3", title: "Почему B2B-компаниям нужна агентная операционная система, а не только CRM", content_type: "article_outline", channel: "website", status: "brief", owner: "Egor" },
-    { id: "c4", title: "Email: безопасный запуск AgentResult Growth Control", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
-    { id: "c5", title: "Лид-магнит: чеклист готовности к AgentResult Growth Control", content_type: "lead_magnet", channel: "website", status: "idea", owner: "Egor" }
+    { id: "c4", title: "Email: безопасный запуск GrothOS Content Ops", content_type: "email", channel: "email", status: "draft", owner: "Egor" },
+    { id: "c5", title: "Чеклист готовности к GrothOS Content Ops", content_type: "lead_magnet", channel: "website", status: "idea", owner: "Egor" }
   ],
   approvals: [
     {
@@ -483,7 +486,7 @@ const demo = {
     },
     {
       id: "a2",
-      summary: "Согласовать формулировки для страницы AgentResult Growth Control",
+      summary: "Согласовать формулировки для страницы GrothOS Content Ops",
       scope: "sensitive_claim",
       target_type: "content_item",
       target_id: "c2",
@@ -497,7 +500,7 @@ const demo = {
     },
     {
       id: "a3",
-      summary: "Согласовать недельный пакет публикаций AgentResult",
+      summary: "Согласовать недельный пакет публикаций",
       scope: "publish",
       target_type: "publishing_calendar_item",
       target_id: "p3",
@@ -507,13 +510,13 @@ const demo = {
       requested_by: "Content Factory",
       decided_by: "owner",
       decision_note: "Пакет можно ставить в очередь выпуска менеджера.",
-      preview: "В пакете: страница сайта, два Telegram-поста, план статьи, письмо и лид-магнит."
+      preview: "В пакете: страница сайта, два Telegram-поста, план статьи, письмо и чеклист."
     }
   ],
   calendar: [
     { id: "p1", title: "Telegram-пост: почему бизнесу нужен операционный контур, а не один AI-агент", channel: "telegram", scheduled_for: "2026-05-28 10:00", status: "published" },
-    { id: "p2", content_item_id: "c2", title: "AgentResult Growth Control для B2B-компаний", channel: "website", scheduled_for: "2026-05-29 12:00", status: "scheduled" },
-    { id: "p3", title: "Недельный пакет публикаций AgentResult", channel: "manual_export", scheduled_for: "2026-05-30 16:00", status: "draft" }
+    { id: "p2", content_item_id: "c2", title: "GrothOS Content Ops для B2B-контента", channel: "website", scheduled_for: "2026-05-29 12:00", status: "scheduled" },
+    { id: "p3", title: "Недельный пакет публикаций", channel: "manual_export", scheduled_for: "2026-05-30 16:00", status: "draft" }
   ],
   agents: [
     "AgentResult",
@@ -588,7 +591,7 @@ const state = {
   channelSettings: loadLocalJson("aiGrowthOsChannelSettings", {}),
   contentDetails: {},
   activity: loadLocalJson("aiGrowthOsActivity", [
-    { at: "Today 09:42", actor: "AgentResult", event: "Подготовил первый недельный пакет материалов AgentResult" },
+    { at: "Today 09:42", actor: "Content Ops", event: "Подготовил первый недельный пакет материалов" },
     { at: "Today 09:39", actor: "Контроль выпуска", event: "Отметил контур согласования для продуктовых формулировок" },
     { at: "Today 09:31", actor: "Offer Architect", event: "Обновил позиционирование AgentResult и язык интерфейса для собственника" }
   ])
@@ -875,7 +878,7 @@ function normalizeAgentResultLanguageArtifacts() {
   const replacements = new Map([
     ["Workflow link verification material", "Проверка согласования и публикации"],
     ["Проверка owner workflow: согласование и публикация", "Проверка согласования и публикации"],
-    ["Weekly AgentResult growth pack", "Недельный пакет публикаций AgentResult"],
+    ["Weekly AgentResult growth pack", "Недельный пакет публикаций"],
     ["AI agents for B2B sales", "AI-агенты для B2B-продаж"],
     ["How to recover overdue receivables without hiring an operator", "Как не терять решения и выпуск в чатах"],
     ["Как вернуть просроченную дебиторку без отдельного оператора", "Как не терять решения и выпуск в чатах"],
@@ -1085,12 +1088,12 @@ function renderRouteModal() {
 }
 
 function renderChrome() {
-  document.querySelector(".brand-lockup h1").textContent = tr("Growth Control");
+  document.querySelector(".brand-lockup h1").textContent = text("Content Ops", "Content Ops");
   const helpButton = document.querySelector("#helpButton");
   const showOnline = state.online && !IS_PRODUCTION_DEMO;
-  helpButton.textContent = showOnline ? text("Online", "Онлайн") : text("Demo", "Демо");
+  helpButton.textContent = showOnline ? text("Online", "Онлайн") : text("Pilot", "Пилот");
   helpButton.hidden = false;
-  helpButton.setAttribute("aria-label", showOnline ? text("Backend online", "Backend online") : text("Demo mode", "Demo mode"));
+  helpButton.setAttribute("aria-label", showOnline ? text("Backend online", "Backend online") : text("Pilot mode", "Pilot mode"));
   helpButton.classList.toggle("online", showOnline);
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLang);
@@ -1209,7 +1212,7 @@ function renderFormModal() {
             ["product_page", text("Product page", "Продуктовая страница")],
             ["problem_page", text("Problem page", "Страница боли")],
             ["integration_page", text("Integration page", "Страница интеграции")],
-            ["lead_magnet", text("Lead magnet", "Лид-магнит")]
+            ["lead_magnet", text("Checklist", "Чеклист")]
           ], "product_page")}
           ${selectField(text("Status", "Статус"), "demandStatus", statusOptions(), "idea")}
         </div>
@@ -1230,7 +1233,7 @@ function renderFormModal() {
             ["landing_page", text("Website page", "Страница сайта")],
             ["article_outline", text("Article outline", "План статьи")],
             ["email", "Email"],
-            ["lead_magnet", text("Lead magnet", "Лид-магнит")]
+            ["lead_magnet", text("Checklist", "Чеклист")]
           ], "telegram_post")}
           ${selectField(text("Status", "Статус"), "contentStatus", statusOptions(), "idea")}
         </div>
@@ -1400,7 +1403,7 @@ function contentDetailForm(itemId) {
         ["landing_page", text("Website page", "Страница сайта")],
         ["article_outline", text("Article outline", "План статьи")],
         ["email", "Email"],
-        ["lead_magnet", text("Lead magnet", "Лид-магнит")],
+        ["lead_magnet", text("Checklist", "Чеклист")],
         ["case_study", text("Case study", "Кейс")]
       ], item.content_type || "telegram_post")}
       ${selectField(text("Status", "Статус"), "contentEditStatus", statusOptions(), item.status || "idea")}
@@ -1494,10 +1497,11 @@ function defaultScheduleDate() {
 
 function renderNav() {
   const activeRoute = canonicalRoute();
+  const visibleItems = IS_CLIENT_SAFE_DEMO ? navItems.filter((item) => !item.clientHidden) : navItems;
   const groups = [
-    [text("Operate", "Работа"), navItems.filter((item) => item.group === "operate")],
-    [text("Control", "Контроль"), navItems.filter((item) => item.group === "control")]
-  ];
+    [text("Operate", "Работа"), visibleItems.filter((item) => item.group === "operate")],
+    [text("Control", "Контроль"), visibleItems.filter((item) => item.group === "control")]
+  ].filter(([, items]) => items.length);
   elements.navList.innerHTML = groups.map(([label, items]) => `
     <div class="nav-group">
       <span class="nav-group-label">${escapeHtml(label)}</span>
@@ -1594,8 +1598,8 @@ function ownerCommandCenter(pending) {
             <h4>${escapeHtml(text(`${activeRows} active items`, `${activeRows} активных пунктов`))}</h4>
           </div>
           <div class="command-center-filters" aria-label="${escapeAttr(text("Queue filters", "Фильтры очереди"))}">
-            <span>${escapeHtml(state.online ? text("Backend source", "Источник: backend") : text("Demo source", "Источник: демо"))}</span>
-            <span>${escapeHtml(text("Owner + manager loop", "Контур: собственник + менеджер"))}</span>
+            <span>${escapeHtml(state.online ? text("Backend connected", "Backend подключен") : text("Pilot workspace", "Пилотный контур"))}</span>
+            <span>${escapeHtml(text("Owner + manager workflow", "Собственник + менеджер"))}</span>
           </div>
         </div>
         <div class="command-center-table" role="table" aria-label="${escapeAttr(text("Command Center action queue", "Очередь действий командного центра"))}">
@@ -1754,8 +1758,8 @@ function weeklyRhythmPanel() {
       title: text("Weekly topic approved", "Тема недели согласована")
     },
     {
-      label: text("AgentResult", "AgentResult"),
-      title: text("AI draft + style check", "AI-текст + проверка стиля")
+      label: text("System", "Система"),
+      title: text("Draft + style check", "Черновик + проверка стиля")
     },
     {
       label: text("Manager QA", "Менеджер QA"),
@@ -1802,7 +1806,7 @@ function ownerCommandPriority(pending) {
     const context = getApprovalContext(pendingApproval);
     return {
       title: text(`Approve weekly topic: ${context.title}`, `Согласовать тему недели: ${context.title}`),
-      note: text("Approve the topic and boundary once. Then AgentResult drafts; manager QA moves it to release.", "Согласовать тему и границу один раз. Дальше AgentResult пишет; менеджер QA ведёт к выпуску."),
+      note: text("Approve the topic and boundary once. Then the system drafts; manager QA moves it to release.", "Согласовать тему и границу один раз. Дальше система готовит текст; менеджер QA ведёт к выпуску."),
       action: "go-approval",
       id: pendingApproval.id,
       label: text("Approve topic", "Согласовать тему")
@@ -3019,17 +3023,14 @@ function resultsDeskTable(results = []) {
   }
   const headers = [
     text("Publication", "Публикация"),
-    text("URL", "URL"),
     text("Channel", "Канал"),
-    text("Format", "Формат"),
     text("Reactions", "Реакции"),
-    text("Next step", "Следующий шаг"),
-    text("Actions", "Действия")
+    text("Next step", "Следующий шаг")
   ];
   return `
     <div class="results-desk-table" style="--results-cols:${headers.length}">
       ${headers.map((header) => `<div class="results-table-head">${escapeHtml(header)}</div>`).join("")}
-      ${results.map((item) => resultsDeskRow(item).join("")).join("")}
+      ${results.map((item) => `<article class="results-table-row">${resultsDeskRow(item).join("")}</article>`).join("")}
     </div>
   `;
 }
@@ -3039,13 +3040,10 @@ function resultsDeskRow(item) {
   const url = item.publication_url || text("not attached", "не прикреплён");
   const isSelected = item.id === state.selectedPublicationResultId || (!state.selectedPublicationResultId && publicationResultsForDesk()[0]?.id === item.id);
   return [
-    `<div class="results-table-cell result-title-cell"><button class="result-title-button ${isSelected ? "active" : ""}" data-action="select-publication-result" data-id="${escapeAttr(item.id)}"><strong>${escapeHtml(item.title || text("Confirmed publication", "Подтверждённая публикация"))}</strong><span>${escapeHtml(formatDate(item.confirmed_at || item.created_at || ""))}</span></button></div>`,
-    `<div class="results-table-cell"><span class="result-url">${escapeHtml(url)}</span></div>`,
-    `<div class="results-table-cell">${escapeHtml(displayChannel(item.channel || "manual"))}</div>`,
-    `<div class="results-table-cell">${escapeHtml(labelize(item.format || "publication"))}</div>`,
+    `<div class="results-table-cell result-title-cell"><button class="result-title-button ${isSelected ? "active" : ""}" data-action="select-publication-result" data-id="${escapeAttr(item.id)}"><strong>${escapeHtml(item.title || text("Confirmed publication", "Подтверждённая публикация"))}</strong><span>${escapeHtml([formatDate(item.confirmed_at || item.created_at || ""), url].filter(Boolean).join(" · "))}</span></button></div>`,
+    `<div class="results-table-cell"><strong class="result-channel">${escapeHtml(displayChannel(item.channel || "manual"))}</strong><span class="result-url">${escapeHtml(displayFormat(item.format || "publication"))}</span></div>`,
     `<div class="results-table-cell">${escapeHtml(reactions)}</div>`,
-    `<div class="results-table-cell"><mark>${escapeHtml(publicationNextStepLabel(item.next_step))}</mark></div>`,
-    `<div class="results-table-cell"><div class="button-row compact">${publicationResultActions(item)}</div></div>`
+    `<div class="results-table-cell"><mark>${escapeHtml(publicationNextStepLabel(item.next_step))}</mark></div>`
   ];
 }
 
@@ -3078,7 +3076,7 @@ function resultsDeskDetail(item) {
       <div class="result-detail-grid">
         <div><span>${escapeHtml(text("URL", "URL"))}</span><strong>${escapeHtml(item.publication_url || text("not attached", "не прикреплён"))}</strong></div>
         <div><span>${escapeHtml(text("Channel", "Канал"))}</span><strong>${escapeHtml(displayChannel(item.channel || "manual"))}</strong></div>
-        <div><span>${escapeHtml(text("Format", "Формат"))}</span><strong>${escapeHtml(labelize(item.format || "publication"))}</strong></div>
+        <div><span>${escapeHtml(text("Format", "Формат"))}</span><strong>${escapeHtml(displayFormat(item.format || "publication"))}</strong></div>
         <div><span>${escapeHtml(text("Confirmed", "Подтверждено"))}</span><strong>${escapeHtml(formatDate(item.confirmed_at || ""))}</strong></div>
       </div>
       <div class="result-reaction-grid">
@@ -3106,7 +3104,7 @@ function publicationReactionSummary(reactions = {}) {
 
 function publicationResultActions(item) {
   return `
-    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
+    <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переиспользовать"))}</button>
     <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
     <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
     <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
@@ -3147,7 +3145,7 @@ function publicationResultRow(item) {
   const url = item.publication_url || "";
   const source = [
     displayChannel(item.channel || "manual"),
-    labelize(item.format || "publication")
+    displayFormat(item.format || "publication")
   ].filter(Boolean).join(" · ");
   return `
     <article class="result-action-row publication-result-row">
@@ -3158,7 +3156,7 @@ function publicationResultRow(item) {
         <p>${escapeHtml(`${reactionSummary}. ${text("Next:", "Дальше:")} ${nextLabel}`)}</p>
       </div>
       <div class="button-row compact">
-        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переисп."))}</button>
+        <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|reuse`)}">${escapeHtml(text("Reuse", "Переиспользовать"))}</button>
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|expand`)}">${escapeHtml(text("Expand", "Расширить"))}</button>
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|update`)}">${escapeHtml(text("Update", "Обновить"))}</button>
         <button class="button secondary table-button" data-action="set-publication-result-step" data-id="${escapeAttr(`${item.id}|${item.calendar_item_id}|leave`)}">${escapeHtml(text("Leave", "Оставить"))}</button>
@@ -3613,7 +3611,7 @@ function renderTechnicalSettings() {
       <div class="panel-heading compact">
         <div>
           <p class="eyebrow">${text("Owner control", "Контроль собственника")}</p>
-          <h3>${state.online ? text("Workspace is connected", "Рабочий контур подключён") : text("Demo loop is ready to review", "Демо-цикл готов к просмотру")}</h3>
+          <h3>${state.online ? text("Workspace is connected", "Рабочий контур подключён") : text("Pilot loop is ready to review", "Пилотный контур готов к просмотру")}</h3>
         </div>
         <span class="status-dot ${state.online ? "online" : "offline"}"></span>
       </div>
@@ -3790,14 +3788,14 @@ function buildPreviewText(item, calendarItem, contentItem, channel) {
         "- спрашивает согласование перед публичной публикацией",
         "- собирает недельный пакет материалов даже до подключения интеграций",
         "",
-        "Следующий шаг: согласовать темы недели и границы; AgentResult пишет, менеджер QA проверяет, дальше выпуск."
+        "Следующий шаг: согласовать темы недели и границы; система готовит текст, менеджер QA проверяет, дальше выпуск."
       ].join("\n")
     );
   }
   if (channel === "website") {
     return text(
-      "H1: AgentResult Growth Control for B2B companies\nMeta: Turn weekly topics and owner boundaries into AI drafts, manager QA, regular release and tracked signals.\nPrimary CTA: Start the first controlled release",
-      "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите темы недели и границы собственника в AI-тексты, QA менеджера, регулярный выпуск и фиксируемые сигналы.\nГлавный CTA: Запустить первый управляемый выпуск"
+      "H1: GrothOS Content Ops for B2B content teams\nMeta: Turn weekly topics and owner boundaries into drafts, manager QA, regular release and tracked publication results.\nPrimary CTA: Start the first controlled release",
+      "H1: GrothOS Content Ops для B2B-контента\nMeta: Превратите темы недели и границы собственника в черновики, QA менеджера, регулярный выпуск и фиксируемые результаты публикаций.\nГлавный CTA: Запустить первый управляемый выпуск"
     );
   }
   if (channel === "email") {
@@ -3944,7 +3942,7 @@ function buildTodayActions(pending, reviewContent) {
     actions.push(
       {
         title: text("Create the first client acquisition topic", "Создать первую тему для привлечения клиентов"),
-        meta: text("Start with product, pain, comparison and lead magnet opportunities.", "Начните с продукта, боли, сравнения и лид-магнита."),
+        meta: text("Start with product, pain, comparison and checklist opportunities.", "Начните с продукта, боли, сравнения и чеклиста."),
         actionLabel: text("Open", "Открыть"),
         action: "go-demand-map",
         id: "demand"
@@ -4067,7 +4065,7 @@ function demandProblem(item) {
   const type = labelize(item.item_type || "");
   if (type.includes("comparison")) return text("Helps compare options without vague promises", "Помогает сравнить варианты без мутных обещаний");
   if (type.includes("pain")) return text("Explains a painful situation and the way out", "Объясняет боль и понятный выход");
-  if (type.includes("tool")) return text("Turns interest into a lead magnet or audit", "Превращает интерес в лид-магнит или аудит");
+  if (type.includes("tool")) return text("Turns interest into a checklist or audit", "Превращает интерес в чеклист или аудит");
   if (type.includes("region")) return text("Shows relevance for a specific market", "Показывает релевантность для конкретного рынка");
   return item.intent || text("Shows why this offer matters", "Показывает, зачем нужен оффер");
 }
@@ -4277,6 +4275,16 @@ function displayChannel(value) {
   if (label === "website") return text("website", "сайт");
   if (label === "social") return text("social channels", "соцсети");
   if (label === "publishing") return text("release queue", "очередь выпуска");
+  return tr(label);
+}
+
+function displayFormat(value) {
+  const label = labelize(value || "publication").toLowerCase();
+  if (label === "publication") return text("publication", "публикация");
+  if (label === "telegram post") return text("Telegram post", "пост Telegram");
+  if (label === "article outline") return text("article outline", "план статьи");
+  if (label === "landing page") return text("website page", "страница сайта");
+  if (label === "lead magnet") return text("checklist", "чеклист");
   return tr(label);
 }
 
@@ -5152,18 +5160,18 @@ function packageAssets() {
   return [
     {
       id: "seo",
-      label: text("Website page: AgentResult Growth Control", "Страница сайта: AgentResult Growth Control"),
+      label: text("Website page: GrothOS Content Ops", "Страница сайта: GrothOS Content Ops"),
       preview: text(
-        "H1: AgentResult Growth Control for B2B companies\nMeta: Turn weekly topics into AI drafts, manager QA, controlled release, and tracked distribution signals.\nCTA: Start the first controlled release.",
-        "H1: AgentResult Growth Control для B2B-компаний\nMeta: Превратите темы недели в AI-тексты, QA менеджера, контролируемый выпуск и фиксируемые сигналы дистрибуции.\nCTA: Запустить первый управляемый выпуск."
+        "H1: GrothOS Content Ops for B2B content teams\nMeta: Turn weekly topics into drafts, manager QA, controlled release, and tracked publication results.\nCTA: Start the first controlled release.",
+        "H1: GrothOS Content Ops для B2B-контента\nMeta: Превратите темы недели в черновики, QA менеджера, контролируемый выпуск и фиксируемые результаты публикаций.\nCTA: Запустить первый управляемый выпуск."
       )
     },
     {
       id: "telegram",
       label: text("Telegram posts: 2", "Посты Telegram: 2"),
       preview: text(
-        "Post 1: AgentResult Growth Control is not an AI writer. It is a weekly control loop: topic, proof, draft, approval, release, result.\n\nPost 2: The safest first automation is not automatic publishing. It is a clear approval queue where the owner sees what will go public and why.",
-        "Пост 1: AgentResult Growth Control — не «AI-писатель». Это рабочий цикл: тема, доказательства, черновик, согласование, выпуск, результат.\n\nПост 2: Самая безопасная первая автоматизация — не автопубликация. Это понятная очередь согласований, где собственник видит, что выйдет и зачем."
+        "Post 1: GrothOS Content Ops is not an AI writer. It is a weekly control loop: topic, proof, draft, approval, release, result.\n\nPost 2: The safest first automation is not automatic publishing. It is a clear approval queue where the owner sees what will go public and why.",
+        "Пост 1: GrothOS Content Ops — не «AI-писатель». Это рабочий цикл: тема, доказательства, черновик, согласование, выпуск, результат.\n\nПост 2: Самая безопасная первая автоматизация — не автопубликация. Это понятная очередь согласований, где собственник видит, что выйдет и зачем."
       )
     },
     {
@@ -5178,16 +5186,16 @@ function packageAssets() {
       id: "email",
       label: text("Email newsletter: 1", "Email-рассылка: 1"),
       preview: text(
-        "Subject: A safer start for AgentResult content release\n\nBody: Start with weekly topics, AI drafts, manager QA, controlled release, and result tracking.",
-        "Тема: Безопасный старт выпуска контента AgentResult\n\nТело: Начните с тем недели, AI-черновиков, QA менеджера, контролируемого выпуска и фиксации результата."
+        "Subject: A safer start for GrothOS content release\n\nBody: Start with weekly topics, drafts, manager QA, controlled release, and result tracking.",
+        "Тема: Безопасный старт выпуска контента GrothOS\n\nТело: Начните с тем недели, черновиков, QA менеджера, контролируемого выпуска и фиксации результата."
       )
     },
     {
       id: "lead-magnet",
-      label: text("Lead magnet: 1", "Лид-магнит: 1"),
+      label: text("Checklist: 1", "Чеклист: 1"),
       preview: text(
-        "AgentResult Growth Control Readiness Checklist\n- Offer clarity\n- ICP and pains\n- Proof assets\n- Weekly topic owner\n- Manager QA owner\n- Release channel",
-        "Чеклист готовности к AgentResult Growth Control\n- Ясность оффера\n- Кому продаём и какие боли закрываем\n- Доказательства\n- Кто согласует темы недели\n- Кто проверяет QA\n- Канал выпуска"
+        "GrothOS Content Ops Readiness Checklist\n- Offer clarity\n- Audience and pains\n- Proof assets\n- Weekly topic owner\n- Manager QA owner\n- Release channel",
+        "Чеклист готовности к GrothOS Content Ops\n- Ясность оффера\n- Аудитория и боли\n- Доказательства\n- Кто согласует темы недели\n- Кто проверяет QA\n- Канал выпуска"
       )
     }
   ];

@@ -2340,9 +2340,11 @@ select:focus {
   }
 
   .nav-link {
-    flex: 0 0 auto;
+    flex: 1 1 0;
+    justify-content: center;
     min-height: 44px;
-    padding: 0 14px;
+    min-width: 0;
+    padding: 0 10px;
     border-radius: 999px;
     white-space: nowrap;
     font-size: 13px;

@@ -265,7 +265,7 @@
 
 .results-desk-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
   gap: 12px;
   align-items: start;
 }
@@ -276,11 +276,15 @@
 
 .results-desk-table {
   display: grid;
-  grid-template-columns: minmax(130px, 1.2fr) minmax(100px, 0.72fr) minmax(70px, 0.48fr) minmax(80px, 0.52fr) minmax(96px, 0.68fr) minmax(96px, 0.62fr) minmax(132px, 0.9fr);
-  min-width: 720px;
+  grid-template-columns: minmax(240px, 1.45fr) minmax(110px, 0.56fr) minmax(130px, 0.68fr) minmax(180px, 0.86fr);
+  min-width: 0;
   border: 1px solid var(--hairline);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.results-table-row {
+  display: contents;
 }
 
 .results-table-head,
@@ -308,9 +312,7 @@
 .result-title-cell span {
   display: block;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .result-title-button {
@@ -335,17 +337,23 @@
 }
 
 .result-title-cell span,
+.result-channel,
 .result-url {
+  display: block;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.25;
 }
 
+.result-channel {
+  margin-bottom: 3px;
+  color: var(--body-strong);
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .result-url {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .results-table-cell mark {
@@ -838,7 +846,47 @@
   }
 
   .results-desk-table {
-    min-width: 760px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .results-table-head {
+    display: none;
+  }
+
+  .results-table-row {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .results-table-cell {
+    min-height: 0;
+    padding: 10px 12px;
+    border-right: 0;
+    background: #ffffff;
+  }
+
+  .results-table-cell:last-child {
+    border-bottom: 0;
+  }
+
+  .results-table-cell .button-row.compact {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .results-table-cell .table-button {
+    width: 100%;
   }
 
   .weekly-rhythm-grid {
