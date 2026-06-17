@@ -55,6 +55,8 @@ function assertDashboardScriptContract() {
   const appJs = readFileSync("apps/dashboard/app.js", "utf8");
   assert(appJs.includes('data-action="complete-week-two-review"'), "Dashboard week-2 review buttons are missing");
   assert(appJs.includes('api("/pilot/week-2/review"'), "Dashboard week-2 review must call backend pilot command");
+  assert(appJs.includes("function pilotScopeWeek(scope)"), "Dashboard pilot scope approval helper is missing");
+  assert(appJs.includes("pilotScopeWeek(item?.scope)"), "Dashboard pilot scope title should support week-3 scope approvals");
 }
 
 async function clickUnique(page, selector) {

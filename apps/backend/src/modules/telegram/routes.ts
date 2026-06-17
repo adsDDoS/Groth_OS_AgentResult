@@ -842,7 +842,7 @@ async function completeDaySevenReviewFromTelegram(
   return {
     command: "day7",
     text: renderDaySevenReviewMessage({ nextStep, review: result }),
-    buttons: weekTwoScopeCommandButtons(result.week_2_scope) || publicationResultCommandButtons(ownerBrief),
+    buttons: pilotScopeCommandButtons(result.week_2_scope) || publicationResultCommandButtons(ownerBrief),
     ownerBrief,
     reviewResult: result
   };
@@ -990,7 +990,7 @@ async function completeWeekTwoReviewFromTelegram(
   return {
     command: "week2_review",
     text: renderWeekTwoReviewMessage({ nextStep, review: result }),
-    buttons: weekTwoScopeCommandButtons(result.week_3_scope) || publicationResultCommandButtons(ownerBrief),
+    buttons: pilotScopeCommandButtons(result.week_3_scope) || publicationResultCommandButtons(ownerBrief),
     ownerBrief,
     reviewResult: result
   };
@@ -2192,7 +2192,7 @@ function publicationResultCommandButtons(brief: OwnerBrief): TelegramCommandButt
   ];
 }
 
-function weekTwoScopeCommandButtons(scope: unknown): TelegramCommandButton[] | null {
+function pilotScopeCommandButtons(scope: unknown): TelegramCommandButton[] | null {
   const approval = scope && typeof scope === "object" && "approval" in scope
     ? (scope as Row).approval
     : null;

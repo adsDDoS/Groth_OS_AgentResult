@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add backend-owned week-2 result review
+Add first-class week-3 scope approvals
 ```
 
 Before changing product or dashboard behavior, read:
@@ -60,6 +60,7 @@ Ready:
 - Telegram owner-control supports `/week2_status`, `/week2_board`, and `/w2`; it renders the same backend week-2 execution view with targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
 - Backend week-2 result review is now `POST /pilot/week-2/review`; it closes active week-2 execution after confirmed URL, records `expand / reuse / update / leave`, completes the week-2 execution task, marks the week-2 result-review board item complete, creates backend-owned `week_3_scope`, updates workspace state, and writes owner-action audit. Week-3 scope uses the shared next-scope proposal builder instead of copying Day-7-specific logic.
 - Dashboard and Telegram now route active week-2 `result_review` choices through `POST /pilot/week-2/review`; dashboard renders direct `reuse / expand / update / leave` buttons in the week-2 panel, and Telegram `reuse / expand / update / leave` closes week-2 only when the backend active execution is at `result_review`.
+- Pilot scope approvals are now first-class for `pilot_week_N_scope`: approving/requesting changes on `pilot_week_2_scope`, `pilot_week_3_scope`, or later generated scope approvals writes matching `week_N_scope` side effects to next material metadata, board item metadata, and tenant workspace state. Dashboard renders week-N pilot scope approval copy dynamically; Telegram uses the same approval actions and only auto-starts week-2 execution for approved `pilot_week_2_scope`.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -203,16 +204,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Make week-3 scope first-class approval flow in dashboard and Telegram:
+Add backend-owned start week-3 execution command:
 
 ```text
-Generalize scope approval side effects beyond pilot_week_2_scope so pilot_week_3_scope can be inspected, approved, or adjusted from dashboard and Telegram before any week-3 execution starts.
+Start week-3 production only after approved pilot_week_3_scope, reusing the generic week execution pattern instead of copying week-2-specific execution logic.
 ```
 
 Why this is next:
 
 ```text
-Week-2 review now creates week_3_scope from product surfaces. The next leverage point is making that proposed scope operationally real instead of leaving it as a pending approval object with week-2-specific approval side effects.
+Week-3 scope can now be approved or adjusted from product surfaces. The next leverage point is turning an approved week-3 scope into real execution: active board, material approval, QA/release ownership, URL confirmation, and result review.
 ```
 
 Suggested first files to inspect:
@@ -220,6 +221,9 @@ Suggested first files to inspect:
 ```text
 apps/dashboard/app.js
 apps/dashboard/modules/publications.js
+apps/backend/src/modules/approvals/service.ts
+apps/backend/src/modules/pilot/routes.ts
+apps/backend/src/modules/telegram/routes.ts
 apps/backend/src/routes.ts
 apps/backend/src/modules
 scripts/dashboard-smoke.mjs

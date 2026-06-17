@@ -178,6 +178,17 @@ try {
   assert(closedWeek2.data.text.includes("Week-2 review закрыт"), "telegram week-2 review close text missing");
   assert(closedWeek2.data.reviewResult?.week_3_scope?.approval?.scope === "pilot_week_3_scope", "telegram week-2 review should create week-3 scope");
   assert(closedWeek2.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek2.data.reviewResult.week_3_scope.approval.id), "telegram week-3 approval button missing");
+  const approvedWeekThreeScope = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: closedWeek2.data.reviewResult.week_3_scope.approval.id,
+    note: "Approve week-3 scope from Telegram."
+  }, tenantId);
+  assert(approvedWeekThreeScope.response.statusCode === 200, `telegram week-3 scope approve failed: ${approvedWeekThreeScope.response.statusCode} ${approvedWeekThreeScope.response.body}`);
+  assert(approvedWeekThreeScope.data.result?.scope === "pilot_week_3_scope", "telegram week-3 scope approval result mismatch");
+  assert(approvedWeekThreeScope.data.result?.status === "approved", "telegram week-3 scope approval status mismatch");
+  assert(!approvedWeekThreeScope.data.weekTwoExecution, "telegram week-3 scope approval should not start week-2 execution");
+  const weekThreeMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [closedWeek2.data.reviewResult.week_3_scope.next_material.id, tenantId]);
+  assert(weekThreeMaterialRows.rows[0]?.metadata?.week_3_scope?.approval_status === "approved", "telegram approved week-3 material metadata missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

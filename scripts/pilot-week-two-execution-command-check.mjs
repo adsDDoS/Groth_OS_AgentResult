@@ -183,6 +183,16 @@ try {
   assert(weekTwoReview.data?.week_2_review?.status === "published", "week-2 review board item should be completed");
   const reviewedMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [started.data.content.id, tenantId]);
   assert(reviewedMaterialRows.rows[0]?.metadata?.week_2_execution?.status === "completed", "week-2 material execution metadata should be completed");
+  const approveWeekThree = await inject("POST", `/approvals/${weekTwoReview.data.week_3_scope.approval.id}/approve`, {
+    note: "Approve week-3 scope from operator."
+  }, tenantId);
+  assert(approveWeekThree.response.statusCode === 200, `week-3 scope approve failed: ${approveWeekThree.response.statusCode} ${approveWeekThree.response.body}`);
+  const approvedWeekThreeMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [weekTwoReview.data.week_3_scope.next_material.id, tenantId]);
+  assert(approvedWeekThreeMaterialRows.rows[0]?.metadata?.week_3_scope?.approval_status === "approved", "approved week-3 content metadata missing");
+  const approvedWeekThreeBoardRows = await query("select * from publishing_calendar_items where tenant_id = $1 order by created_at desc limit 300", [tenantId]);
+  assert(approvedWeekThreeBoardRows.rows.some((item) => item.metadata?.week_3_scope?.approval_status === "approved" && item.content_item_id === weekTwoReview.data.week_3_scope.next_material.id), "approved week-3 board metadata missing");
+  const approvedWeekThreeWorkspaceRows = await query("select * from tenants where id = $1", [tenantId]);
+  assert(approvedWeekThreeWorkspaceRows.rows[0]?.settings?.dashboard_state?.activePilotWorkspace?.week_3_scope?.approval_status === "approved", "approved week-3 workspace metadata missing");
 
   const repeated = await inject("POST", "/pilot/week-2/start", {
     note: "Idempotent repeat."
@@ -212,6 +222,42 @@ try {
   const otherStarted = await inject("POST", "/pilot/week-2/start", {}, otherTenantId);
   assert(otherStarted.response.statusCode === 200, `other tenant week-2 start failed: ${otherStarted.response.statusCode} ${otherStarted.response.body}`);
   assert(otherStarted.data.content?.id !== started.data.content?.id, "week-2 execution leaked content across tenants");
+  const otherMaterialApproval = await inject("POST", `/approvals/${otherStarted.data.approval.id}/approve`, {
+    note: "Other tenant week-2 material approved."
+  }, otherTenantId);
+  assert(otherMaterialApproval.response.statusCode === 200, `other tenant material approval failed: ${otherMaterialApproval.response.statusCode} ${otherMaterialApproval.response.body}`);
+  const otherAfterMaterialApproval = await inject("GET", "/pilot/week-2/execution", undefined, otherTenantId);
+  const otherHandoffCalendarId = otherAfterMaterialApproval.data.actions.handoff_release.calendar_item_id;
+  await inject("POST", `/publishing/items/${otherHandoffCalendarId}/handoff`, {
+    note: "Other tenant week-2 handoff."
+  }, otherTenantId);
+  await inject("POST", `/publishing/items/${otherHandoffCalendarId}/confirm-live`, {
+    note: "Other tenant week-2 publication confirmed.",
+    publicationUrl: "https://t.me/agentresult/904",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 1,
+      reposts: 0,
+      saves: 1,
+      reactions: 3
+    },
+    nextStep: "reuse",
+    nextStepNote: "Reuse other tenant week-2 proof."
+  }, otherTenantId);
+  const otherAfterConfirmation = await inject("GET", "/pilot/week-2/execution", undefined, otherTenantId);
+  const otherWeekTwoReview = await inject("POST", "/pilot/week-2/review", {
+    publicationResultId: otherAfterConfirmation.data.actions.review_result.publication_result_id,
+    nextStep: "reuse",
+    note: "Reuse other tenant week-2 proof."
+  }, otherTenantId);
+  assert(otherWeekTwoReview.response.statusCode === 200, `other tenant week-2 review failed: ${otherWeekTwoReview.response.statusCode} ${otherWeekTwoReview.response.body}`);
+  const changeWeekThree = await inject("POST", `/approvals/${otherWeekTwoReview.data.week_3_scope.approval.id}/request-changes`, {
+    note: "Make week-3 scope narrower before execution."
+  }, otherTenantId);
+  assert(changeWeekThree.response.statusCode === 200, `week-3 scope request changes failed: ${changeWeekThree.response.statusCode} ${changeWeekThree.response.body}`);
+  const changedWeekThreeMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [otherWeekTwoReview.data.week_3_scope.next_material.id, otherTenantId]);
+  assert(changedWeekThreeMaterialRows.rows[0]?.metadata?.week_3_scope?.approval_status === "changes_requested", "changed week-3 content metadata missing");
+  assert(changedWeekThreeMaterialRows.rows[0]?.metadata?.week_3_scope?.adjustment_note === "Make week-3 scope narrower before execution.", "changed week-3 adjustment note missing");
 
   console.log("Pilot week-2 execution command check passed");
 } finally {

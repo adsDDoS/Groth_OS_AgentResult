@@ -71,8 +71,8 @@ export async function decideApproval(input: {
   if (approval?.status === "approved") {
     await applyApprovalSideEffects(approval);
   }
-  if (approval?.scope === "pilot_week_2_scope" && ["approved", "changes_requested"].includes(String(approval.status))) {
-    await applyPilotWeekTwoScopeApprovalSideEffects(approval);
+  if (isPilotWeekScopeApproval(approval) && ["approved", "changes_requested"].includes(String(approval.status))) {
+    await applyPilotScopeApprovalSideEffects(approval);
   }
   if (approval) {
     await recordOwnerActionAudit({
@@ -94,23 +94,34 @@ export async function decideApproval(input: {
   return approval;
 }
 
-async function applyPilotWeekTwoScopeApprovalSideEffects(approval: Record<string, unknown>) {
+function pilotWeekScopeNumber(scope: unknown) {
+  const match = String(scope || "").match(/^pilot_week_(\d+)_scope$/);
+  return match ? Number(match[1]) : null;
+}
+
+function isPilotWeekScopeApproval(approval: Record<string, unknown> | null | undefined) {
+  return Boolean(pilotWeekScopeNumber(approval?.scope));
+}
+
+async function applyPilotScopeApprovalSideEffects(approval: Record<string, unknown>) {
   const tenantId = typeof approval.tenant_id === "string" ? approval.tenant_id : "";
   const targetId = typeof approval.target_id === "string" ? approval.target_id : "";
   const status = typeof approval.status === "string" ? approval.status : "";
-  if (!tenantId || !targetId || !status) return;
+  const week = pilotWeekScopeNumber(approval.scope);
+  if (!tenantId || !targetId || !status || !week) return;
+  const scopeKey = `week_${week}_scope`;
 
   const contentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [targetId, tenantId]);
   const content = contentResult.rows[0] ?? null;
   if (content) {
     const metadata = content.metadata && typeof content.metadata === "object" ? content.metadata as Record<string, unknown> : {};
-    const currentScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
-      ? metadata.week_2_scope as Record<string, unknown>
+    const currentScope = metadata[scopeKey] && typeof metadata[scopeKey] === "object"
+      ? metadata[scopeKey] as Record<string, unknown>
       : {};
     await patchJson("content_items", targetId, {
       metadata: {
         ...metadata,
-        week_2_scope: {
+        [scopeKey]: {
           ...currentScope,
           approval_id: approval.id ?? null,
           approval_status: status,
@@ -123,17 +134,17 @@ async function applyPilotWeekTwoScopeApprovalSideEffects(approval: Record<string
   }
 
   const boardResult = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]);
-  const boardRows = boardResult.rows.filter((row) => row.content_item_id === targetId && row.metadata?.week_2_scope);
+  const boardRows = boardResult.rows.filter((row) => row.content_item_id === targetId && row.metadata?.[scopeKey]);
   await Promise.all(boardRows.map((row) => {
     const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata as Record<string, unknown> : {};
-    const currentScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
-      ? metadata.week_2_scope as Record<string, unknown>
+    const currentScope = metadata[scopeKey] && typeof metadata[scopeKey] === "object"
+      ? metadata[scopeKey] as Record<string, unknown>
       : {};
     return patchJson("publishing_calendar_items", String(row.id), {
       status: status === "changes_requested" ? "review" : row.status,
       metadata: {
         ...metadata,
-        week_2_scope: {
+        [scopeKey]: {
           ...currentScope,
           approval_id: approval.id ?? null,
           approval_status: status,
@@ -145,7 +156,7 @@ async function applyPilotWeekTwoScopeApprovalSideEffects(approval: Record<string
     }, tenantId);
   }));
 
-  await patchPilotWorkspaceWeekTwoScopeApproval(tenantId, {
+  await patchPilotWorkspaceScopeApproval(tenantId, scopeKey, {
     approval_id: approval.id ?? null,
     approval_status: status,
     adjustment_note: status === "changes_requested" ? approval.decision_note ?? "" : null,
@@ -154,7 +165,7 @@ async function applyPilotWeekTwoScopeApprovalSideEffects(approval: Record<string
   });
 }
 
-async function patchPilotWorkspaceWeekTwoScopeApproval(tenantId: string, patch: Record<string, unknown>) {
+async function patchPilotWorkspaceScopeApproval(tenantId: string, scopeKey: string, patch: Record<string, unknown>) {
   const result = await query("select * from tenants where id = $1", [tenantId]);
   const tenant = result.rows[0] ?? null;
   if (!tenant) return;
@@ -165,15 +176,15 @@ async function patchPilotWorkspaceWeekTwoScopeApproval(tenantId: string, patch: 
   const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
     ? { ...(dashboardState.activePilotWorkspace as Record<string, unknown>) }
     : {};
-  const weekTwoScope = activePilotWorkspace.week_2_scope && typeof activePilotWorkspace.week_2_scope === "object"
-    ? { ...(activePilotWorkspace.week_2_scope as Record<string, unknown>) }
+  const currentScope = activePilotWorkspace[scopeKey] && typeof activePilotWorkspace[scopeKey] === "object"
+    ? { ...(activePilotWorkspace[scopeKey] as Record<string, unknown>) }
     : {};
   settings.dashboard_state = {
     ...dashboardState,
     activePilotWorkspace: {
       ...activePilotWorkspace,
-      week_2_scope: {
-        ...weekTwoScope,
+      [scopeKey]: {
+        ...currentScope,
         ...patch
       }
     }

@@ -111,7 +111,7 @@ Request body:
 
 Response includes `{ decision, publication_result, action, target, target_type, week_2_scope, day_7_review, task, workspace_state }`. `week_2_scope` contains the week-2 next material, five board items, owner/release/result roles, one-channel constraint, `continue / repair / narrow` decision, and a pending `pilot_week_2_scope` approval. Dashboard and Telegram owner-control use this response; they do not create week-2 scope locally.
 
-Approving the returned `pilot_week_2_scope` approval marks the week-2 scope as approved on the next material, board items, and workspace state. Requesting changes stores the adjustment note on the same backend-owned objects so the operator can revise the scope before week-2 production starts.
+Approving a returned `pilot_week_N_scope` approval marks the matching `week_N_scope` as approved on the next material, board items, and workspace state. Requesting changes stores the adjustment note on the same backend-owned objects so the operator can revise the scope before the next production loop starts. This applies to `pilot_week_2_scope`, `pilot_week_3_scope`, and later week scopes created by the same backend scope proposal builder.
 
 `POST /pilot/week-2/start` starts backend-owned week-2 execution only after the `pilot_week_2_scope` approval is approved. It moves the next material into review, marks the Day-8 board item as started, creates a `pilot_week_2_execution` task, opens the week-2 material approval, updates tenant workspace state, and writes owner-action audit. Repeating the command is idempotent and returns `status: "already_started"` with the existing execution objects.
 
