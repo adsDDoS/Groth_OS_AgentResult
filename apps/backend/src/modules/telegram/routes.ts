@@ -781,6 +781,7 @@ function renderDaySevenReviewMessage(input: {
     lines.push("Week-2 scope создан.");
     lines.push(`Канал: ${textValue(weekTwoScope.channel_constraint, "один проверенный канал")}.`);
     if (nextMaterial) lines.push(`Следующий материал: ${textValue(nextMaterial.title, "материал недели 2")}.`);
+    lines.push("Нужно согласовать scope или запросить правки.");
   }
 
   return lines.join("\n");
@@ -813,7 +814,7 @@ async function completeDaySevenReviewFromTelegram(
   return {
     command: "day7",
     text: renderDaySevenReviewMessage({ nextStep, review: result }),
-    buttons: publicationResultCommandButtons(ownerBrief),
+    buttons: weekTwoScopeCommandButtons(result.week_2_scope) || publicationResultCommandButtons(ownerBrief),
     ownerBrief,
     reviewResult: result
   };
@@ -1954,6 +1955,20 @@ function publicationResultCommandButtons(brief: OwnerBrief): TelegramCommandButt
     commandButton("reuse", "Переиспользовать", targetId),
     commandButton("expand", "Расширить", targetId),
     commandButton("update", "Обновить", targetId)
+  ];
+}
+
+function weekTwoScopeCommandButtons(scope: unknown): TelegramCommandButton[] | null {
+  const approval = scope && typeof scope === "object" && "approval" in scope
+    ? (scope as Row).approval
+    : null;
+  const targetId = approval && typeof approval === "object" && typeof (approval as Row).id === "string"
+    ? String((approval as Row).id)
+    : null;
+  if (!targetId) return null;
+  return [
+    commandButton("osapprove", "Согласовать scope", targetId),
+    commandButton("changes", "Правки scope", targetId)
   ];
 }
 

@@ -4249,6 +4249,7 @@ function contentStatusForDecision(status) {
 
 function approvalReason(item, channel) {
   const channelName = displayChannel(channel);
+  if (item.scope === "pilot_week_2_scope") return text("Approve the week-2 scope before the team starts the next production loop.", "Согласуйте scope недели 2 до старта следующего производственного цикла.");
   if (item.scope === "sensitive_claim") return text("Approve the boundary for claims that need proof or owner-level risk control.", "Согласуйте границу утверждений, где нужны доказательства или контроль риска собственника.");
   if (item.scope === "social_post") return text(`Approve the weekly topic and public boundary for ${channelName}; manager QA checks the final text.`, `Согласуйте тему недели и публичные границы для ${channelName}; финальный текст проверяет менеджер QA.`);
   if (item.scope === "publish") return text("This approves the weekly release direction before AgentResult drafts and manager QA.", "Это согласует направление недельного выпуска до AI-текстов и QA менеджера.");
@@ -4257,6 +4258,7 @@ function approvalReason(item, channel) {
 
 function approvalOutcome(item, channel) {
   const channelName = displayChannel(channel);
+  if (item.scope === "pilot_week_2_scope") return text("Week 2 can move into owner approval, QA, release handoff, URL confirmation, and next-step review.", "Неделя 2 перейдёт в согласование, QA, передачу на выпуск, подтверждение URL и следующий review.");
   if (item.scope === "publish") return text(`AgentResult can draft for ${channelName}; manager QA checks quality before release.`, `AgentResult сможет писать для ${channelName}; менеджер QA проверит качество перед выпуском.`);
   if (item.scope === "social_post") return text(`The ${channelName} topic can move into AI drafting and manager QA.`, `Тема для ${channelName} перейдёт в AI-подготовку и QA менеджера.`);
   if (item.scope === "sensitive_claim") return text("AgentResult keeps the approved boundary; exceptions return to the owner.", "AgentResult держит согласованную границу; исключения возвращаются собственнику.");
@@ -4303,6 +4305,7 @@ function channelFromScope(scope) {
   if (scope === "newsletter_send") return "email";
   if (scope === "social_post") return "social";
   if (scope === "publish") return "publishing";
+  if (scope === "pilot_week_2_scope") return "pilot";
   return "unknown";
 }
 
@@ -4313,6 +4316,7 @@ function approvalTitle(item, calendarItem = null, contentItem = null, channel = 
   const linkedTitle = calendarItem?.title || contentItem?.title;
 
   if (linkedTitle) return linkedTitle;
+  if (item?.scope === "pilot_week_2_scope") return text("Week-2 pilot scope", "Scope недели 2");
   if (lower.includes("telegram") || channel === "telegram") return text("Telegram post publication", "Публикация Telegram-поста");
   if (lower.includes("comparison")) return text("Comparison page claims", "Утверждения на странице сравнения");
   if (lower.includes("weekly") || lower.includes("pack")) return text("Weekly material pack", "Недельный пакет материалов");
@@ -5449,6 +5453,10 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
       if (weekTwoScope.task) {
         state.tasks = mergeLocalItems(state.tasks, [normalizeTask(weekTwoScope.task)]).map(normalizeVisibleTask);
         state.metrics.tasks_created = state.tasks.length;
+      }
+      if (weekTwoScope.approval) {
+        state.approvals = mergeLocalItems(state.approvals, [weekTwoScope.approval]);
+        state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
       }
     }
     if (data.task) {

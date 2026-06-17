@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { APPROVAL_SCOPES, canTransition, type ApprovalScope } from "@ai-growth-os/shared";
 import { query } from "../../db/client.js";
 import { recordOwnerActionAudit } from "../common/audit.js";
+import { patchJson } from "../common/repository.js";
 
 const protectedApprovalScopes = new Set<string>(APPROVAL_SCOPES);
 
@@ -70,6 +71,9 @@ export async function decideApproval(input: {
   if (approval?.status === "approved") {
     await applyApprovalSideEffects(approval);
   }
+  if (approval?.scope === "pilot_week_2_scope" && ["approved", "changes_requested"].includes(String(approval.status))) {
+    await applyPilotWeekTwoScopeApprovalSideEffects(approval);
+  }
   if (approval) {
     await recordOwnerActionAudit({
       tenantId: input.tenantId,
@@ -88,6 +92,93 @@ export async function decideApproval(input: {
     });
   }
   return approval;
+}
+
+async function applyPilotWeekTwoScopeApprovalSideEffects(approval: Record<string, unknown>) {
+  const tenantId = typeof approval.tenant_id === "string" ? approval.tenant_id : "";
+  const targetId = typeof approval.target_id === "string" ? approval.target_id : "";
+  const status = typeof approval.status === "string" ? approval.status : "";
+  if (!tenantId || !targetId || !status) return;
+
+  const contentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [targetId, tenantId]);
+  const content = contentResult.rows[0] ?? null;
+  if (content) {
+    const metadata = content.metadata && typeof content.metadata === "object" ? content.metadata as Record<string, unknown> : {};
+    const currentScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
+      ? metadata.week_2_scope as Record<string, unknown>
+      : {};
+    await patchJson("content_items", targetId, {
+      metadata: {
+        ...metadata,
+        week_2_scope: {
+          ...currentScope,
+          approval_id: approval.id ?? null,
+          approval_status: status,
+          approved_at: status === "approved" ? approval.decided_at ?? null : currentScope.approved_at ?? null,
+          adjustment_note: status === "changes_requested" ? approval.decision_note ?? "" : currentScope.adjustment_note ?? null,
+          decided_by: approval.decided_by ?? null
+        }
+      }
+    }, tenantId);
+  }
+
+  const boardResult = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]);
+  const boardRows = boardResult.rows.filter((row) => row.content_item_id === targetId && row.metadata?.week_2_scope);
+  await Promise.all(boardRows.map((row) => {
+    const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata as Record<string, unknown> : {};
+    const currentScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
+      ? metadata.week_2_scope as Record<string, unknown>
+      : {};
+    return patchJson("publishing_calendar_items", String(row.id), {
+      status: status === "changes_requested" ? "review" : row.status,
+      metadata: {
+        ...metadata,
+        week_2_scope: {
+          ...currentScope,
+          approval_id: approval.id ?? null,
+          approval_status: status,
+          adjustment_note: status === "changes_requested" ? approval.decision_note ?? "" : currentScope.adjustment_note ?? null,
+          decided_by: approval.decided_by ?? null,
+          decided_at: approval.decided_at ?? null
+        }
+      }
+    }, tenantId);
+  }));
+
+  await patchPilotWorkspaceWeekTwoScopeApproval(tenantId, {
+    approval_id: approval.id ?? null,
+    approval_status: status,
+    adjustment_note: status === "changes_requested" ? approval.decision_note ?? "" : null,
+    decided_by: approval.decided_by ?? null,
+    decided_at: approval.decided_at ?? null
+  });
+}
+
+async function patchPilotWorkspaceWeekTwoScopeApproval(tenantId: string, patch: Record<string, unknown>) {
+  const result = await query("select * from tenants where id = $1", [tenantId]);
+  const tenant = result.rows[0] ?? null;
+  if (!tenant) return;
+  const settings = tenant.settings && typeof tenant.settings === "object" ? { ...(tenant.settings as Record<string, unknown>) } : {};
+  const dashboardState = settings.dashboard_state && typeof settings.dashboard_state === "object"
+    ? { ...(settings.dashboard_state as Record<string, unknown>) }
+    : {};
+  const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
+    ? { ...(dashboardState.activePilotWorkspace as Record<string, unknown>) }
+    : {};
+  const weekTwoScope = activePilotWorkspace.week_2_scope && typeof activePilotWorkspace.week_2_scope === "object"
+    ? { ...(activePilotWorkspace.week_2_scope as Record<string, unknown>) }
+    : {};
+  settings.dashboard_state = {
+    ...dashboardState,
+    activePilotWorkspace: {
+      ...activePilotWorkspace,
+      week_2_scope: {
+        ...weekTwoScope,
+        ...patch
+      }
+    }
+  };
+  await query("update tenants set settings = $2 where id = $1 returning *", [tenantId, settings]);
 }
 
 export async function reconcileApprovedCalendarApprovals(tenantId: string) {

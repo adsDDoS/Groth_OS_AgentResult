@@ -129,9 +129,21 @@ try {
   assert(expandReview.data.week_2_scope?.board?.length === 5, `expand week-2 board length mismatch: ${expandReview.data.week_2_scope?.board?.length}`);
   assert(expandReview.data.week_2_scope?.roles?.approval_owner, "expand week-2 approval owner missing");
   assert(expandReview.data.week_2_scope?.task?.task_type === "pilot_week_2_scope", "expand week-2 scope task missing");
+  assert(expandReview.data.week_2_scope?.approval?.scope === "pilot_week_2_scope", "expand week-2 approval scope missing");
+  assert(expandReview.data.week_2_scope?.approval?.status === "pending", "expand week-2 approval should be pending");
   assert(expandReview.data.workspace_state?.activePilotWorkspace?.week_2_scope?.next_material_id === expandReview.data.target?.id, "workspace week-2 next material missing");
+  assert(expandReview.data.workspace_state?.activePilotWorkspace?.week_2_scope?.approval_id === expandReview.data.week_2_scope?.approval?.id, "workspace week-2 approval id missing");
   assert(expandReview.data.publication_result?.next_step === "expand", "publication result next step mismatch");
   await assertReviewAudit(tenantId, publicationResult.id, "expand");
+
+  const approveWeekTwo = await inject("POST", `/approvals/${expandReview.data.week_2_scope.approval.id}/approve`, {
+    note: "Week-2 scope approved from pilot check."
+  }, tenantId);
+  assert(approveWeekTwo.response.statusCode === 200, `week-2 scope approve failed: ${approveWeekTwo.response.statusCode} ${approveWeekTwo.response.body}`);
+  const approvedContentRows = await query("select * from content_items where id = $1 and tenant_id = $2", [expandReview.data.week_2_scope.next_material.id, tenantId]);
+  assert(approvedContentRows.rows[0]?.metadata?.week_2_scope?.approval_status === "approved", "approved week-2 content metadata missing");
+  const approvedBoardRows = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 200", [tenantId]);
+  assert(approvedBoardRows.rows.some((item) => item.metadata?.week_2_scope?.approval_status === "approved" && item.content_item_id === expandReview.data.week_2_scope.next_material.id), "approved week-2 board metadata missing");
 
   const pilotRows = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [pilot.calendar.find((item) => String(item.title).startsWith("Day 7:")).id, tenantId]);
   assert(pilotRows.rows[0]?.metadata?.day_7_review?.publication_result_id === publicationResult.id, "Day-7 metadata publication result mismatch");
@@ -180,10 +192,18 @@ try {
   assert(leaveReview.data.week_2_scope?.next_material?.content_type === "telegram_post", "leave week-2 scope should create a next Telegram material");
   assert(leaveReview.data.week_2_scope?.repair_decision === "narrow", "leave week-2 repair decision mismatch");
   assert(leaveReview.data.week_2_scope?.channel_constraint === "keep one proven channel for week 2: telegram", "leave week-2 channel constraint mismatch");
+  assert(leaveReview.data.week_2_scope?.approval?.status === "pending", "leave week-2 approval should be pending");
   assert(leaveReview.data.workspace_state?.activePilotWorkspace?.week_2_scope?.decision === "leave", "leave workspace week-2 scope missing");
   assert(leaveReview.data.publication_result?.next_step === "leave", "leave publication result next step mismatch");
   const leaveWeekTwoCalendarRows = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 200", [otherTenantId]);
   assert(leaveWeekTwoCalendarRows.rows.filter((item) => item.metadata?.week_2_scope?.decision === "leave").length === 5, "leave week-2 board rows missing");
+  const changeWeekTwo = await inject("POST", `/approvals/${leaveReview.data.week_2_scope.approval.id}/request-changes`, {
+    note: "Keep Telegram only and make the next topic narrower."
+  }, otherTenantId);
+  assert(changeWeekTwo.response.statusCode === 200, `week-2 scope request changes failed: ${changeWeekTwo.response.statusCode} ${changeWeekTwo.response.body}`);
+  const changedContentRows = await query("select * from content_items where id = $1 and tenant_id = $2", [leaveReview.data.week_2_scope.next_material.id, otherTenantId]);
+  assert(changedContentRows.rows[0]?.metadata?.week_2_scope?.approval_status === "changes_requested", "changed week-2 content metadata missing");
+  assert(changedContentRows.rows[0]?.metadata?.week_2_scope?.adjustment_note === "Keep Telegram only and make the next topic narrower.", "changed week-2 adjustment note missing");
   await assertReviewAudit(otherTenantId, leavePublicationResult.id, "leave");
 
   const otherTenantContent = await inject("GET", "/content/items", undefined, otherTenantId);

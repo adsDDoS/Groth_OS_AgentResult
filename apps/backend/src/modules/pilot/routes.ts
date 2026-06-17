@@ -327,6 +327,8 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
         channel_constraint: weekTwoScope.channel_constraint,
         next_material_id: weekTwoScope.next_material?.id ?? null,
         task_id: weekTwoScope.task?.id ?? null,
+        approval_id: weekTwoScope.approval?.id ?? null,
+        approval_status: weekTwoScope.approval?.status ?? "pending",
         board_ids: weekTwoScope.board.map((item) => item.id)
       }
     }
@@ -502,6 +504,15 @@ async function createWeekTwoScope(input: {
     },
     createdBy: input.userId ?? undefined
   });
+  const approval = await createApprovalRequest({
+    tenantId: input.tenantId,
+    scope: "pilot_week_2_scope",
+    targetType: "content_item",
+    targetId: String(nextMaterial.id),
+    requestedBy: input.userId ?? undefined,
+    riskFlags: ["week-2 scope", "channel constraint", "owner approval"],
+    summary: `Approve week-2 scope: ${weekTwoDecisionLabel(input.nextStep)}`
+  });
   await recordOwnerActionAudit({
     tenantId: input.tenantId,
     action: "pilot.week_2.scope_created",
@@ -515,7 +526,8 @@ async function createWeekTwoScope(input: {
       channel_constraint: channelConstraint,
       publication_result_id: input.publicationResult.id ?? null,
       board_ids: board.map((item) => item.id),
-      task_id: task.id ?? null
+      task_id: task.id ?? null,
+      approval_id: approval.id ?? null
     }
   });
   return {
@@ -526,7 +538,8 @@ async function createWeekTwoScope(input: {
     roles,
     next_material: nextMaterial,
     board,
-    task
+    task,
+    approval
   };
 }
 

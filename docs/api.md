@@ -106,7 +106,9 @@ Request body:
 
 `nextStep` must be one of `expand`, `reuse`, `update`, or `leave`. `expand`, `reuse`, and `update` delegate to the canonical publication-result commands. `leave` records the review decision without creating a publication-result target.
 
-Response includes `{ decision, publication_result, action, target, target_type, week_2_scope, day_7_review, task, workspace_state }`. `week_2_scope` contains the week-2 next material, five board items, owner/release/result roles, one-channel constraint, and `continue / repair / narrow` decision. Dashboard and Telegram owner-control use this response; they do not create week-2 scope locally.
+Response includes `{ decision, publication_result, action, target, target_type, week_2_scope, day_7_review, task, workspace_state }`. `week_2_scope` contains the week-2 next material, five board items, owner/release/result roles, one-channel constraint, `continue / repair / narrow` decision, and a pending `pilot_week_2_scope` approval. Dashboard and Telegram owner-control use this response; they do not create week-2 scope locally.
+
+Approving the returned `pilot_week_2_scope` approval marks the week-2 scope as approved on the next material, board items, and workspace state. Requesting changes stores the adjustment note on the same backend-owned objects so the operator can revise the scope before week-2 production starts.
 
 ## SEO/GEO
 

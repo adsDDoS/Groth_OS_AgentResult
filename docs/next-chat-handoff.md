@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add backend-owned week-2 scope creation
+Add week-2 scope approval flow
 ```
 
 Before changing product or dashboard behavior, read:
@@ -47,10 +47,11 @@ Ready:
 - Backend pilot command creates the repeatable week-1 workspace from intake: company profile, first ICP demand item, first material brief, owner approval, QA/release calendar board, URL confirmation path, Day-7 review task, tenant dashboard state, and owner-action audit.
 - Telegram owner-control now supports backend-owned week-1 pilot start through `/pilot`, `/start_pilot`, `/week_1_pilot`, and natural phrases such as `запусти пилот` / `week-1 pilot`. Telegram parses optional intake fields and calls the same canonical backend pilot command instead of duplicating pilot state.
 - Backend Day-7 pilot review command closes the active week-1 loop after confirmed publication result and records `expand / reuse / update / leave` into publication result metadata, Day-7 calendar item, Day-7 task, workspace state, and owner-action audit.
-- Backend Day-7 pilot review now also creates backend-owned week-2 scope: next material, five board items, owner/release/result roles, one-channel constraint, and `continue / repair / narrow` decision.
+- Backend Day-7 pilot review now also creates backend-owned week-2 scope: next material, five board items, owner/release/result roles, one-channel constraint, `continue / repair / narrow` decision, and a pending `pilot_week_2_scope` approval.
 - Dashboard Results next-step buttons now close active pilot Day-7 review through `POST /pilot/week-1/day-7-review`; outside active pilot workspace they still use ordinary publication-result commands/local fallback.
-- Dashboard merges returned week-2 scope into content, calendar, task, and workspace state after Day-7 review.
-- Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`; responses show that week-2 scope was created.
+- Dashboard merges returned week-2 scope into content, calendar, task, approval, and workspace state after Day-7 review, then renders `pilot_week_2_scope` in the existing decision queue.
+- Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`; responses show that week-2 scope was created and include approve/request-changes commands for the scope.
+- Approving/requesting changes on `pilot_week_2_scope` writes backend-owned side effects to next material metadata, week-2 board item metadata, and tenant workspace state.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -192,16 +193,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Expose week-2 scope as a first-class operator/owner flow:
+Start week-2 execution from approved scope:
 
 ```text
-Add dashboard and Telegram controls to inspect, approve, and adjust the backend-created week-2 scope before week-2 execution starts.
+Add backend command and dashboard/Telegram entry points that start week-2 production only after `pilot_week_2_scope` is approved.
 ```
 
 Why this is next:
 
 ```text
-Week-2 scope is now created by the backend. The next leverage point is making it reviewable and adjustable in operator/owner surfaces before the team starts week-2 production.
+Week-2 scope can now be created, reviewed, approved, or sent back for changes. The next leverage point is converting approved scope into active week-2 execution without bypassing the owner gate.
 ```
 
 Suggested first files to inspect:
