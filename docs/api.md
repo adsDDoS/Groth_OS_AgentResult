@@ -245,6 +245,8 @@ For published material cards, `/telegram/commands` supports `reuse`, `expand`, a
 
 For week-1 pilot startup, `/telegram/commands` supports `/pilot`, `/start_pilot`, and `/week_1_pilot`. `POST /telegram/intent` also maps phrases such as "запусти пилот" and "week-1 pilot" to the same flow. Telegram parses optional intake fields from the command note/text, then calls the canonical `POST /pilot/week-1/start` workflow; it does not duplicate pilot domain state.
 
+For Day-7 pilot review, `/telegram/commands` supports `/day7 expand|reuse|update|leave`, `/review ...`, and `/pilot_review ...`. `POST /telegram/intent` maps phrases such as "закрой day-7 review" or "закрой пилот" to the same backend `POST /pilot/week-1/day-7-review` workflow.
+
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 
 The same intent router can be used by the backend owner-control polling middleware. Enable it with `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` only after disabling Hermes polling for the same bot token. The middleware uses the Telegram allowlist, routes owner text through backend intent logic, and sends back only owner-facing text.
@@ -305,6 +307,7 @@ Supported commands:
 - `/demo_reset`: explicitly resets local demo state;
 - `/onboarding`: starts the Telegram setup flow: offer, client, release channel, release owner, first signal source, approval rules, first material.
 - `/pilot`: starts the backend-owned week-1 pilot workspace. Optional note/text fields: `icp`, `channel`, `material`, `approval owner`, `release owner`, `result owner`, `result source`, `forbidden`.
+- `/day7 expand|reuse|update|leave`: closes active week-1 pilot review through the backend Day-7 command.
 
 Onboarding flow:
 

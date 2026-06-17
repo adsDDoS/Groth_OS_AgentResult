@@ -26,6 +26,7 @@
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --scope adsddosss-4657s-projects",
     "telegram:regression": "node scripts/telegram-owner-control-regression.mjs",
     "telegram:pilot-week-one-command:check": "node scripts/telegram-pilot-week-one-command-check.mjs",
+    "telegram:day-seven-review:check": "node scripts/telegram-day-seven-review-command-check.mjs",
     "telegram:polling-invariant": "node scripts/telegram-polling-invariant-check.mjs",
     "telegram:production-smoke": "bash scripts/smoke-telegram-publication-result-vps.sh",
     "pilot-demo:owner-flow-smoke": "bash scripts/smoke-pilot-demo-owner-flow-vps.sh",

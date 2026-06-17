@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add backend Day-7 pilot review command
+Add Day-7 review dashboard and Telegram surfaces
 ```
 
 Before changing product or dashboard behavior, read:
@@ -47,6 +47,8 @@ Ready:
 - Backend pilot command creates the repeatable week-1 workspace from intake: company profile, first ICP demand item, first material brief, owner approval, QA/release calendar board, URL confirmation path, Day-7 review task, tenant dashboard state, and owner-action audit.
 - Telegram owner-control now supports backend-owned week-1 pilot start through `/pilot`, `/start_pilot`, `/week_1_pilot`, and natural phrases such as `запусти пилот` / `week-1 pilot`. Telegram parses optional intake fields and calls the same canonical backend pilot command instead of duplicating pilot state.
 - Backend Day-7 pilot review command closes the active week-1 loop after confirmed publication result and records `expand / reuse / update / leave` into publication result metadata, Day-7 calendar item, Day-7 task, workspace state, and owner-action audit.
+- Dashboard Results next-step buttons now close active pilot Day-7 review through `POST /pilot/week-1/day-7-review`; outside active pilot workspace they still use ordinary publication-result commands/local fallback.
+- Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -151,6 +153,7 @@ Latest completed checks before this handoff:
 - `npm run pilot:week-one-command:check` passed.
 - `npm run pilot:day-seven-review:check` passed.
 - `npm run telegram:pilot-week-one-command:check` passed.
+- `npm run telegram:day-seven-review:check` passed.
 - `npm run telegram:regression` passed.
 - `npm run build -w packages/shared` passed.
 - `npm run build -w apps/backend` passed.
@@ -176,6 +179,7 @@ npm run build -w apps/backend
 npm run pilot:week-one-command:check
 npm run pilot:day-seven-review:check
 npm run telegram:pilot-week-one-command:check
+npm run telegram:day-seven-review:check
 ```
 
 For docs-only changes, at least run:
@@ -186,16 +190,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Expose Day-7 review through dashboard and Telegram owner-control:
+Make week-2 scope creation backend-owned:
 
 ```text
-Add operator UI and Telegram command/intent for Day-7 review that call `POST /pilot/week-1/day-7-review`, without duplicating review logic outside the backend command.
+Create backend command(s) that convert a completed Day-7 review decision into week-2 scope: next material, channel constraint, owner/release responsibilities, and repair/narrow/continue decision.
 ```
 
 Why this is next:
 
 ```text
-The backend can now close the week-1 loop. The next leverage point is making that command usable where operators work: dashboard for board review and Telegram for owner-control decisions.
+Week 1 can now start and close from product surfaces. The next leverage point is turning the review decision into an executable week-2 board, so pilots do not fall back into docs after the first loop.
 ```
 
 Suggested first files to inspect:

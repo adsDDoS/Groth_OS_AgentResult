@@ -16,6 +16,7 @@ run_step npm run telegram:polling-invariant
 
 if [ "${CONTENT_FACTORY_SKIP_TELEGRAM_REGRESSION:-0}" != "1" ]; then
   run_step npm run telegram:pilot-week-one-command:check
+  run_step npm run telegram:day-seven-review:check
   run_step npm run telegram:regression
 fi
 

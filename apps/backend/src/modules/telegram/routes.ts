@@ -8,7 +8,7 @@ import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
-import { startWeekOnePilot } from "../pilot/routes.js";
+import { completeDaySevenReview, startWeekOnePilot } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -661,6 +661,25 @@ function pilotStartCommandFromText(command: string) {
     || command.startsWith("week1_pilot ");
 }
 
+function daySevenReviewCommandFromText(command: string): "expand" | "reuse" | "update" | "leave" | null {
+  const normalized = command.replace(/^\/+/, "").trim().toLowerCase();
+  if (!/^(day7|day_7|day-7|review|pilot_review|week_1_review|week-1-review)\b/.test(normalized)) return null;
+  if (includesAny(normalized, ["reuse", "repurpose", "переиспольз", "ещё пост", "еще пост"])) return "reuse";
+  if (includesAny(normalized, ["expand", "article", "расшир", "стать", "лонгрид"])) return "expand";
+  if (includesAny(normalized, ["update", "revise", "обнов", "правк"])) return "update";
+  if (includesAny(normalized, ["leave", "остав", "ничего", "как есть"])) return "leave";
+  return "leave";
+}
+
+function daySevenReviewStepFromText(value: string): "expand" | "reuse" | "update" | "leave" {
+  const normalized = value.trim().toLowerCase();
+  if (includesAny(normalized, ["reuse", "repurpose", "переиспольз", "ещё пост", "еще пост"])) return "reuse";
+  if (includesAny(normalized, ["expand", "article", "расшир", "стать", "лонгрид"])) return "expand";
+  if (includesAny(normalized, ["update", "revise", "обнов", "правк"])) return "update";
+  if (includesAny(normalized, ["leave", "остав", "ничего", "как есть"])) return "leave";
+  return "leave";
+}
+
 function parsePilotStartIntake(input: TelegramCommandInput) {
   const raw = [input.command, input.note].filter(Boolean).join("\n");
   const normalizedLines = raw
@@ -729,6 +748,62 @@ async function startWeekOnePilotFromTelegram(input: TelegramCommandInput, contex
     buttons: briefCommandButtons(ownerBrief),
     ownerBrief,
     pilot
+  };
+}
+
+function renderDaySevenReviewMessage(input: {
+  nextStep: "expand" | "reuse" | "update" | "leave";
+  review: NonNullable<Awaited<ReturnType<typeof completeDaySevenReview>>>;
+}) {
+  const labels = {
+    expand: "расширить материал",
+    reuse: "переиспользовать материал",
+    update: "обновить опубликованный материал",
+    leave: "оставить как опубликованное"
+  };
+  const lines = [
+    "Day-7 review закрыт.",
+    "",
+    `Следующий контент-шаг: ${labels[input.nextStep]}.`
+  ];
+
+  if (input.review.target) {
+    lines.push(`Создано: ${textValue(input.review.target.title ?? (input.review.target.payload as Row | undefined)?.title, "следующее действие")}`);
+  }
+
+  return lines.join("\n");
+}
+
+async function completeDaySevenReviewFromTelegram(
+  nextStep: "expand" | "reuse" | "update" | "leave",
+  input: TelegramCommandInput,
+  context: TelegramExecutionContext
+) {
+  const result = await completeDaySevenReview({
+    tenantId: context.tenantId,
+    userId: context.userId,
+    publicationResultId: input.targetId,
+    nextStep,
+    note: input.note
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  if (!result) {
+    return {
+      command: "day7",
+      text: "Day-7 review пока нельзя закрыть: нужен активный week-1 pilot и подтверждённый результат публикации.",
+      buttons: publicationResultCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  return {
+    command: "day7",
+    text: renderDaySevenReviewMessage({ nextStep, review: result }),
+    buttons: publicationResultCommandButtons(ownerBrief),
+    ownerBrief,
+    reviewResult: result
   };
 }
 
@@ -2201,7 +2276,12 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
   const primaryDecisionId = typeof ownerBrief.decisions[0]?.id === "string" ? ownerBrief.decisions[0].id : null;
+  const daySevenReviewCommand = daySevenReviewCommandFromText(command);
   const publicationResultCommand = publicationResultCommandFromText(command);
+
+  if (daySevenReviewCommand) {
+    return completeDaySevenReviewFromTelegram(daySevenReviewCommand, input, context);
+  }
 
   if (publicationResultCommand) {
     return executeTelegramPublicationResultCommand(publicationResultCommand, input, ownerBrief, context);
@@ -2575,6 +2655,26 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
     return {
       ...commandResult,
       intent: "preparation_status",
+      command: null
+    };
+  }
+
+  if (includesAny(text, [
+    "day-7 review",
+    "day 7 review",
+    "day7 review",
+    "закрой day-7",
+    "закрыть day-7",
+    "закрой пилот",
+    "закрыть пилот",
+    "ревью пилота",
+    "review пилота"
+  ])) {
+    const nextStep = daySevenReviewStepFromText(input.text);
+    const commandResult = await executeTelegramCommand({ command: `/day7 ${nextStep}`, note: input.note || input.text }, context);
+    return {
+      ...commandResult,
+      intent: "pilot_day_7_review",
       command: null
     };
   }

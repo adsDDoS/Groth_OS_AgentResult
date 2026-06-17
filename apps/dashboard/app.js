@@ -5359,6 +5359,17 @@ async function setPublicationResultStep(encoded = "") {
   const item = state.calendar.find((entry) => entry.id === calendarId);
   if (!item) return;
   const nextStep = ["reuse", "expand", "update", "leave"].includes(step) ? step : "leave";
+  const nextStepNote = publicationNextStepLabel(nextStep);
+  if (canCompletePilotDaySevenReview(item) && state.online && !String(item.id || "").startsWith("local-calendar")) {
+    const review = await executePilotDaySevenReviewCommand({
+      publicationResultId,
+      nextStep,
+      note: nextStepNote
+    });
+    if (review) return;
+    showToast(text("Could not close Day-7 review.", "Не удалось закрыть Day-7 review."));
+    return;
+  }
   if (state.online && !String(item.id || "").startsWith("local-calendar") && nextStep !== "leave") {
     await executePublicationNextStep(item, nextStep, {
       publicationResultId,
@@ -5372,7 +5383,7 @@ async function setPublicationResultStep(encoded = "") {
     publication_result: {
       ...(item.metadata?.publication_result || {}),
       next_step: nextStep,
-      next_step_note: publicationNextStepLabel(nextStep),
+      next_step_note: nextStepNote,
       decided_at: new Date().toISOString(),
       decided_by: state.me.userId || state.me.name || null
     }
@@ -5391,6 +5402,52 @@ async function setPublicationResultStep(encoded = "") {
 
   refreshPublicationResults();
   await executePublicationNextStep(item, nextStep, { publicationResultId });
+}
+
+function canCompletePilotDaySevenReview(item) {
+  const workspace = state.workspaceState?.activePilotWorkspace || {};
+  if (!workspace.day_7_review_id || workspace.day_7_review_completed_at) return false;
+  if (workspace.material_id && item.content_item_id && workspace.material_id !== item.content_item_id) return false;
+  return true;
+}
+
+async function executePilotDaySevenReviewCommand({ publicationResultId = "", nextStep = "leave", note = "" } = {}) {
+  if (!state.online) return null;
+  try {
+    const response = await api("/pilot/week-1/day-7-review", {
+      method: "POST",
+      body: JSON.stringify({
+        publicationResultId,
+        nextStep,
+        note
+      })
+    });
+    const data = response?.data || null;
+    if (!data) return null;
+    if (data.day_7_review) state.calendar = mergeLocalItems(state.calendar, [data.day_7_review]);
+    if (data.publication_result) {
+      state.publicationResults = mergeLocalItems(state.publicationResults, [data.publication_result]);
+      state.publicationResultsSource = "backend";
+    }
+    if (data.target_type === "content_item" && data.target) {
+      state.content = mergeLocalItems(state.content, [data.target]);
+      state.metrics.content_items = state.content.length;
+    }
+    if (data.target_type === "task" && data.target) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
+      state.metrics.tasks_created = state.tasks.length;
+    }
+    if (data.task) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
+    }
+    if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
+    const targetRoute = data.target_type === "content_item" ? "content-pipeline" : data.target_type === "task" ? "overview" : "analytics";
+    showToast(text("Day-7 review closed.", "Day-7 review закрыт."));
+    setRoute(targetRoute);
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 async function executePublicationNextStep(item, nextStep = "leave", options = {}) {
