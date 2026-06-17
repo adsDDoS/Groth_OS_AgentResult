@@ -8,7 +8,7 @@ import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
-import { completeDaySevenReview, startWeekOnePilot, startWeekTwoExecution } from "../pilot/routes.js";
+import { completeDaySevenReview, getActiveWeekTwoExecution, startWeekOnePilot, startWeekTwoExecution } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -676,6 +676,19 @@ function weekTwoStartCommandFromText(command: string) {
     || command.startsWith("start_week_2 ");
 }
 
+function weekTwoStatusCommandFromText(command: string) {
+  return command === "week2_status"
+    || command === "week_2_status"
+    || command === "week-2-status"
+    || command === "week2_board"
+    || command === "week_2_board"
+    || command === "week-2-board"
+    || command === "w2"
+    || command === "w2_status"
+    || command === "статус_week2"
+    || command === "статус_week_2";
+}
+
 function daySevenReviewCommandFromText(command: string): "expand" | "reuse" | "update" | "leave" | null {
   const normalized = command.replace(/^\/+/, "").trim().toLowerCase();
   if (!/^(day7|day_7|day-7|review|pilot_review|week_1_review|week-1-review)\b/.test(normalized)) return null;
@@ -837,15 +850,85 @@ async function completeDaySevenReviewFromTelegram(
 
 function renderWeekTwoExecutionMessage(result: NonNullable<Awaited<ReturnType<typeof startWeekTwoExecution>>>) {
   const title = textValue(result.content?.title, "week-2 material");
-  if (result.status === "already_started") {
-    return `Week-2 execution уже запущен.\n\nМатериал: ${title}.`;
-  }
   return [
-    "Week-2 execution запущен.",
+    result.status === "already_started" ? "Week-2 execution уже запущен." : "Week-2 execution запущен.",
     "",
     `Материал: ${title}.`,
     "Следующий gate: согласовать week-2 material перед QA и release handoff."
   ].join("\n");
+}
+
+function renderActiveWeekTwoExecutionMessage(execution: NonNullable<Awaited<ReturnType<typeof getActiveWeekTwoExecution>>>) {
+  const title = textValue(execution.material?.title, "week-2 material");
+  const roles = execution.roles && typeof execution.roles === "object" ? execution.roles as Row : {};
+  const board = Array.isArray(execution.board) ? execution.board : [];
+  const result = execution.publication_result && typeof execution.publication_result === "object" ? execution.publication_result as Row : null;
+  const lines = [
+    `Week-2 execution: ${weekTwoGateTelegramLabel(textValue(execution.current_gate, "active"))}`,
+    "",
+    `Материал: ${title}.`,
+    `Согласование: ${textValue(execution.material_approval?.status, "pending")}.`,
+    `Owner: ${textValue(roles.approval_owner, "Founder / managing partner")}.`,
+    `QA/release: ${textValue(roles.release_owner, "Content operator or chief of staff")}.`,
+    `Result owner: ${textValue(roles.result_owner, "Content operator or chief of staff")}.`
+  ];
+  if (execution.channel_constraint) lines.push(`Канал: ${textValue(execution.channel_constraint, "one proven channel")}.`);
+  if (board.length) {
+    lines.push("", "Доска:");
+    lines.push(...board.map((item) => `- ${textValue(item.title, "Week-2 item")} — ${textValue(item.status, "scheduled")}`));
+  }
+  if (result) {
+    lines.push("", `URL: ${textValue(result.publication_url, "не указан")}.`);
+    lines.push(`Следующий шаг: ${textValue(result.next_step, "leave")}.`);
+  }
+  lines.push("", `Следующее действие: ${weekTwoGateTelegramAction(textValue(execution.current_gate, "active"))}.`);
+  return lines.join("\n");
+}
+
+function weekTwoGateTelegramLabel(gate: string) {
+  if (gate === "material_approval") return "согласование материала";
+  if (gate === "qa_release_handoff") return "QA и передача на выпуск";
+  if (gate === "url_confirmation") return "подтверждение URL";
+  if (gate === "result_review") return "review результата";
+  return "активно";
+}
+
+function weekTwoGateTelegramAction(gate: string) {
+  if (gate === "material_approval") return "согласовать material";
+  if (gate === "qa_release_handoff") return "закрыть QA и передать в выпуск";
+  if (gate === "url_confirmation") return "подтвердить URL публикации";
+  if (gate === "result_review") return "выбрать reuse / expand / update";
+  return "проверить статус";
+}
+
+function weekTwoExecutionCommandButtons(execution: Awaited<ReturnType<typeof getActiveWeekTwoExecution>> | null): TelegramCommandButton[] {
+  if (!execution) return [commandButton("week2", "Запустить week-2")];
+  const gate = textValue(execution.current_gate, "");
+  const actions = execution.actions && typeof execution.actions === "object" ? execution.actions as Row : {};
+  if (gate === "material_approval") {
+    const approve = actions.approve_material && typeof actions.approve_material === "object" ? actions.approve_material as Row : {};
+    const approvalId = typeof approve.approval_id === "string" ? approve.approval_id : "";
+    return approvalId ? [commandButton("osapprove", "Согласовать material", approvalId)] : [commandButton("brief", "Сводка")];
+  }
+  if (gate === "qa_release_handoff") {
+    const handoff = actions.handoff_release && typeof actions.handoff_release === "object" ? actions.handoff_release as Row : {};
+    const calendarId = typeof handoff.calendar_item_id === "string" ? handoff.calendar_item_id : "";
+    return calendarId ? [commandButton("handoff", "QA passed / handoff", calendarId)] : [commandButton("brief", "Сводка")];
+  }
+  if (gate === "url_confirmation") {
+    const confirm = actions.confirm_url && typeof actions.confirm_url === "object" ? actions.confirm_url as Row : {};
+    const calendarId = typeof confirm.calendar_item_id === "string" ? confirm.calendar_item_id : "";
+    return calendarId ? [commandButton("published", "Подтвердить URL", calendarId)] : [commandButton("result", "Результат")];
+  }
+  const review = actions.review_result && typeof actions.review_result === "object" ? actions.review_result as Row : {};
+  const resultId = typeof review.publication_result_id === "string" ? review.publication_result_id : "";
+  return resultId
+    ? [
+        commandButton("reuse", "Reuse", resultId),
+        commandButton("expand", "Expand", resultId),
+        commandButton("update", "Update", resultId)
+      ]
+    : [commandButton("result", "Результат")];
 }
 
 async function startWeekTwoExecutionFromTelegram(input: TelegramCommandInput, context: TelegramExecutionContext) {
@@ -866,12 +949,34 @@ async function startWeekTwoExecutionFromTelegram(input: TelegramCommandInput, co
     };
   }
 
+  const activeExecution = await getActiveWeekTwoExecution(context.tenantId);
   return {
     command: "week2",
-    text: renderWeekTwoExecutionMessage(result),
-    buttons: briefCommandButtons(ownerBrief),
+    text: activeExecution ? renderActiveWeekTwoExecutionMessage(activeExecution) : renderWeekTwoExecutionMessage(result),
+    buttons: weekTwoExecutionCommandButtons(activeExecution),
     ownerBrief,
     weekTwoExecution: result
+  };
+}
+
+async function showWeekTwoExecutionFromTelegram(context: TelegramExecutionContext) {
+  const execution = await getActiveWeekTwoExecution(context.tenantId);
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+  if (!execution) {
+    return {
+      command: "week2_status",
+      text: "Активный week-2 execution пока не найден. Запустите `/week2` после согласования `pilot_week_2_scope`.",
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+  return {
+    command: "week2_status",
+    text: renderActiveWeekTwoExecutionMessage(execution),
+    buttons: weekTwoExecutionCommandButtons(execution),
+    ownerBrief,
+    weekTwoExecution: execution
   };
 }
 
@@ -2170,8 +2275,35 @@ async function createTelegramMaterial(input: TelegramMaterialInput, context: { t
   };
 }
 
-async function createManualHandoff(context: { tenantId: string; userId?: string }) {
+async function createManualHandoff(context: { tenantId: string; userId?: string }, targetId?: string | null) {
   const briefData = await loadOwnerBriefData(context.tenantId);
+  if (targetId) {
+    const target = briefData.calendar.find((row) => row.id === targetId);
+    if (target?.id) {
+      const item = await patchJson("publishing_calendar_items", String(target.id), {
+        status: "handed_off",
+        metadata: {
+          ...(typeof target.metadata === "object" && target.metadata ? target.metadata : {}),
+          handoff_source: "telegram_week_2_execution",
+          handed_off_by: context.userId ?? null,
+          handed_off_at: new Date().toISOString()
+        }
+      }, context.tenantId);
+      if (item?.content_item_id) {
+        await patchJson("content_items", String(item.content_item_id), { status: "handed_off" }, context.tenantId);
+      }
+      const updatedBriefData = await loadOwnerBriefData(context.tenantId);
+      const ownerBrief = buildOwnerBrief(updatedBriefData);
+      return {
+        command: "handoff",
+        text: renderHandoffMessage({ item, ownerBrief }),
+        buttons: handoffButtonsForBrief(ownerBrief),
+        ownerBrief,
+        item
+      };
+    }
+  }
+
   const contentItem = findApprovedContentForHandoff(briefData);
 
   if (!contentItem) {
@@ -2382,6 +2514,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return startWeekOnePilotFromTelegram(input, context);
   }
 
+  if (weekTwoStatusCommandFromText(command)) {
+    return showWeekTwoExecutionFromTelegram(context);
+  }
+
   if (weekTwoStartCommandFromText(command)) {
     return startWeekTwoExecutionFromTelegram(input, context);
   }
@@ -2466,7 +2602,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
   }
 
   if (["handoff", "передано", "передал", "в выпуск"].includes(command)) {
-    return createManualHandoff(context);
+    return createManualHandoff(context, input.targetId);
   }
 
   if (["published", "live", "вышло", "опубликовано"].includes(command)) {

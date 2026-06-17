@@ -554,6 +554,7 @@ const state = {
   publicationResults: [],
   publicationResultsSource: "derived",
   selectedPublicationResultId: "",
+  weekTwoExecution: null,
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -699,7 +700,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -710,7 +711,8 @@ async function loadData() {
       api("/publishing/calendar"),
       api("/distribution-signals").catch(() => api("/result-signals").catch(() => ({ data: [] }))),
       api("/publication-results").catch(() => ({ data: [] })),
-      api("/workspace/state").catch(() => ({ data: {} }))
+      api("/workspace/state").catch(() => ({ data: {} })),
+      api("/pilot/week-2/execution").catch(() => ({ data: null }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
 
@@ -729,6 +731,8 @@ async function loadData() {
     state.publicationResultsSource = backendPublicationResults.length ? "backend" : "derived";
     state.resultSignals = state.distributionSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
+    state.weekTwoExecution = weekTwoExecution.data && typeof weekTwoExecution.data === "object" ? weekTwoExecution.data : null;
+    mergeWeekTwoExecutionState(state.weekTwoExecution);
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
       ...deriveMetrics(metrics.data || {}),
@@ -756,6 +760,7 @@ async function loadData() {
     };
     state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
     state.publicationResultsSource = "derived";
+    state.weekTwoExecution = null;
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -1351,6 +1356,28 @@ function derivePublicationResults(signals = [], calendarItems = [], contentItems
     const contentItem = contentById.get(String(signal.content_item_id || calendarItem?.content_item_id || "")) || null;
     return publicationResultFromSignal(signal, calendarItem, contentItem);
   });
+}
+
+function mergeWeekTwoExecutionState(execution) {
+  if (!execution || typeof execution !== "object") return;
+  if (execution.material) {
+    state.content = mergeLocalItems(state.content, [execution.material]);
+  }
+  if (Array.isArray(execution.board)) {
+    state.calendar = mergeLocalItems(state.calendar, execution.board);
+  }
+  if (execution.material_approval) {
+    state.approvals = mergeLocalItems(state.approvals, [execution.material_approval]);
+  }
+  if (execution.task) {
+    state.tasks = mergeLocalItems(state.tasks, [normalizeTask(execution.task)]).map(normalizeVisibleTask);
+  }
+  if (execution.publication_result) {
+    state.publicationResults = mergeLocalItems(state.publicationResults, [execution.publication_result]);
+  }
+  if (execution.workspace_state && typeof execution.workspace_state === "object") {
+    state.workspaceState = execution.workspace_state;
+  }
 }
 
 function distributionSignalFromCalendar(item) {
@@ -1986,6 +2013,7 @@ function ownerCommandCenter(pending) {
           </article>
         `).join("")}
       </div>
+      ${weekTwoExecutionPanel()}
       <div class="command-center-workbench">
         <div class="command-center-table-head">
           <div>
@@ -2015,7 +2043,26 @@ function ownerCommandCenter(pending) {
 
 function commandCenterRows(pending) {
   const rows = [];
+  const weekTwo = state.weekTwoExecution;
+  if (weekTwo?.status === "active") {
+    const action = weekTwoExecutionPrimaryAction(weekTwo);
+    rows.push({
+      priority: text("P1", "P1"),
+      kind: text("Week-2 execution", "Week-2 execution"),
+      title: weekTwo.material?.title || text("Week-2 material", "Материал недели 2"),
+      meta: weekTwoGateLabel(weekTwo.current_gate),
+      owner: weekTwoGateOwner(weekTwo),
+      state: weekTwo.current_gate === "result_review" ? "queued" : "active",
+      status: weekTwoGateLabel(weekTwo.current_gate),
+      due: formatDate(weekTwoNextBoardItem(weekTwo)?.scheduled_for || weekTwo.material?.updated_at),
+      action: action.action,
+      id: action.id,
+      label: action.label
+    });
+  }
+
   pending.forEach((approval) => {
+    if (isActiveWeekTwoApproval(approval)) return;
     const context = getApprovalContext(approval);
     rows.push({
       priority: text("P1", "P1"),
@@ -2051,7 +2098,7 @@ function commandCenterRows(pending) {
     });
 
   state.calendar
-    .filter((item) => item.status === "scheduled")
+    .filter((item) => item.status === "scheduled" && !isActiveWeekTwoCalendar(item))
     .forEach((item) => {
       rows.push({
         priority: text("P2", "P2"),
@@ -2069,7 +2116,7 @@ function commandCenterRows(pending) {
     });
 
   state.calendar
-    .filter((item) => item.status === "handed_off")
+    .filter((item) => item.status === "handed_off" && !isActiveWeekTwoCalendar(item))
     .forEach((item) => {
       rows.push({
         priority: text("P1", "P1"),
@@ -2126,6 +2173,163 @@ function commandPriorityRank(priority) {
   if (String(priority).includes("1")) return 1;
   if (String(priority).includes("2")) return 2;
   return 3;
+}
+
+function isActiveWeekTwoApproval(approval) {
+  const execution = state.weekTwoExecution;
+  if (!execution?.material_approval?.id) return false;
+  return approval.id === execution.material_approval.id;
+}
+
+function isActiveWeekTwoCalendar(item) {
+  const execution = state.weekTwoExecution;
+  const board = Array.isArray(execution?.board) ? execution.board : [];
+  return board.some((entry) => entry.id === item.id);
+}
+
+function weekTwoExecutionPanel() {
+  const execution = state.weekTwoExecution;
+  if (!execution || execution.status !== "active") return "";
+  const action = weekTwoExecutionPrimaryAction(execution);
+  const board = Array.isArray(execution.board) ? execution.board : [];
+  const roles = execution.roles || {};
+  const result = execution.publication_result || null;
+  return `
+    <section class="panel full pilot-execution-brief-panel" aria-label="${escapeAttr(text("Week-2 execution", "Week-2 execution"))}">
+      <div class="panel-heading compact">
+        <div>
+          <p class="eyebrow">${text("Week-2 execution", "Week-2 execution")}</p>
+          <h3>${escapeHtml(execution.material?.title || text("Week-2 material", "Материал недели 2"))}</h3>
+        </div>
+        <span class="status-chip">${escapeHtml(weekTwoGateLabel(execution.current_gate))}</span>
+      </div>
+      <div class="owner-command-statuses">
+        <article class="${execution.current_gate === "material_approval" ? "active" : "done"}">
+          <span>${escapeHtml(text("Owner approval", "Согласование"))}</span>
+          <strong>${escapeHtml(execution.material_approval?.status === "approved" ? text("Approved", "Согласовано") : text("Waiting", "Ждёт"))}</strong>
+          <p>${escapeHtml(textValue(roles.approval_owner, "Founder / managing partner"))}</p>
+        </article>
+        <article class="${execution.current_gate === "qa_release_handoff" ? "active" : ["url_confirmation", "result_review"].includes(execution.current_gate) ? "done" : "muted"}">
+          <span>${escapeHtml(text("QA / handoff", "QA / передача"))}</span>
+          <strong>${escapeHtml(weekTwoReleaseStatus(execution))}</strong>
+          <p>${escapeHtml(textValue(roles.release_owner, "Content operator or chief of staff"))}</p>
+        </article>
+        <article class="${execution.current_gate === "url_confirmation" ? "active" : execution.current_gate === "result_review" ? "done" : "muted"}">
+          <span>${escapeHtml(text("URL confirmation", "Подтверждение URL"))}</span>
+          <strong>${escapeHtml(result?.publication_url ? text("Confirmed", "Подтверждён") : text("Not yet", "Пока нет"))}</strong>
+          <p>${escapeHtml(textValue(roles.result_owner, "Content operator or chief of staff"))}</p>
+        </article>
+        <article class="${execution.current_gate === "result_review" ? "active" : "muted"}">
+          <span>${escapeHtml(text("Result review", "Review результата"))}</span>
+          <strong>${escapeHtml(result ? text("Ready", "Готов") : text("Pending", "Ждёт"))}</strong>
+          <p>${escapeHtml(result?.publication_url || text("Choose next content step after URL.", "Выберите следующий шаг после URL."))}</p>
+        </article>
+      </div>
+      <div class="command-center-table compact" role="table" aria-label="${escapeAttr(text("Week-2 board", "Доска недели 2"))}">
+        ${board.map((item) => `
+          <div class="command-center-row ${weekTwoBoardRowState(item, execution)}" role="row">
+            <span role="cell"><em class="queue-priority">${escapeHtml(text("W2", "W2"))}</em></span>
+            <span role="cell" class="queue-title">
+              <strong>${escapeHtml(item.title || text("Week-2 board item", "Пункт недели 2"))}</strong>
+              <small>${escapeHtml(displayChannel(item.channel || execution.material?.channel || "manual"))}</small>
+            </span>
+            <span role="cell">${escapeHtml(weekTwoBoardOwner(item, execution))}</span>
+            <span role="cell"><mark>${escapeHtml(labelize(item.status || "scheduled"))}</mark></span>
+            <span role="cell">${escapeHtml(formatDate(item.scheduled_for || item.updated_at))}</span>
+            <span role="cell">${escapeHtml(weekTwoBoardGate(item))}</span>
+          </div>
+        `).join("")}
+      </div>
+      <button class="button primary" data-action="${escapeAttr(action.action)}" data-id="${escapeAttr(action.id || "")}">${escapeHtml(action.label)}</button>
+    </section>
+  `;
+}
+
+function weekTwoExecutionPrimaryAction(execution) {
+  if (execution.current_gate === "material_approval") {
+    return {
+      action: "go-approval",
+      id: execution.actions?.approve_material?.approval_id || execution.material_approval?.id || "",
+      label: text("Approve material", "Согласовать материал")
+    };
+  }
+  if (execution.current_gate === "qa_release_handoff") {
+    return {
+      action: "mark-calendar-exported",
+      id: execution.actions?.handoff_release?.calendar_item_id || "",
+      label: text("QA passed / hand off", "QA пройден / передать")
+    };
+  }
+  if (execution.current_gate === "url_confirmation") {
+    return {
+      action: "mark-calendar-published",
+      id: execution.actions?.confirm_url?.calendar_item_id || "",
+      label: text("Confirm URL", "Подтвердить URL")
+    };
+  }
+  return {
+    action: "go-analytics",
+    id: execution.actions?.review_result?.publication_result_id || "",
+    label: text("Review result", "Review результата")
+  };
+}
+
+function weekTwoGateLabel(gate) {
+  if (gate === "material_approval") return text("Material approval", "Согласование материала");
+  if (gate === "qa_release_handoff") return text("QA and release handoff", "QA и передача на выпуск");
+  if (gate === "url_confirmation") return text("URL confirmation", "Подтверждение URL");
+  if (gate === "result_review") return text("Week-2 result review", "Review результата week-2");
+  return text("Active", "Активно");
+}
+
+function weekTwoGateOwner(execution) {
+  const roles = execution.roles || {};
+  if (execution.current_gate === "material_approval") return textValue(roles.approval_owner, text("Owner", "Собственник"));
+  if (execution.current_gate === "qa_release_handoff") return textValue(roles.release_owner, text("Release owner", "Ответственный"));
+  return textValue(roles.result_owner, text("Result owner", "Ответственный"));
+}
+
+function weekTwoReleaseStatus(execution) {
+  const releaseItem = weekTwoReleaseItem(execution);
+  if (releaseItem?.status === "handed_off") return text("Handed off", "Передано");
+  if (releaseItem?.status === "published") return text("Published", "Опубликовано");
+  return text("With manager", "У менеджера");
+}
+
+function weekTwoNextBoardItem(execution) {
+  const board = Array.isArray(execution.board) ? execution.board : [];
+  if (execution.current_gate === "qa_release_handoff") return weekTwoReleaseItem(execution);
+  if (execution.current_gate === "url_confirmation") return weekTwoReleaseItem(execution);
+  if (execution.current_gate === "result_review") return weekTwoConfirmationItem(execution);
+  return board.find((item) => String(item.title || "").includes("Day 10")) || board[0] || null;
+}
+
+function weekTwoReleaseItem(execution) {
+  const board = Array.isArray(execution.board) ? execution.board : [];
+  return board.find((item) => String(item.title || "").includes("Day 11"))
+    || board.find((item) => ["scheduled", "handed_off", "review"].includes(String(item.status || "")))
+    || null;
+}
+
+function weekTwoConfirmationItem(execution) {
+  const board = Array.isArray(execution.board) ? execution.board : [];
+  return board.find((item) => String(item.title || "").includes("Day 14")) || null;
+}
+
+function weekTwoBoardRowState(item, execution) {
+  if (item.status === "published") return "done";
+  if (weekTwoNextBoardItem(execution)?.id === item.id) return "active";
+  if (["handed_off", "scheduled", "review"].includes(String(item.status || ""))) return "queued";
+  return "muted";
+}
+
+function weekTwoBoardOwner(item, execution) {
+  const scope = item.metadata?.week_2_scope || {};
+  return textValue(scope.owner, weekTwoGateOwner(execution));
+}
+
+function weekTwoBoardGate(item) {
+  return textValue(item.metadata?.week_2_scope?.gate, text("Gate", "Gate"));
 }
 
 function commandCenterRow(row) {
@@ -2185,6 +2389,17 @@ function weeklyRhythmPanel() {
 }
 
 function ownerCommandPriority(pending) {
+  if (state.weekTwoExecution?.status === "active") {
+    const action = weekTwoExecutionPrimaryAction(state.weekTwoExecution);
+    return {
+      title: text(`Week-2 execution: ${state.weekTwoExecution.material?.title || "active material"}`, `Week-2 execution: ${state.weekTwoExecution.material?.title || "активный материал"}`),
+      note: weekTwoGateLabel(state.weekTwoExecution.current_gate),
+      action: action.action,
+      id: action.id,
+      label: action.label
+    };
+  }
+
   const handoff = state.calendar.find((item) => item.status === "handed_off");
   if (handoff) {
     return {
@@ -4689,8 +4904,8 @@ function textarea(label, id, value) {
   return `<label>${escapeHtml(tr(label))}<textarea id="${escapeAttr(id)}" rows="4">${escapeHtml(value || "")}</textarea></label>`;
 }
 
-function textValue(value) {
-  return Array.isArray(value) ? value.join("\n") : value || "";
+function textValue(value, fallback = "") {
+  return Array.isArray(value) ? value.join("\n") : value || fallback || "";
 }
 
 function statusChip(status) {
@@ -6676,10 +6891,24 @@ async function executeStartWeekTwoExecutionCommand({ note = "" } = {}) {
       state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
     }
     if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
+    await refreshWeekTwoExecution();
     showToast(text("Week-2 execution started.", "Week-2 execution запущен."));
     return data;
   } catch {
     showToast(text("Could not start week-2 execution.", "Не удалось запустить week-2 execution."));
+    return null;
+  }
+}
+
+async function refreshWeekTwoExecution() {
+  if (!state.online) return null;
+  try {
+    const response = await api("/pilot/week-2/execution");
+    state.weekTwoExecution = response?.data || null;
+    mergeWeekTwoExecutionState(state.weekTwoExecution);
+    return state.weekTwoExecution;
+  } catch {
+    state.weekTwoExecution = null;
     return null;
   }
 }

@@ -122,6 +122,52 @@ try {
   assert(started.data.workspace_state?.activePilotWorkspace?.mode === "week_2", "workspace mode should be week_2");
   assert(started.data.workspace_state?.activePilotWorkspace?.week_2_execution?.status === "started", "workspace week-2 execution marker missing");
 
+  const activeExecution = await inject("GET", "/pilot/week-2/execution", undefined, tenantId);
+  assert(activeExecution.response.statusCode === 200, `week-2 execution view failed: ${activeExecution.response.statusCode} ${activeExecution.response.body}`);
+  assert(activeExecution.data?.status === "active", "week-2 execution view should be active");
+  assert(activeExecution.data?.current_gate === "material_approval", "week-2 execution should wait for material approval first");
+  assert(activeExecution.data?.material?.id === started.data.content.id, "week-2 execution view material mismatch");
+  assert(activeExecution.data?.material_approval?.id === started.data.approval.id, "week-2 execution material approval mismatch");
+  assert(activeExecution.data?.board?.length === 5, "week-2 execution view board missing");
+  assert(activeExecution.data?.roles?.release_owner, "week-2 execution view release owner missing");
+  assert(activeExecution.data?.actions?.approve_material?.approval_id === started.data.approval.id, "week-2 execution approve material action mismatch");
+  assert(activeExecution.data?.actions?.handoff_release?.calendar_item_id, "week-2 execution handoff action missing");
+  assert(activeExecution.data?.actions?.confirm_url?.calendar_item_id, "week-2 execution confirm URL action missing");
+
+  const materialApproval = await inject("POST", `/approvals/${started.data.approval.id}/approve`, {
+    note: "Week-2 material approved."
+  }, tenantId);
+  assert(materialApproval.response.statusCode === 200, `material approval failed: ${materialApproval.response.statusCode} ${materialApproval.response.body}`);
+  const afterMaterialApproval = await inject("GET", "/pilot/week-2/execution", undefined, tenantId);
+  assert(afterMaterialApproval.data?.current_gate === "qa_release_handoff", "week-2 execution should move to QA/release after material approval");
+
+  const handoffCalendarId = afterMaterialApproval.data.actions.handoff_release.calendar_item_id;
+  const weekTwoHandoff = await inject("POST", `/publishing/items/${handoffCalendarId}/handoff`, {
+    note: "Week-2 QA passed and final text handed off."
+  }, tenantId);
+  assert(weekTwoHandoff.response.statusCode === 200, `week-2 handoff failed: ${weekTwoHandoff.response.statusCode} ${weekTwoHandoff.response.body}`);
+  const afterHandoff = await inject("GET", "/pilot/week-2/execution", undefined, tenantId);
+  assert(afterHandoff.data?.current_gate === "url_confirmation", "week-2 execution should move to URL confirmation after handoff");
+
+  const weekTwoConfirmed = await inject("POST", `/publishing/items/${handoffCalendarId}/confirm-live`, {
+    note: "Week-2 publication confirmed live.",
+    publicationUrl: "https://t.me/agentresult/903",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 1,
+      reposts: 0,
+      saves: 2,
+      reactions: 6
+    },
+    nextStep: "reuse",
+    nextStepNote: "Reuse week-2 proof in the next material."
+  }, tenantId);
+  assert(weekTwoConfirmed.response.statusCode === 200, `week-2 confirm-live failed: ${weekTwoConfirmed.response.statusCode} ${weekTwoConfirmed.response.body}`);
+  const afterConfirmation = await inject("GET", "/pilot/week-2/execution", undefined, tenantId);
+  assert(afterConfirmation.data?.current_gate === "result_review", "week-2 execution should move to result review after URL confirmation");
+  assert(afterConfirmation.data?.publication_result?.publication_url === "https://t.me/agentresult/903", "week-2 execution result URL mismatch");
+  assert(afterConfirmation.data?.actions?.review_result?.publication_result_id, "week-2 execution review action missing");
+
   const repeated = await inject("POST", "/pilot/week-2/start", {
     note: "Idempotent repeat."
   }, tenantId);

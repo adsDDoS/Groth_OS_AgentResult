@@ -117,6 +117,58 @@ try {
   assert(approvedWeek2.data.weekTwoExecution?.status === "started", "telegram scope approval should start week-2 execution");
   assert(approvedWeek2.data.weekTwoExecution?.task?.task_type === "pilot_week_2_execution", "telegram week-2 execution task missing");
 
+  const week2Status = await inject("POST", "/telegram/commands", {
+    command: "/week2_status"
+  }, tenantId);
+  assert(week2Status.response.statusCode === 200, `telegram week-2 status failed: ${week2Status.response.statusCode} ${week2Status.response.body}`);
+  assert(week2Status.data.text.includes("согласование материала"), "telegram week-2 status should show material approval gate");
+  assert(week2Status.data.text.includes("Доска:"), "telegram week-2 status should show board");
+  assert(week2Status.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === approvedWeek2.data.weekTwoExecution.approval.id), "telegram week-2 material approval button missing");
+
+  const week2MaterialApproval = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: approvedWeek2.data.weekTwoExecution.approval.id,
+    note: "Approve week-2 material from Telegram."
+  }, tenantId);
+  assert(week2MaterialApproval.response.statusCode === 200, `telegram week-2 material approve failed: ${week2MaterialApproval.response.statusCode} ${week2MaterialApproval.response.body}`);
+  const week2QaStatus = await inject("POST", "/telegram/commands", {
+    command: "/week2_status"
+  }, tenantId);
+  assert(week2QaStatus.data.text.includes("QA и передача на выпуск"), "telegram week-2 status should move to QA/release gate");
+  const handoffButton = week2QaStatus.data.buttons?.find((button) => button.command === "handoff" && button.targetId);
+  assert(handoffButton?.targetId, "telegram week-2 handoff button missing");
+
+  const week2Handoff = await inject("POST", "/telegram/commands", {
+    command: "/handoff",
+    targetId: handoffButton.targetId,
+    note: "Week-2 QA passed."
+  }, tenantId);
+  assert(week2Handoff.response.statusCode === 200, `telegram week-2 handoff failed: ${week2Handoff.response.statusCode} ${week2Handoff.response.body}`);
+  const week2UrlStatus = await inject("POST", "/telegram/commands", {
+    command: "/week2_status"
+  }, tenantId);
+  assert(week2UrlStatus.data.text.includes("подтверждение URL"), "telegram week-2 status should move to URL confirmation gate");
+
+  const confirmedWeek2 = await inject("POST", `/publishing/items/${handoffButton.targetId}/confirm-live`, {
+    note: "Week-2 URL confirmed.",
+    publicationUrl: "https://t.me/agentresult/803",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 1,
+      reposts: 0,
+      saves: 1,
+      reactions: 4
+    },
+    nextStep: "reuse",
+    nextStepNote: "Reuse week-2 proof."
+  }, tenantId);
+  assert(confirmedWeek2.response.statusCode === 200, `week-2 confirm-live failed: ${confirmedWeek2.response.statusCode} ${confirmedWeek2.response.body}`);
+  const week2ReviewStatus = await inject("POST", "/telegram/commands", {
+    command: "/week2_status"
+  }, tenantId);
+  assert(week2ReviewStatus.data.text.includes("review результата"), "telegram week-2 status should move to result review gate");
+  assert(week2ReviewStatus.data.buttons?.some((button) => button.command === "reuse" && button.targetId), "telegram week-2 result review button missing");
+
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);
   const intent = await inject("POST", "/telegram/intent", {

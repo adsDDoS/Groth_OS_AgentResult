@@ -69,6 +69,18 @@ export async function pilotRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.get("/pilot/week-2/execution", async (request, reply) => {
+    const result = await getActiveWeekTwoExecution(request.tenantId);
+    if (!result) {
+      reply.status(404);
+      return {
+        error: "PilotWeekTwoExecutionNotFound",
+        message: "No active week-2 execution workspace is available."
+      };
+    }
+    return { data: result };
+  });
+
   app.post("/pilot/week-2/start", async (request, reply) => {
     const body = weekTwoStartBody.parse(request.body ?? {});
     const result = await startWeekTwoExecution({
@@ -398,6 +410,78 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
     day_7_review: daySevenCalendar,
     task,
     workspace_state: updatedWorkspaceState
+  };
+}
+
+export async function getActiveWeekTwoExecution(tenantId: string) {
+  const dashboardState = await getDashboardState(tenantId);
+  const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
+    ? dashboardState.activePilotWorkspace as Record<string, unknown>
+    : {};
+  const weekTwoExecution = activePilotWorkspace.week_2_execution && typeof activePilotWorkspace.week_2_execution === "object"
+    ? activePilotWorkspace.week_2_execution as Record<string, unknown>
+    : {};
+  const weekTwoScope = activePilotWorkspace.week_2_scope && typeof activePilotWorkspace.week_2_scope === "object"
+    ? activePilotWorkspace.week_2_scope as Record<string, unknown>
+    : {};
+  const contentItemId = textValue(weekTwoExecution.content_item_id || weekTwoScope.next_material_id, "");
+  if (activePilotWorkspace.mode !== "week_2" || !contentItemId) return null;
+
+  const contentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [contentItemId, tenantId]);
+  const material = contentResult.rows[0] ?? null;
+  if (!material) return null;
+
+  const board = await listWeekTwoBoard(tenantId, contentItemId);
+  const materialApproval = await findWeekTwoMaterialApproval(tenantId, contentItemId);
+  const task = await findWeekTwoExecutionTask(tenantId, contentItemId);
+  const publicationResults = await listPublicationResults(tenantId);
+  const publicationResult = publicationResults.find((item) => item.content_item_id === contentItemId) ?? null;
+  const releaseItem = weekTwoReleaseItem(board);
+  const confirmationItem = weekTwoConfirmationItem(board) ?? releaseItem;
+  const roles = weekTwoRolesFromMaterial(material, board, weekTwoScope);
+  const materialApproved = materialApproval?.status === "approved";
+  const releaseStatus = textValue(releaseItem?.status, "");
+  const currentGate = publicationResult
+    ? "result_review"
+    : !materialApproved
+      ? "material_approval"
+      : releaseStatus === "handed_off"
+        ? "url_confirmation"
+        : "qa_release_handoff";
+
+  return {
+    status: "active",
+    current_gate: currentGate,
+    material,
+    material_approval: materialApproval,
+    board,
+    task,
+    publication_result: publicationResult,
+    roles,
+    channel_constraint: textValue(weekTwoScope.channel_constraint, ""),
+    actions: {
+      approve_material: materialApproval ? {
+        approval_id: materialApproval.id,
+        enabled: materialApproval.status === "pending"
+      } : null,
+      handoff_release: releaseItem ? {
+        calendar_item_id: releaseItem.id,
+        enabled: materialApproved && ["scheduled", "review"].includes(releaseStatus)
+      } : null,
+      confirm_url: releaseItem ? {
+        calendar_item_id: releaseItem.id,
+        enabled: releaseStatus === "handed_off"
+      } : null,
+      review_result: publicationResult ? {
+        publication_result_id: publicationResult.id,
+        enabled: true
+      } : null,
+      confirmation_gate: confirmationItem ? {
+        calendar_item_id: confirmationItem.id,
+        enabled: Boolean(publicationResult)
+      } : null
+    },
+    workspace_state: dashboardState
   };
 }
 
@@ -742,6 +826,54 @@ async function findWeekTwoMaterialApproval(tenantId: string, contentItemId: stri
     [tenantId, "content_item", contentItemId, "social_post"]
   );
   return result.rows[0] ?? null;
+}
+
+function weekTwoReleaseItem(board: Record<string, unknown>[]) {
+  return board.find((item) => String(item.title || "").includes("Day 11"))
+    ?? board.find((item) => ["handed_off", "scheduled", "review"].includes(textValue(item.status, "")))
+    ?? null;
+}
+
+function weekTwoConfirmationItem(board: Record<string, unknown>[]) {
+  return board.find((item) => String(item.title || "").includes("Day 14")) ?? null;
+}
+
+function weekTwoRolesFromMaterial(
+  material: Record<string, unknown>,
+  board: Record<string, unknown>[],
+  weekTwoScope: Record<string, unknown>
+) {
+  const metadata = material.metadata && typeof material.metadata === "object"
+    ? material.metadata as Record<string, unknown>
+    : {};
+  const materialScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
+    ? metadata.week_2_scope as Record<string, unknown>
+    : {};
+  const roles = materialScope.roles && typeof materialScope.roles === "object"
+    ? materialScope.roles as Record<string, unknown>
+    : weekTwoScope.roles && typeof weekTwoScope.roles === "object"
+      ? weekTwoScope.roles as Record<string, unknown>
+      : {};
+  const releaseItem = weekTwoReleaseItem(board);
+  const confirmationItem = weekTwoConfirmationItem(board);
+  const releaseMetadata = releaseItem?.metadata && typeof releaseItem.metadata === "object"
+    ? releaseItem.metadata as Record<string, unknown>
+    : {};
+  const confirmationMetadata = confirmationItem?.metadata && typeof confirmationItem.metadata === "object"
+    ? confirmationItem.metadata as Record<string, unknown>
+    : {};
+  const releaseScope = releaseMetadata.week_2_scope && typeof releaseMetadata.week_2_scope === "object"
+    ? releaseMetadata.week_2_scope as Record<string, unknown>
+    : {};
+  const confirmationScope = confirmationMetadata.week_2_scope && typeof confirmationMetadata.week_2_scope === "object"
+    ? confirmationMetadata.week_2_scope as Record<string, unknown>
+    : {};
+
+  return {
+    approval_owner: textValue(roles.approval_owner, "Founder / managing partner"),
+    release_owner: textValue(roles.release_owner || releaseScope.owner, "Content operator or chief of staff"),
+    result_owner: textValue(roles.result_owner || confirmationScope.owner, "Content operator or chief of staff")
+  };
 }
 
 async function ensureWeekTwoNextMaterial(

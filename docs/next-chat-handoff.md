@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add approved week-2 execution start
+Add first-class week-2 execution surface
 ```
 
 Before changing product or dashboard behavior, read:
@@ -55,6 +55,9 @@ Ready:
 - Backend week-2 execution start is now `POST /pilot/week-2/start`; it is blocked until `pilot_week_2_scope` is approved, then moves the next material into review, marks Day 8 started, creates `pilot_week_2_execution`, opens week-2 material approval, updates workspace state, and writes owner-action audit.
 - Dashboard starts week-2 execution automatically after approving `pilot_week_2_scope`.
 - Telegram owner-control supports `/week2` / `/start_week2`, and approving `pilot_week_2_scope` from Telegram starts week-2 execution automatically.
+- Backend week-2 execution surface is now `GET /pilot/week-2/execution`; it returns active material, material approval, board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
+- Dashboard Today renders active week-2 execution as a first-class working panel and P1 queue row, using backend action targets for material approval, QA/release handoff, URL confirmation, and result review.
+- Telegram owner-control supports `/week2_status`, `/week2_board`, and `/w2`; it renders the same backend week-2 execution view with targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -198,16 +201,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Make week-2 execution visible as an operator board:
+Close week-2 result review into a backend-owned week-3 scope decision:
 
 ```text
-Add focused dashboard/Telegram views for active week-2 execution: material approval, Day 8/9/10/11/14 board, QA/release owner, URL confirmation, and week-2 result review.
+Add backend-owned week-2 result review command that records reuse / expand / update / leave after confirmed week-2 publication and creates the next scope proposal without copying Day-7-specific logic.
 ```
 
 Why this is next:
 
 ```text
-Week-2 can now start safely after owner approval. The next leverage point is making the active execution loop visible enough for an operator to run it without digging through generic queues.
+Week-2 is now runnable from product surfaces. The next leverage point is closing the second loop with the same controlled production logic, without hard-coding everything as Day-7/week-1.
 ```
 
 Suggested first files to inspect:
