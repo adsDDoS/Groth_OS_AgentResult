@@ -770,6 +770,18 @@ function renderDaySevenReviewMessage(input: {
   if (input.review.target) {
     lines.push(`Создано: ${textValue(input.review.target.title ?? (input.review.target.payload as Row | undefined)?.title, "следующее действие")}`);
   }
+  const weekTwoScope = input.review.week_2_scope && typeof input.review.week_2_scope === "object"
+    ? input.review.week_2_scope as Row
+    : null;
+  const nextMaterial = weekTwoScope?.next_material && typeof weekTwoScope.next_material === "object"
+    ? weekTwoScope.next_material as Row
+    : null;
+  if (weekTwoScope) {
+    lines.push("");
+    lines.push("Week-2 scope создан.");
+    lines.push(`Канал: ${textValue(weekTwoScope.channel_constraint, "один проверенный канал")}.`);
+    if (nextMaterial) lines.push(`Следующий материал: ${textValue(nextMaterial.title, "материал недели 2")}.`);
+  }
 
   return lines.join("\n");
 }

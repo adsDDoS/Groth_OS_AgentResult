@@ -303,13 +303,32 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
     note,
     owner_notes: input.ownerNotes ?? null
   });
+  const weekTwoScope = await createWeekTwoScope({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    materialId,
+    nextStep: input.nextStep,
+    note,
+    publicationResult,
+    actionResult,
+    decidedAt: now
+  });
   const updatedWorkspaceState = await mergeDashboardState(input.tenantId, {
     activePilotWorkspace: {
       ...activePilotWorkspace,
       day_7_review_completed_at: now,
       day_7_review_decision: input.nextStep,
       day_7_review_note: note,
-      publication_result_id: publicationResult.id
+      publication_result_id: publicationResult.id,
+      week_2_scope: {
+        created_at: weekTwoScope.created_at,
+        decision: weekTwoScope.decision,
+        repair_decision: weekTwoScope.repair_decision,
+        channel_constraint: weekTwoScope.channel_constraint,
+        next_material_id: weekTwoScope.next_material?.id ?? null,
+        task_id: weekTwoScope.task?.id ?? null,
+        board_ids: weekTwoScope.board.map((item) => item.id)
+      }
     }
   });
 
@@ -327,7 +346,13 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
       note,
       owner_notes: input.ownerNotes ?? null,
       next_target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
-      next_target_id: actionResult.target?.id ?? actionResult.action?.target_id ?? null
+      next_target_id: actionResult.target?.id ?? actionResult.action?.target_id ?? null,
+      week_2_scope: {
+        repair_decision: weekTwoScope.repair_decision,
+        channel_constraint: weekTwoScope.channel_constraint,
+        next_material_id: weekTwoScope.next_material?.id ?? null,
+        task_id: weekTwoScope.task?.id ?? null
+      }
     }
   });
 
@@ -343,10 +368,214 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
     action: actionResult.action ?? null,
     target: actionResult.target ?? null,
     target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
+    week_2_scope: weekTwoScope,
     day_7_review: daySevenCalendar,
     task,
     workspace_state: updatedWorkspaceState
   };
+}
+
+async function createWeekTwoScope(input: {
+  tenantId: string;
+  userId?: string | null;
+  materialId: string;
+  nextStep: "expand" | "reuse" | "update" | "leave";
+  note: string;
+  publicationResult: Record<string, unknown>;
+  actionResult: Record<string, unknown>;
+  decidedAt: string;
+}) {
+  const sourceContentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [
+    input.materialId,
+    input.tenantId
+  ]);
+  const sourceContent = sourceContentResult.rows[0] ?? {};
+  const sourceMetadata = sourceContent.metadata && typeof sourceContent.metadata === "object"
+    ? sourceContent.metadata as Record<string, unknown>
+    : {};
+  const roles = {
+    approval_owner: "Founder / managing partner",
+    release_owner: textValue(sourceMetadata.owner, "Content operator or chief of staff"),
+    result_owner: textValue(sourceMetadata.result_owner, textValue(sourceMetadata.owner, "Content operator or chief of staff"))
+  };
+  const nextMaterial = await ensureWeekTwoNextMaterial(input, sourceContent);
+  const channel = textValue(nextMaterial.channel, textValue(sourceContent.channel, textValue(input.publicationResult.channel, "telegram")));
+  const repairDecision = weekTwoRepairDecision(input.nextStep);
+  const channelConstraint = `keep one proven channel for week 2: ${channel}`;
+  const scopeMetadata = {
+    source: "pilot_week_2_scope",
+    decision: input.nextStep,
+    repair_decision: repairDecision,
+    channel_constraint: channelConstraint,
+    source_material_id: input.materialId,
+    publication_result_id: input.publicationResult.id ?? null,
+    owner_note: input.note,
+    roles
+  };
+  const board = await Promise.all([
+    createCalendarItem(input.tenantId, {
+      title: "Week 2 Day 8: confirm scope and one-channel constraint",
+      content_item_id: nextMaterial.id,
+      channel,
+      status: "scheduled",
+      scheduled_for: "2026-06-24 10:00",
+      metadata: {
+        week_2_scope: {
+          ...scopeMetadata,
+          gate: "No second channel until week-1 loop is clean and week-2 scope is approved."
+        }
+      }
+    }),
+    createCalendarItem(input.tenantId, {
+      title: "Week 2 Day 9: prepare next material brief or draft",
+      content_item_id: nextMaterial.id,
+      channel,
+      status: "scheduled",
+      scheduled_for: "2026-06-25 18:00",
+      metadata: {
+        week_2_scope: {
+          ...scopeMetadata,
+          gate: "Material follows the Day-7 decision and avoids forbidden claims."
+        }
+      }
+    }),
+    createCalendarItem(input.tenantId, {
+      title: "Week 2 Day 10: owner approval for next material",
+      content_item_id: nextMaterial.id,
+      channel,
+      status: "scheduled",
+      scheduled_for: "2026-06-26 12:00",
+      metadata: {
+        week_2_scope: {
+          ...scopeMetadata,
+          owner: roles.approval_owner,
+          gate: "Owner approves topic boundary and claim safety."
+        }
+      }
+    }),
+    createCalendarItem(input.tenantId, {
+      title: "Week 2 Day 11: QA and release handoff",
+      content_item_id: nextMaterial.id,
+      channel,
+      status: "scheduled",
+      scheduled_for: "2026-06-27 16:00",
+      metadata: {
+        week_2_scope: {
+          ...scopeMetadata,
+          owner: roles.release_owner,
+          gate: "QA passes before handoff; handoff is not publication."
+        }
+      }
+    }),
+    createCalendarItem(input.tenantId, {
+      title: "Week 2 Day 14: confirm URL and choose next content step",
+      content_item_id: nextMaterial.id,
+      channel,
+      status: "scheduled",
+      scheduled_for: "2026-06-30 12:00",
+      metadata: {
+        week_2_scope: {
+          ...scopeMetadata,
+          owner: roles.result_owner,
+          gate: "URL and primary reactions are confirmed before another scope expansion."
+        }
+      }
+    })
+  ]);
+  const task = await createAgentTask({
+    tenantId: input.tenantId,
+    role: "growth_orchestrator",
+    taskType: "pilot_week_2_scope",
+    targetType: "content_item",
+    targetId: String(nextMaterial.id),
+    payload: {
+      title: `Week 2 scope: ${weekTwoDecisionLabel(input.nextStep)}`,
+      owner: "Founder + operator",
+      status: "queued",
+      decision: input.nextStep,
+      repairDecision,
+      channelConstraint,
+      roles,
+      source: "pilot_week_2_scope",
+      publicationResultId: input.publicationResult.id ?? null,
+      sourceMaterialId: input.materialId
+    },
+    createdBy: input.userId ?? undefined
+  });
+  await recordOwnerActionAudit({
+    tenantId: input.tenantId,
+    action: "pilot.week_2.scope_created",
+    targetType: "content_item",
+    targetId: String(nextMaterial.id),
+    userId: input.userId ?? null,
+    source: "pilot_command",
+    metadata: {
+      decision: input.nextStep,
+      repair_decision: repairDecision,
+      channel_constraint: channelConstraint,
+      publication_result_id: input.publicationResult.id ?? null,
+      board_ids: board.map((item) => item.id),
+      task_id: task.id ?? null
+    }
+  });
+  return {
+    created_at: input.decidedAt,
+    decision: input.nextStep,
+    repair_decision: repairDecision,
+    channel_constraint: channelConstraint,
+    roles,
+    next_material: nextMaterial,
+    board,
+    task
+  };
+}
+
+async function ensureWeekTwoNextMaterial(
+  input: {
+    tenantId: string;
+    userId?: string | null;
+    nextStep: "expand" | "reuse" | "update" | "leave";
+    note: string;
+    publicationResult: Record<string, unknown>;
+    actionResult: Record<string, unknown>;
+  },
+  sourceContent: Record<string, unknown>
+) {
+  const target = input.actionResult.target && typeof input.actionResult.target === "object"
+    ? input.actionResult.target as Record<string, unknown>
+    : null;
+  const targetType = textValue(input.actionResult.target_type ?? (input.actionResult.action as Record<string, unknown> | undefined)?.target_type, "");
+  if (targetType === "content_item" && target?.id) return target;
+
+  const sourceMetadata = sourceContent.metadata && typeof sourceContent.metadata === "object"
+    ? sourceContent.metadata as Record<string, unknown>
+    : {};
+  const title = weekTwoMaterialTitle(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material"));
+  const contentType = input.nextStep === "expand" ? "article_outline" : textValue(sourceContent.content_type, "telegram_post");
+  const channel = input.nextStep === "expand" ? "website" : textValue(sourceContent.channel ?? input.publicationResult.channel, "telegram");
+  return insertJson("content_items", {
+    demand_map_item_id: sourceContent.demand_map_item_id ?? null,
+    title,
+    content_type: contentType,
+    channel,
+    status: "idea",
+    owner_id: sourceContent.owner_id ?? null,
+    target_url: null,
+    body_md: "",
+    metadata: {
+      source: "pilot_week_2_scope",
+      source_content_item_id: sourceContent.id ?? null,
+      source_publication_result_id: input.publicationResult.id ?? null,
+      next_step: input.nextStep,
+      repair_decision: weekTwoRepairDecision(input.nextStep),
+      brief: weekTwoMaterialBrief(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material")),
+      proof: input.note,
+      owner: sourceMetadata.owner ?? "Content operator or chief of staff",
+      result_owner: sourceMetadata.result_owner ?? sourceMetadata.owner ?? "Content operator or chief of staff",
+      created_by_command: "pilot.week_2.scope_created",
+      created_by: input.userId ?? null
+    }
+  }, input.tenantId);
 }
 
 async function upsertCompanyProfile(tenantId: string, profilePatch: Record<string, unknown>) {
@@ -484,4 +713,35 @@ function defaultDaySevenReviewNote(nextStep: "expand" | "reuse" | "update" | "le
   if (nextStep === "reuse") return "Reuse the strongest paragraph as the next material.";
   if (nextStep === "update") return "Update the published material with confirmed reactions and owner notes.";
   return "Leave the material as published and keep the next week narrow.";
+}
+
+function weekTwoRepairDecision(nextStep: "expand" | "reuse" | "update" | "leave") {
+  if (nextStep === "update") return "repair";
+  if (nextStep === "leave") return "narrow";
+  return "continue";
+}
+
+function weekTwoDecisionLabel(nextStep: "expand" | "reuse" | "update" | "leave") {
+  if (nextStep === "expand") return "expand the proven angle";
+  if (nextStep === "reuse") return "reuse the strongest paragraph";
+  if (nextStep === "update") return "repair and update the published material";
+  return "keep the scope narrow and run one clean loop";
+}
+
+function weekTwoMaterialTitle(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string) {
+  if (nextStep === "expand") return `Week 2 expand: ${sourceTitle}`;
+  if (nextStep === "reuse") return `Week 2 reuse: ${sourceTitle}`;
+  if (nextStep === "update") return `Week 2 update brief: ${sourceTitle}`;
+  return `Week 2 controlled loop: ${sourceTitle}`;
+}
+
+function weekTwoMaterialBrief(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string) {
+  if (nextStep === "expand") return `Expand the strongest angle from "${sourceTitle}" into a larger article outline. Keep claims practical and proof-bound.`;
+  if (nextStep === "reuse") return `Reuse the strongest paragraph from "${sourceTitle}" as a second material in the same channel.`;
+  if (nextStep === "update") return `Prepare an update brief for "${sourceTitle}" with confirmed reactions, corrections, and owner notes.`;
+  return `Run a narrow second loop after "${sourceTitle}" without adding a new channel or broadening claims.`;
+}
+
+function textValue(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }

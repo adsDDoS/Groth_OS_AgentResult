@@ -5437,6 +5437,20 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
       state.metrics.tasks_created = state.tasks.length;
     }
+    if (data.week_2_scope && typeof data.week_2_scope === "object") {
+      const weekTwoScope = data.week_2_scope;
+      if (weekTwoScope.next_material) {
+        state.content = mergeLocalItems(state.content, [weekTwoScope.next_material]);
+        state.metrics.content_items = state.content.length;
+      }
+      if (Array.isArray(weekTwoScope.board)) {
+        state.calendar = mergeLocalItems(state.calendar, weekTwoScope.board);
+      }
+      if (weekTwoScope.task) {
+        state.tasks = mergeLocalItems(state.tasks, [normalizeTask(weekTwoScope.task)]).map(normalizeVisibleTask);
+        state.metrics.tasks_created = state.tasks.length;
+      }
+    }
     if (data.task) {
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
     }

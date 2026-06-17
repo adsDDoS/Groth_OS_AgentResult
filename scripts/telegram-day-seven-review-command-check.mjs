@@ -94,8 +94,10 @@ try {
   assert(day7.response.statusCode === 200, `telegram Day-7 command failed: ${day7.response.statusCode} ${day7.response.body}`);
   assert(day7.data.text.includes("Day-7 review закрыт"), "Day-7 command text mismatch");
   assert(day7.data.text.includes("расширить материал"), "Day-7 command next step text mismatch");
+  assert(day7.data.text.includes("Week-2 scope создан"), "Day-7 command week-2 scope text mismatch");
   assert(day7.data.reviewResult?.decision?.next_step === "expand", "Day-7 command decision mismatch");
   assert(day7.data.reviewResult?.target?.content_type === "article_outline", "Day-7 command should create article outline");
+  assert(day7.data.reviewResult?.week_2_scope?.next_material?.id === day7.data.reviewResult?.target?.id, "Day-7 command week-2 next material mismatch");
   assert(day7.data.ownerBrief?.publishedResults?.[0]?.nextStep === "expand", "owner brief publication result step mismatch");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
@@ -109,6 +111,7 @@ try {
   assert(intent.data.reviewResult?.decision?.next_step === "leave", "Day-7 intent decision mismatch");
   assert(intent.data.reviewResult?.publication_result?.id === otherPublicationResult.id, "Day-7 intent publication result mismatch");
   assert(intent.data.reviewResult?.target === null, "Day-7 leave intent should not create target");
+  assert(intent.data.reviewResult?.week_2_scope?.repair_decision === "narrow", "Day-7 leave intent week-2 scope mismatch");
 
   const firstTenantContent = await inject("GET", "/content/items", undefined, tenantId);
   assert(!firstTenantContent.data.some((item) => item.title === "Telegram Day-7 leave material"), "Day-7 intent leaked across tenants");

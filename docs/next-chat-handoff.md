@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add Day-7 review dashboard and Telegram surfaces
+Add backend-owned week-2 scope creation
 ```
 
 Before changing product or dashboard behavior, read:
@@ -47,8 +47,10 @@ Ready:
 - Backend pilot command creates the repeatable week-1 workspace from intake: company profile, first ICP demand item, first material brief, owner approval, QA/release calendar board, URL confirmation path, Day-7 review task, tenant dashboard state, and owner-action audit.
 - Telegram owner-control now supports backend-owned week-1 pilot start through `/pilot`, `/start_pilot`, `/week_1_pilot`, and natural phrases such as `запусти пилот` / `week-1 pilot`. Telegram parses optional intake fields and calls the same canonical backend pilot command instead of duplicating pilot state.
 - Backend Day-7 pilot review command closes the active week-1 loop after confirmed publication result and records `expand / reuse / update / leave` into publication result metadata, Day-7 calendar item, Day-7 task, workspace state, and owner-action audit.
+- Backend Day-7 pilot review now also creates backend-owned week-2 scope: next material, five board items, owner/release/result roles, one-channel constraint, and `continue / repair / narrow` decision.
 - Dashboard Results next-step buttons now close active pilot Day-7 review through `POST /pilot/week-1/day-7-review`; outside active pilot workspace they still use ordinary publication-result commands/local fallback.
-- Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`.
+- Dashboard merges returned week-2 scope into content, calendar, task, and workspace state after Day-7 review.
+- Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`; responses show that week-2 scope was created.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -158,7 +160,7 @@ Latest completed checks before this handoff:
 - `npm run build -w packages/shared` passed.
 - `npm run build -w apps/backend` passed.
 - `npm run dashboard:smoke` passed.
-- GitHub Actions `Dashboard smoke` passed through run #167.
+- GitHub Actions `Dashboard smoke` is expected to pass on each pushed main commit; check the latest main run after push.
 - Production `?demo=client&v=client-demo-v3` DOM check passed:
   - navigation: `Сегодня`, `Публикации`, `Результаты`;
   - `Материалы` hidden from client-demo navigation;
@@ -190,16 +192,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Make week-2 scope creation backend-owned:
+Expose week-2 scope as a first-class operator/owner flow:
 
 ```text
-Create backend command(s) that convert a completed Day-7 review decision into week-2 scope: next material, channel constraint, owner/release responsibilities, and repair/narrow/continue decision.
+Add dashboard and Telegram controls to inspect, approve, and adjust the backend-created week-2 scope before week-2 execution starts.
 ```
 
 Why this is next:
 
 ```text
-Week 1 can now start and close from product surfaces. The next leverage point is turning the review decision into an executable week-2 board, so pilots do not fall back into docs after the first loop.
+Week-2 scope is now created by the backend. The next leverage point is making it reviewable and adjustable in operator/owner surfaces before the team starts week-2 production.
 ```
 
 Suggested first files to inspect:

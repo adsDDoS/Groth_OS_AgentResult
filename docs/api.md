@@ -91,7 +91,7 @@ Request body:
 
 Response includes `{ company, demand, content, approval, calendar, task, workspace_state }`. The command does not publish, autopost, or create revenue attribution.
 
-`POST /pilot/week-1/day-7-review` closes the active week-1 pilot loop after publication is confirmed. It requires an active `workspace_state.activePilotWorkspace` and a confirmed publication result. It records the selected next content step, completes the Day-7 review calendar/task, updates tenant dashboard state, and writes owner-action audit.
+`POST /pilot/week-1/day-7-review` closes the active week-1 pilot loop after publication is confirmed. It requires an active `workspace_state.activePilotWorkspace` and a confirmed publication result. It records the selected next content step, completes the Day-7 review calendar/task, creates the backend-owned week-2 scope, updates tenant dashboard state, and writes owner-action audit.
 
 Request body:
 
@@ -104,7 +104,9 @@ Request body:
 }
 ```
 
-`nextStep` must be one of `expand`, `reuse`, `update`, or `leave`. `expand`, `reuse`, and `update` delegate to the canonical publication-result commands. `leave` records the review decision without creating a new target.
+`nextStep` must be one of `expand`, `reuse`, `update`, or `leave`. `expand`, `reuse`, and `update` delegate to the canonical publication-result commands. `leave` records the review decision without creating a publication-result target.
+
+Response includes `{ decision, publication_result, action, target, target_type, week_2_scope, day_7_review, task, workspace_state }`. `week_2_scope` contains the week-2 next material, five board items, owner/release/result roles, one-channel constraint, and `continue / repair / narrow` decision. Dashboard and Telegram owner-control use this response; they do not create week-2 scope locally.
 
 ## SEO/GEO
 

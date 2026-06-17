@@ -123,11 +123,47 @@ try {
   assert(expandReview.data.day_7_review?.metadata?.day_7_review?.next_step === "expand", "Day-7 calendar decision missing");
   assert(expandReview.data.task?.status === "completed", "Day-7 task should be completed");
   assert(expandReview.data.workspace_state?.activePilotWorkspace?.day_7_review_decision === "expand", "workspace decision missing");
+  assert(expandReview.data.week_2_scope?.decision === "expand", "expand week-2 scope decision missing");
+  assert(expandReview.data.week_2_scope?.next_material?.id === expandReview.data.target?.id, "expand week-2 scope should reuse next content target");
+  assert(expandReview.data.week_2_scope?.channel_constraint === "keep one proven channel for week 2: website", "expand week-2 channel constraint mismatch");
+  assert(expandReview.data.week_2_scope?.board?.length === 5, `expand week-2 board length mismatch: ${expandReview.data.week_2_scope?.board?.length}`);
+  assert(expandReview.data.week_2_scope?.roles?.approval_owner, "expand week-2 approval owner missing");
+  assert(expandReview.data.week_2_scope?.task?.task_type === "pilot_week_2_scope", "expand week-2 scope task missing");
+  assert(expandReview.data.workspace_state?.activePilotWorkspace?.week_2_scope?.next_material_id === expandReview.data.target?.id, "workspace week-2 next material missing");
   assert(expandReview.data.publication_result?.next_step === "expand", "publication result next step mismatch");
   await assertReviewAudit(tenantId, publicationResult.id, "expand");
 
   const pilotRows = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [pilot.calendar.find((item) => String(item.title).startsWith("Day 7:")).id, tenantId]);
   assert(pilotRows.rows[0]?.metadata?.day_7_review?.publication_result_id === publicationResult.id, "Day-7 metadata publication result mismatch");
+
+  const reusePilot = await startPilot(tenantId, "Day-7 reuse review material");
+  const reusePublicationResult = await confirmPilotPublication(tenantId, reusePilot, 703);
+  const reuseReview = await inject("POST", "/pilot/week-1/day-7-review", {
+    publicationResultId: reusePublicationResult.id,
+    nextStep: "reuse",
+    note: "Reuse the strongest paragraph as the next Telegram material."
+  }, tenantId);
+  assert(reuseReview.response.statusCode === 200, `reuse Day-7 review failed: ${reuseReview.response.statusCode} ${reuseReview.response.body}`);
+  assert(reuseReview.data.week_2_scope?.decision === "reuse", "reuse week-2 scope decision missing");
+  assert(reuseReview.data.week_2_scope?.next_material?.id === reuseReview.data.target?.id, "reuse week-2 scope should reuse next content target");
+  assert(reuseReview.data.week_2_scope?.repair_decision === "continue", "reuse week-2 repair decision mismatch");
+  assert(reuseReview.data.week_2_scope?.channel_constraint === "keep one proven channel for week 2: telegram", "reuse week-2 channel constraint mismatch");
+  assert(reuseReview.data.week_2_scope?.board?.length === 5, "reuse week-2 board rows missing");
+
+  const updatePilot = await startPilot(tenantId, "Day-7 update review material");
+  const updatePublicationResult = await confirmPilotPublication(tenantId, updatePilot, 704);
+  const updateReview = await inject("POST", "/pilot/week-1/day-7-review", {
+    publicationResultId: updatePublicationResult.id,
+    nextStep: "update",
+    note: "Update the published material with confirmed corrections."
+  }, tenantId);
+  assert(updateReview.response.statusCode === 200, `update Day-7 review failed: ${updateReview.response.statusCode} ${updateReview.response.body}`);
+  assert(updateReview.data.target_type === "task", "update should keep publication update target as task");
+  assert(updateReview.data.week_2_scope?.decision === "update", "update week-2 scope decision missing");
+  assert(updateReview.data.week_2_scope?.repair_decision === "repair", "update week-2 repair decision mismatch");
+  assert(updateReview.data.week_2_scope?.next_material?.title === "Week 2 update brief: Day 4/5: Telegram post released and URL confirmed", "update week-2 next material title mismatch");
+  assert(updateReview.data.week_2_scope?.channel_constraint === "keep one proven channel for week 2: telegram", "update week-2 channel constraint mismatch");
+  assert(updateReview.data.week_2_scope?.board?.length === 5, "update week-2 board rows missing");
 
   const leavePilot = await startPilot(otherTenantId, "Day-7 leave review material");
   const leavePublicationResult = await confirmPilotPublication(otherTenantId, leavePilot, 702);
@@ -140,7 +176,14 @@ try {
   assert(leaveReview.data.decision.next_step === "leave", "leave decision mismatch");
   assert(leaveReview.data.action?.type === "leave", "leave action missing");
   assert(leaveReview.data.target === null, "leave should not create a target");
+  assert(leaveReview.data.week_2_scope?.decision === "leave", "leave week-2 scope decision missing");
+  assert(leaveReview.data.week_2_scope?.next_material?.content_type === "telegram_post", "leave week-2 scope should create a next Telegram material");
+  assert(leaveReview.data.week_2_scope?.repair_decision === "narrow", "leave week-2 repair decision mismatch");
+  assert(leaveReview.data.week_2_scope?.channel_constraint === "keep one proven channel for week 2: telegram", "leave week-2 channel constraint mismatch");
+  assert(leaveReview.data.workspace_state?.activePilotWorkspace?.week_2_scope?.decision === "leave", "leave workspace week-2 scope missing");
   assert(leaveReview.data.publication_result?.next_step === "leave", "leave publication result next step mismatch");
+  const leaveWeekTwoCalendarRows = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 200", [otherTenantId]);
+  assert(leaveWeekTwoCalendarRows.rows.filter((item) => item.metadata?.week_2_scope?.decision === "leave").length === 5, "leave week-2 board rows missing");
   await assertReviewAudit(otherTenantId, leavePublicationResult.id, "leave");
 
   const otherTenantContent = await inject("GET", "/content/items", undefined, otherTenantId);
