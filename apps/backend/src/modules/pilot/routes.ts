@@ -4,7 +4,8 @@ import { query } from "../../db/client.js";
 import { createAgentTask } from "../agents/runner.js";
 import { createApprovalRequest } from "../approvals/service.js";
 import { recordOwnerActionAudit } from "../common/audit.js";
-import { insertJson } from "../common/repository.js";
+import { insertJson, patchJson } from "../common/repository.js";
+import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 
 const weekOnePilotBody = z.object({
   icp: z.string().trim().optional(),
@@ -16,8 +17,18 @@ const weekOnePilotBody = z.object({
   resultSource: z.string().trim().optional(),
   forbiddenClaims: z.string().trim().optional()
 });
+const daySevenReviewBody = z.object({
+  nextStep: z.enum(["expand", "reuse", "update", "leave"]),
+  note: z.string().trim().optional(),
+  ownerNotes: z.string().trim().optional(),
+  publicationResultId: z.string().trim().optional()
+});
 
 type WeekOnePilotInput = z.infer<typeof weekOnePilotBody> & {
+  tenantId: string;
+  userId?: string | null;
+};
+type DaySevenReviewInput = z.infer<typeof daySevenReviewBody> & {
   tenantId: string;
   userId?: string | null;
 };
@@ -32,6 +43,23 @@ export async function pilotRoutes(app: FastifyInstance) {
         userId: request.userId
       })
     };
+  });
+
+  app.post("/pilot/week-1/day-7-review", async (request, reply) => {
+    const body = daySevenReviewBody.parse(request.body ?? {});
+    const result = await completeDaySevenReview({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotReviewNotReady",
+        message: "Week-1 pilot review requires an active pilot workspace and a confirmed publication result."
+      };
+    }
+    return { data: result };
   });
 }
 
@@ -207,6 +235,120 @@ export async function startWeekOnePilot(input: WeekOnePilotInput) {
   };
 }
 
+export async function completeDaySevenReview(input: DaySevenReviewInput) {
+  const now = new Date().toISOString();
+  const dashboardState = await getDashboardState(input.tenantId);
+  const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
+    ? dashboardState.activePilotWorkspace as Record<string, unknown>
+    : {};
+  const materialId = typeof activePilotWorkspace.material_id === "string" ? activePilotWorkspace.material_id : "";
+  const daySevenReviewId = typeof activePilotWorkspace.day_7_review_id === "string" ? activePilotWorkspace.day_7_review_id : "";
+  if (!materialId || !daySevenReviewId) return null;
+
+  const publicationResults = await listPublicationResults(input.tenantId);
+  const publicationResult = publicationResults.find((item) =>
+    input.publicationResultId
+      ? [item.id, item.calendar_item_id, item.distribution_signal_id].includes(input.publicationResultId)
+      : item.content_item_id === materialId
+  ) ?? null;
+  if (!publicationResult) return null;
+  if (publicationResult.content_item_id !== materialId) return null;
+
+  const note = input.note || input.ownerNotes || defaultDaySevenReviewNote(input.nextStep);
+  const actionResult = input.nextStep === "leave"
+    ? await markPublicationResultLeft({
+      tenantId: input.tenantId,
+      userId: input.userId,
+      publicationResult,
+      note,
+      decidedAt: now
+    })
+    : await executePublicationResultCommand({
+      tenantId: input.tenantId,
+      userId: input.userId,
+      publicationResultId: String(publicationResult.id),
+      command: input.nextStep,
+      note
+    });
+  if (!actionResult) return null;
+
+  const daySevenCalendarResult = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [
+    daySevenReviewId,
+    input.tenantId
+  ]);
+  const currentDaySevenCalendar = daySevenCalendarResult.rows[0] ?? null;
+  const currentDaySevenMetadata = currentDaySevenCalendar?.metadata && typeof currentDaySevenCalendar.metadata === "object"
+    ? currentDaySevenCalendar.metadata as Record<string, unknown>
+    : {};
+  const daySevenCalendar = await patchJson("publishing_calendar_items", daySevenReviewId, {
+    status: "published",
+    metadata: {
+      ...currentDaySevenMetadata,
+      day_7_review: {
+        decided_at: now,
+        decided_by: input.userId ?? null,
+        material_id: materialId,
+        publication_result_id: publicationResult.id,
+        next_step: input.nextStep,
+        note,
+        owner_notes: input.ownerNotes ?? null,
+        action: actionResult.action ?? null
+      }
+    }
+  }, input.tenantId);
+  const task = await completeDaySevenReviewTask(input.tenantId, materialId, {
+    decided_at: now,
+    publication_result_id: publicationResult.id,
+    next_step: input.nextStep,
+    note,
+    owner_notes: input.ownerNotes ?? null
+  });
+  const updatedWorkspaceState = await mergeDashboardState(input.tenantId, {
+    activePilotWorkspace: {
+      ...activePilotWorkspace,
+      day_7_review_completed_at: now,
+      day_7_review_decision: input.nextStep,
+      day_7_review_note: note,
+      publication_result_id: publicationResult.id
+    }
+  });
+
+  await recordOwnerActionAudit({
+    tenantId: input.tenantId,
+    action: "pilot.week_1.day_7_review",
+    targetType: "publication_result",
+    targetId: String(publicationResult.id),
+    userId: input.userId ?? null,
+    source: "pilot_command",
+    metadata: {
+      material_id: materialId,
+      day_7_review_id: daySevenReviewId,
+      next_step: input.nextStep,
+      note,
+      owner_notes: input.ownerNotes ?? null,
+      next_target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
+      next_target_id: actionResult.target?.id ?? actionResult.action?.target_id ?? null
+    }
+  });
+
+  return {
+    decision: {
+      next_step: input.nextStep,
+      note,
+      owner_notes: input.ownerNotes ?? null,
+      decided_at: now,
+      decided_by: input.userId ?? null
+    },
+    publication_result: actionResult.publication_result ?? publicationResult,
+    action: actionResult.action ?? null,
+    target: actionResult.target ?? null,
+    target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
+    day_7_review: daySevenCalendar,
+    task,
+    workspace_state: updatedWorkspaceState
+  };
+}
+
 async function upsertCompanyProfile(tenantId: string, profilePatch: Record<string, unknown>) {
   const existing = await query("select * from companies where tenant_id = $1 order by created_at asc limit 1", [tenantId]);
   const current = existing.rows[0] ?? null;
@@ -245,12 +387,10 @@ async function createCalendarItem(tenantId: string, item: Record<string, unknown
 }
 
 async function mergeDashboardState(tenantId: string, patch: Record<string, unknown>) {
+  const currentState = await getDashboardState(tenantId);
   const result = await query("select * from tenants where id = $1", [tenantId]);
   const tenant = result.rows[0] ?? null;
   const settings = tenant?.settings && typeof tenant.settings === "object" ? { ...(tenant.settings as Record<string, unknown>) } : {};
-  const currentState = settings.dashboard_state && typeof settings.dashboard_state === "object"
-    ? settings.dashboard_state as Record<string, unknown>
-    : {};
   settings.dashboard_state = {
     ...currentState,
     ...patch
@@ -262,4 +402,86 @@ async function mergeDashboardState(tenantId: string, patch: Record<string, unkno
   return updatedSettings.dashboard_state && typeof updatedSettings.dashboard_state === "object"
     ? updatedSettings.dashboard_state as Record<string, unknown>
     : {};
+}
+
+async function getDashboardState(tenantId: string) {
+  const result = await query("select * from tenants where id = $1", [tenantId]);
+  const settings = result.rows[0]?.settings && typeof result.rows[0].settings === "object"
+    ? result.rows[0].settings as Record<string, unknown>
+    : {};
+  return settings.dashboard_state && typeof settings.dashboard_state === "object"
+    ? settings.dashboard_state as Record<string, unknown>
+    : {};
+}
+
+async function markPublicationResultLeft(input: {
+  tenantId: string;
+  userId?: string | null;
+  publicationResult: Record<string, unknown>;
+  note: string;
+  decidedAt: string;
+}) {
+  const calendarItemId = typeof input.publicationResult.calendar_item_id === "string" ? input.publicationResult.calendar_item_id : "";
+  if (!calendarItemId) return null;
+  const result = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [calendarItemId, input.tenantId]);
+  const calendar = result.rows[0] ?? null;
+  if (!calendar) return null;
+  const metadata = calendar.metadata && typeof calendar.metadata === "object" ? calendar.metadata as Record<string, unknown> : {};
+  const currentResult = metadata.publication_result && typeof metadata.publication_result === "object"
+    ? metadata.publication_result as Record<string, unknown>
+    : {};
+  const action = {
+    type: "leave",
+    target_type: null,
+    target_id: null,
+    created_at: input.decidedAt,
+    created_by: input.userId ?? null
+  };
+  const updatedCalendar = await patchJson("publishing_calendar_items", calendarItemId, {
+    metadata: {
+      ...metadata,
+      publication_result: {
+        ...currentResult,
+        next_step: "leave",
+        next_step_note: input.note,
+        next_step_action: action,
+        decided_at: input.decidedAt,
+        decided_by: input.userId ?? null
+      }
+    }
+  }, input.tenantId);
+  return {
+    action,
+    target: null,
+    target_type: null,
+    calendar_item: updatedCalendar,
+    publication_result: {
+      ...input.publicationResult,
+      next_step: "leave",
+      next_step_note: input.note
+    }
+  };
+}
+
+async function completeDaySevenReviewTask(tenantId: string, materialId: string, payload: Record<string, unknown>) {
+  const result = await query("select * from tasks where tenant_id = $1 order by created_at desc limit 200", [tenantId]);
+  const task = result.rows.find((row) => row.task_type === "pilot_day_7_review" && row.target_id === materialId);
+  if (!task?.id) return null;
+  const metadata = task.payload && typeof task.payload === "object" ? task.payload as Record<string, unknown> : {};
+  const updated = await patchJson("tasks", String(task.id), {
+    status: "completed",
+    payload: {
+      ...metadata,
+      status: "completed",
+      day_7_review: payload
+    }
+  }, tenantId);
+  return updated;
+}
+
+function defaultDaySevenReviewNote(nextStep: "expand" | "reuse" | "update" | "leave") {
+  if (nextStep === "expand") return "Expand the strongest angle into a larger content piece.";
+  if (nextStep === "reuse") return "Reuse the strongest paragraph as the next material.";
+  if (nextStep === "update") return "Update the published material with confirmed reactions and owner notes.";
+  return "Leave the material as published and keep the next week narrow.";
 }

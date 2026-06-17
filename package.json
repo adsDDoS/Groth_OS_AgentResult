@@ -20,6 +20,7 @@
     "approval-side-effects:check": "npm run build && node scripts/approval-side-effects-check.mjs",
     "publishing-commands:check": "npm run build && node scripts/publishing-commands-check.mjs",
     "pilot:week-one-command:check": "node scripts/pilot-week-one-command-check.mjs",
+    "pilot:day-seven-review:check": "node scripts/pilot-day-seven-review-command-check.mjs",
     "auth:tenant-guard:check": "npm run build && node scripts/auth-tenant-guard-check.mjs",
     "content-factory:check": "bash scripts/content-factory-core-check.sh",
     "dashboard:deploy": "npm run dashboard:smoke && npx vercel --prod --yes --scope adsddosss-4657s-projects",

@@ -70,6 +70,7 @@ Publishing creates jobs only after required approval exists.
 ## Pilot Commands
 
 - `POST /pilot/week-1/start`
+- `POST /pilot/week-1/day-7-review`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -89,6 +90,21 @@ Request body:
 ```
 
 Response includes `{ company, demand, content, approval, calendar, task, workspace_state }`. The command does not publish, autopost, or create revenue attribution.
+
+`POST /pilot/week-1/day-7-review` closes the active week-1 pilot loop after publication is confirmed. It requires an active `workspace_state.activePilotWorkspace` and a confirmed publication result. It records the selected next content step, completes the Day-7 review calendar/task, updates tenant dashboard state, and writes owner-action audit.
+
+Request body:
+
+```json
+{
+  "publicationResultId": "optional publication_result.id, calendar_item_id, or distribution_signal_id",
+  "nextStep": "expand",
+  "note": "Expand into a practical article for week 2.",
+  "ownerNotes": "Comments and saves justify a longer explanation."
+}
+```
+
+`nextStep` must be one of `expand`, `reuse`, `update`, or `leave`. `expand`, `reuse`, and `update` delegate to the canonical publication-result commands. `leave` records the review decision without creating a new target.
 
 ## SEO/GEO
 
