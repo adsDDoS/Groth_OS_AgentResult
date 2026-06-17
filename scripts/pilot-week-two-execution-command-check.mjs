@@ -168,11 +168,27 @@ try {
   assert(afterConfirmation.data?.publication_result?.publication_url === "https://t.me/agentresult/903", "week-2 execution result URL mismatch");
   assert(afterConfirmation.data?.actions?.review_result?.publication_result_id, "week-2 execution review action missing");
 
+  const weekTwoReview = await inject("POST", "/pilot/week-2/review", {
+    publicationResultId: afterConfirmation.data.actions.review_result.publication_result_id,
+    nextStep: "expand",
+    note: "Expand week-2 proof into the next controlled scope."
+  }, tenantId);
+  assert(weekTwoReview.response.statusCode === 200, `week-2 review failed: ${weekTwoReview.response.statusCode} ${weekTwoReview.response.body}`);
+  assert(weekTwoReview.data?.decision?.next_step === "expand", "week-2 review decision mismatch");
+  assert(weekTwoReview.data?.week_3_scope?.approval?.scope === "pilot_week_3_scope", "week-3 scope approval missing");
+  assert(weekTwoReview.data?.week_3_scope?.board?.length === 5, "week-3 scope board missing");
+  assert(weekTwoReview.data?.week_3_scope?.next_material?.id, "week-3 next material missing");
+  assert(weekTwoReview.data?.workspace_state?.activePilotWorkspace?.week_2_execution?.status === "completed", "workspace week-2 execution should be completed");
+  assert(weekTwoReview.data?.workspace_state?.activePilotWorkspace?.week_3_scope?.approval_id === weekTwoReview.data.week_3_scope.approval.id, "workspace week-3 approval id mismatch");
+  assert(weekTwoReview.data?.week_2_review?.status === "published", "week-2 review board item should be completed");
+  const reviewedMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [started.data.content.id, tenantId]);
+  assert(reviewedMaterialRows.rows[0]?.metadata?.week_2_execution?.status === "completed", "week-2 material execution metadata should be completed");
+
   const repeated = await inject("POST", "/pilot/week-2/start", {
     note: "Idempotent repeat."
   }, tenantId);
   assert(repeated.response.statusCode === 200, `week-2 repeated start failed: ${repeated.response.statusCode} ${repeated.response.body}`);
-  assert(repeated.data.status === "already_started", "week-2 repeated start should be idempotent");
+  assert(repeated.data.status === "already_completed", "week-2 repeated start should stay completed after review");
   assert(repeated.data.task?.id === started.data.task.id, "week-2 repeated start should reuse execution task");
 
   const audits = await listRows("integrations", { tenantId, limit: 300 });

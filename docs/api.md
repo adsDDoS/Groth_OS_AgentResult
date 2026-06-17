@@ -73,6 +73,7 @@ Publishing creates jobs only after required approval exists.
 - `POST /pilot/week-1/day-7-review`
 - `POST /pilot/week-2/start`
 - `GET /pilot/week-2/execution`
+- `POST /pilot/week-2/review`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -150,6 +151,21 @@ Response includes:
 ```
 
 `current_gate` is one of `material_approval`, `qa_release_handoff`, `url_confirmation`, or `result_review`. Dashboard renders this as the first-class week-2 execution panel in Today. Telegram renders the same backend state through `/week2_status`.
+
+`POST /pilot/week-2/review` closes the active week-2 loop after the week-2 publication URL is confirmed. It requires active week-2 execution and a matching confirmed publication result. It records `expand / reuse / update / leave`, completes the week-2 execution task, marks the week-2 result-review board item complete, creates a backend-owned `week_3_scope` proposal, updates tenant workspace state, and writes owner-action audit.
+
+Request body:
+
+```json
+{
+  "publicationResultId": "optional publication_result.id, calendar_item_id, or distribution_signal_id",
+  "nextStep": "expand",
+  "note": "Expand week-2 proof into the next controlled scope.",
+  "ownerNotes": "The week-2 URL and reactions justify a larger follow-up."
+}
+```
+
+Response includes `{ decision, publication_result, action, target, target_type, week_3_scope, week_2_review, task, workspace_state }`. `week_3_scope` uses the same backend next-scope proposal builder as week-2 scope creation, with `pilot_week_3_scope` approval, next material, board, roles, and one-channel constraint.
 
 ## SEO/GEO
 

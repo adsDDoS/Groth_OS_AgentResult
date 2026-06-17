@@ -26,6 +26,12 @@ const daySevenReviewBody = z.object({
 const weekTwoStartBody = z.object({
   note: z.string().trim().optional()
 });
+const weekTwoReviewBody = z.object({
+  nextStep: z.enum(["expand", "reuse", "update", "leave"]),
+  note: z.string().trim().optional(),
+  ownerNotes: z.string().trim().optional(),
+  publicationResultId: z.string().trim().optional()
+});
 
 type WeekOnePilotInput = z.infer<typeof weekOnePilotBody> & {
   tenantId: string;
@@ -36,6 +42,10 @@ type DaySevenReviewInput = z.infer<typeof daySevenReviewBody> & {
   userId?: string | null;
 };
 type WeekTwoStartInput = z.infer<typeof weekTwoStartBody> & {
+  tenantId: string;
+  userId?: string | null;
+};
+type WeekTwoReviewInput = z.infer<typeof weekTwoReviewBody> & {
   tenantId: string;
   userId?: string | null;
 };
@@ -93,6 +103,23 @@ export async function pilotRoutes(app: FastifyInstance) {
       return {
         error: "PilotWeekTwoNotReady",
         message: "Week-2 execution requires an approved pilot_week_2_scope approval."
+      };
+    }
+    return { data: result };
+  });
+
+  app.post("/pilot/week-2/review", async (request, reply) => {
+    const body = weekTwoReviewBody.parse(request.body ?? {});
+    const result = await completeWeekTwoReview({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekTwoReviewNotReady",
+        message: "Week-2 review requires active week-2 execution and a confirmed week-2 publication result."
       };
     }
     return { data: result };
@@ -291,21 +318,14 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
   if (publicationResult.content_item_id !== materialId) return null;
 
   const note = input.note || input.ownerNotes || defaultDaySevenReviewNote(input.nextStep);
-  const actionResult = input.nextStep === "leave"
-    ? await markPublicationResultLeft({
-      tenantId: input.tenantId,
-      userId: input.userId,
-      publicationResult,
-      note,
-      decidedAt: now
-    })
-    : await executePublicationResultCommand({
-      tenantId: input.tenantId,
-      userId: input.userId,
-      publicationResultId: String(publicationResult.id),
-      command: input.nextStep,
-      note
-    });
+  const actionResult = await executePilotPublicationResultDecision({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    publicationResult,
+    nextStep: input.nextStep,
+    note,
+    decidedAt: now
+  });
   if (!actionResult) return null;
 
   const daySevenCalendarResult = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [
@@ -485,6 +505,148 @@ export async function getActiveWeekTwoExecution(tenantId: string) {
   };
 }
 
+export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
+  const now = new Date().toISOString();
+  const execution = await getActiveWeekTwoExecution(input.tenantId);
+  if (!execution || execution.current_gate !== "result_review") return null;
+  const materialId = textValue(execution.material?.id, "");
+  const publicationResult = execution.publication_result && typeof execution.publication_result === "object"
+    ? execution.publication_result as Record<string, unknown>
+    : null;
+  if (!materialId || !publicationResult) return null;
+  if (input.publicationResultId && ![publicationResult.id, publicationResult.calendar_item_id, publicationResult.distribution_signal_id].includes(input.publicationResultId)) return null;
+
+  const note = input.note || input.ownerNotes || defaultPilotReviewNote(input.nextStep);
+  const actionResult = await executePilotPublicationResultDecision({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    publicationResult,
+    nextStep: input.nextStep,
+    note,
+    decidedAt: now
+  });
+  if (!actionResult) return null;
+
+  const board = Array.isArray(execution.board) ? execution.board as Record<string, unknown>[] : [];
+  const reviewItem = weekTwoConfirmationItem(board);
+  const weekTwoReview = reviewItem?.id
+    ? await patchPilotReviewBoardItem(input.tenantId, String(reviewItem.id), "week_2_review", {
+        decided_at: now,
+        decided_by: input.userId ?? null,
+        material_id: materialId,
+        publication_result_id: publicationResult.id ?? null,
+        next_step: input.nextStep,
+        note,
+        owner_notes: input.ownerNotes ?? null,
+        action: actionResult.action ?? null
+      })
+    : null;
+  const task = await completePilotTask(input.tenantId, "pilot_week_2_execution", materialId, {
+    status: "completed",
+    week_2_review: {
+      decided_at: now,
+      publication_result_id: publicationResult.id ?? null,
+      next_step: input.nextStep,
+      note,
+      owner_notes: input.ownerNotes ?? null
+    }
+  });
+  await completeWeekTwoMaterialExecution(input.tenantId, materialId, {
+    completed_at: now,
+    completed_by: input.userId ?? null,
+    review_decision: input.nextStep,
+    review_note: note,
+    publication_result_id: publicationResult.id ?? null
+  });
+  const weekThreeScope = await createPilotScopeProposal({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    sourceWeek: 2,
+    targetWeek: 3,
+    materialId,
+    nextStep: input.nextStep,
+    note,
+    publicationResult,
+    actionResult,
+    decidedAt: now
+  });
+
+  const dashboardState = await getDashboardState(input.tenantId);
+  const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
+    ? dashboardState.activePilotWorkspace as Record<string, unknown>
+    : {};
+  const weekTwoExecution = activePilotWorkspace.week_2_execution && typeof activePilotWorkspace.week_2_execution === "object"
+    ? activePilotWorkspace.week_2_execution as Record<string, unknown>
+    : {};
+  const updatedWorkspaceState = await mergeDashboardState(input.tenantId, {
+    activePilotWorkspace: {
+      ...activePilotWorkspace,
+      mode: "week_2_reviewed",
+      week_2_execution: {
+        ...weekTwoExecution,
+        status: "completed",
+        completed_at: now,
+        review_decision: input.nextStep,
+        review_note: note,
+        publication_result_id: publicationResult.id ?? null
+      },
+      week_3_scope: {
+        created_at: weekThreeScope.created_at,
+        decision: weekThreeScope.decision,
+        repair_decision: weekThreeScope.repair_decision,
+        channel_constraint: weekThreeScope.channel_constraint,
+        next_material_id: weekThreeScope.next_material?.id ?? null,
+        task_id: weekThreeScope.task?.id ?? null,
+        approval_id: weekThreeScope.approval?.id ?? null,
+        approval_status: weekThreeScope.approval?.status ?? "pending",
+        board_ids: weekThreeScope.board.map((item) => item.id)
+      }
+    }
+  });
+
+  await recordOwnerActionAudit({
+    tenantId: input.tenantId,
+    action: "pilot.week_2.review",
+    targetType: "publication_result",
+    targetId: String(publicationResult.id),
+    userId: input.userId ?? null,
+    source: "pilot_command",
+    metadata: {
+      material_id: materialId,
+      next_step: input.nextStep,
+      note,
+      owner_notes: input.ownerNotes ?? null,
+      next_target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
+      next_target_id: actionResult.target?.id ?? actionResult.action?.target_id ?? null,
+      week_3_scope: {
+        repair_decision: weekThreeScope.repair_decision,
+        channel_constraint: weekThreeScope.channel_constraint,
+        next_material_id: weekThreeScope.next_material?.id ?? null,
+        task_id: weekThreeScope.task?.id ?? null,
+        approval_id: weekThreeScope.approval?.id ?? null
+      }
+    }
+  });
+
+  return {
+    decision: {
+      next_step: input.nextStep,
+      note,
+      owner_notes: input.ownerNotes ?? null,
+      decided_at: now,
+      decided_by: input.userId ?? null
+    },
+    publication_result: actionResult.publication_result ?? publicationResult,
+    action: actionResult.action ?? null,
+    target: actionResult.target ?? null,
+    target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
+    week_3_scope: weekThreeScope,
+    week_2_review: weekTwoReview,
+    task,
+    workspace_state: updatedWorkspaceState
+  };
+}
+
 export async function startWeekTwoExecution(input: WeekTwoStartInput) {
   const now = new Date().toISOString();
   const dashboardState = await getDashboardState(input.tenantId);
@@ -517,12 +679,12 @@ export async function startWeekTwoExecution(input: WeekTwoStartInput) {
   const currentExecution = currentMetadata.week_2_execution && typeof currentMetadata.week_2_execution === "object"
     ? currentMetadata.week_2_execution as Record<string, unknown>
     : {};
-  if (currentExecution.status === "started") {
+  if (currentExecution.status === "started" || currentExecution.status === "completed") {
     const board = await listWeekTwoBoard(input.tenantId, nextMaterialId);
     const task = await findWeekTwoExecutionTask(input.tenantId, nextMaterialId);
     const materialApproval = await findWeekTwoMaterialApproval(input.tenantId, nextMaterialId);
     return {
-      status: "already_started",
+      status: currentExecution.status === "completed" ? "already_completed" : "already_started",
       content: currentContent,
       board,
       task,
@@ -630,6 +792,25 @@ async function createWeekTwoScope(input: {
   actionResult: Record<string, unknown>;
   decidedAt: string;
 }) {
+  return createPilotScopeProposal({
+    ...input,
+    sourceWeek: 1,
+    targetWeek: 2
+  });
+}
+
+async function createPilotScopeProposal(input: {
+  tenantId: string;
+  userId?: string | null;
+  sourceWeek: number;
+  targetWeek: number;
+  materialId: string;
+  nextStep: "expand" | "reuse" | "update" | "leave";
+  note: string;
+  publicationResult: Record<string, unknown>;
+  actionResult: Record<string, unknown>;
+  decidedAt: string;
+}) {
   const sourceContentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [
     input.materialId,
     input.tenantId
@@ -646,9 +827,13 @@ async function createWeekTwoScope(input: {
   const nextMaterial = await ensureWeekTwoNextMaterial(input, sourceContent);
   const channel = textValue(nextMaterial.channel, textValue(sourceContent.channel, textValue(input.publicationResult.channel, "telegram")));
   const repairDecision = weekTwoRepairDecision(input.nextStep);
-  const channelConstraint = `keep one proven channel for week 2: ${channel}`;
+  const channelConstraint = `keep one proven channel for week ${input.targetWeek}: ${channel}`;
+  const scopeKey = `week_${input.targetWeek}_scope`;
+  const taskType = `pilot_week_${input.targetWeek}_scope`;
+  const baseDay = input.targetWeek === 2 ? 8 : ((input.targetWeek - 1) * 7) + 1;
+  const scopeLabel = `Week ${input.targetWeek}`;
   const scopeMetadata = {
-    source: "pilot_week_2_scope",
+    source: taskType,
     decision: input.nextStep,
     repair_decision: repairDecision,
     channel_constraint: channelConstraint,
@@ -659,39 +844,39 @@ async function createWeekTwoScope(input: {
   };
   const board = await Promise.all([
     createCalendarItem(input.tenantId, {
-      title: "Week 2 Day 8: confirm scope and one-channel constraint",
+      title: `${scopeLabel} Day ${baseDay}: confirm scope and one-channel constraint`,
       content_item_id: nextMaterial.id,
       channel,
       status: "scheduled",
-      scheduled_for: "2026-06-24 10:00",
+      scheduled_for: input.targetWeek === 2 ? "2026-06-24 10:00" : null,
       metadata: {
-        week_2_scope: {
+        [scopeKey]: {
           ...scopeMetadata,
-          gate: "No second channel until week-1 loop is clean and week-2 scope is approved."
+          gate: `No second channel until week-${input.sourceWeek} loop is clean and week-${input.targetWeek} scope is approved.`
         }
       }
     }),
     createCalendarItem(input.tenantId, {
-      title: "Week 2 Day 9: prepare next material brief or draft",
+      title: `${scopeLabel} Day ${baseDay + 1}: prepare next material brief or draft`,
       content_item_id: nextMaterial.id,
       channel,
       status: "scheduled",
-      scheduled_for: "2026-06-25 18:00",
+      scheduled_for: input.targetWeek === 2 ? "2026-06-25 18:00" : null,
       metadata: {
-        week_2_scope: {
+        [scopeKey]: {
           ...scopeMetadata,
-          gate: "Material follows the Day-7 decision and avoids forbidden claims."
+          gate: `Material follows the week-${input.sourceWeek} review decision and avoids forbidden claims.`
         }
       }
     }),
     createCalendarItem(input.tenantId, {
-      title: "Week 2 Day 10: owner approval for next material",
+      title: `${scopeLabel} Day ${baseDay + 2}: owner approval for next material`,
       content_item_id: nextMaterial.id,
       channel,
       status: "scheduled",
-      scheduled_for: "2026-06-26 12:00",
+      scheduled_for: input.targetWeek === 2 ? "2026-06-26 12:00" : null,
       metadata: {
-        week_2_scope: {
+        [scopeKey]: {
           ...scopeMetadata,
           owner: roles.approval_owner,
           gate: "Owner approves topic boundary and claim safety."
@@ -699,13 +884,13 @@ async function createWeekTwoScope(input: {
       }
     }),
     createCalendarItem(input.tenantId, {
-      title: "Week 2 Day 11: QA and release handoff",
+      title: `${scopeLabel} Day ${baseDay + 3}: QA and release handoff`,
       content_item_id: nextMaterial.id,
       channel,
       status: "scheduled",
-      scheduled_for: "2026-06-27 16:00",
+      scheduled_for: input.targetWeek === 2 ? "2026-06-27 16:00" : null,
       metadata: {
-        week_2_scope: {
+        [scopeKey]: {
           ...scopeMetadata,
           owner: roles.release_owner,
           gate: "QA passes before handoff; handoff is not publication."
@@ -713,13 +898,13 @@ async function createWeekTwoScope(input: {
       }
     }),
     createCalendarItem(input.tenantId, {
-      title: "Week 2 Day 14: confirm URL and choose next content step",
+      title: `${scopeLabel} Day ${baseDay + 6}: confirm URL and choose next content step`,
       content_item_id: nextMaterial.id,
       channel,
       status: "scheduled",
-      scheduled_for: "2026-06-30 12:00",
+      scheduled_for: input.targetWeek === 2 ? "2026-06-30 12:00" : null,
       metadata: {
-        week_2_scope: {
+        [scopeKey]: {
           ...scopeMetadata,
           owner: roles.result_owner,
           gate: "URL and primary reactions are confirmed before another scope expansion."
@@ -730,18 +915,18 @@ async function createWeekTwoScope(input: {
   const task = await createAgentTask({
     tenantId: input.tenantId,
     role: "growth_orchestrator",
-    taskType: "pilot_week_2_scope",
+    taskType,
     targetType: "content_item",
     targetId: String(nextMaterial.id),
     payload: {
-      title: `Week 2 scope: ${weekTwoDecisionLabel(input.nextStep)}`,
+      title: `${scopeLabel} scope: ${weekTwoDecisionLabel(input.nextStep)}`,
       owner: "Founder + operator",
       status: "queued",
       decision: input.nextStep,
       repairDecision,
       channelConstraint,
       roles,
-      source: "pilot_week_2_scope",
+      source: taskType,
       publicationResultId: input.publicationResult.id ?? null,
       sourceMaterialId: input.materialId
     },
@@ -749,16 +934,16 @@ async function createWeekTwoScope(input: {
   });
   const approval = await createApprovalRequest({
     tenantId: input.tenantId,
-    scope: "pilot_week_2_scope",
+    scope: taskType,
     targetType: "content_item",
     targetId: String(nextMaterial.id),
     requestedBy: input.userId ?? undefined,
-    riskFlags: ["week-2 scope", "channel constraint", "owner approval"],
-    summary: `Approve week-2 scope: ${weekTwoDecisionLabel(input.nextStep)}`
+    riskFlags: [`week-${input.targetWeek} scope`, "channel constraint", "owner approval"],
+    summary: `Approve week-${input.targetWeek} scope: ${weekTwoDecisionLabel(input.nextStep)}`
   });
   await recordOwnerActionAudit({
     tenantId: input.tenantId,
-    action: "pilot.week_2.scope_created",
+    action: `pilot.week_${input.targetWeek}.scope_created`,
     targetType: "content_item",
     targetId: String(nextMaterial.id),
     userId: input.userId ?? null,
@@ -768,6 +953,8 @@ async function createWeekTwoScope(input: {
       repair_decision: repairDecision,
       channel_constraint: channelConstraint,
       publication_result_id: input.publicationResult.id ?? null,
+      source_week: input.sourceWeek,
+      target_week: input.targetWeek,
       board_ids: board.map((item) => item.id),
       task_id: task.id ?? null,
       approval_id: approval.id ?? null
@@ -880,6 +1067,7 @@ async function ensureWeekTwoNextMaterial(
   input: {
     tenantId: string;
     userId?: string | null;
+    targetWeek?: number;
     nextStep: "expand" | "reuse" | "update" | "leave";
     note: string;
     publicationResult: Record<string, unknown>;
@@ -896,7 +1084,8 @@ async function ensureWeekTwoNextMaterial(
   const sourceMetadata = sourceContent.metadata && typeof sourceContent.metadata === "object"
     ? sourceContent.metadata as Record<string, unknown>
     : {};
-  const title = weekTwoMaterialTitle(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material"));
+  const targetWeek = Number(input.targetWeek ?? 2);
+  const title = weekTwoMaterialTitle(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material"), targetWeek);
   const contentType = input.nextStep === "expand" ? "article_outline" : textValue(sourceContent.content_type, "telegram_post");
   const channel = input.nextStep === "expand" ? "website" : textValue(sourceContent.channel ?? input.publicationResult.channel, "telegram");
   return insertJson("content_items", {
@@ -909,16 +1098,16 @@ async function ensureWeekTwoNextMaterial(
     target_url: null,
     body_md: "",
     metadata: {
-      source: "pilot_week_2_scope",
+      source: `pilot_week_${targetWeek}_scope`,
       source_content_item_id: sourceContent.id ?? null,
       source_publication_result_id: input.publicationResult.id ?? null,
       next_step: input.nextStep,
       repair_decision: weekTwoRepairDecision(input.nextStep),
-      brief: weekTwoMaterialBrief(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material")),
+      brief: weekTwoMaterialBrief(input.nextStep, textValue(input.publicationResult.title ?? sourceContent.title, "published material"), targetWeek),
       proof: input.note,
       owner: sourceMetadata.owner ?? "Content operator or chief of staff",
       result_owner: sourceMetadata.result_owner ?? sourceMetadata.owner ?? "Content operator or chief of staff",
-      created_by_command: "pilot.week_2.scope_created",
+      created_by_command: `pilot.week_${targetWeek}.scope_created`,
       created_by: input.userId ?? null
     }
   }, input.tenantId);
@@ -1038,6 +1227,80 @@ async function markPublicationResultLeft(input: {
   };
 }
 
+async function executePilotPublicationResultDecision(input: {
+  tenantId: string;
+  userId?: string | null;
+  publicationResult: Record<string, unknown>;
+  nextStep: "expand" | "reuse" | "update" | "leave";
+  note: string;
+  decidedAt: string;
+}) {
+  return input.nextStep === "leave"
+    ? markPublicationResultLeft({
+        tenantId: input.tenantId,
+        userId: input.userId,
+        publicationResult: input.publicationResult,
+        note: input.note,
+        decidedAt: input.decidedAt
+      })
+    : executePublicationResultCommand({
+        tenantId: input.tenantId,
+        userId: input.userId,
+        publicationResultId: String(input.publicationResult.id),
+        command: input.nextStep,
+        note: input.note
+      });
+}
+
+async function patchPilotReviewBoardItem(tenantId: string, itemId: string, metadataKey: string, payload: Record<string, unknown>) {
+  const result = await query("select * from publishing_calendar_items where id = $1 and tenant_id = $2", [itemId, tenantId]);
+  const current = result.rows[0] ?? null;
+  if (!current) return null;
+  const metadata = current.metadata && typeof current.metadata === "object" ? current.metadata as Record<string, unknown> : {};
+  return patchJson("publishing_calendar_items", itemId, {
+    status: "published",
+    metadata: {
+      ...metadata,
+      [metadataKey]: payload
+    }
+  }, tenantId);
+}
+
+async function completePilotTask(tenantId: string, taskType: string, targetId: string, payload: Record<string, unknown>) {
+  const result = await query("select * from tasks where tenant_id = $1 order by created_at desc limit 300", [tenantId]);
+  const task = result.rows.find((row) => row.task_type === taskType && row.target_id === targetId);
+  if (!task?.id) return null;
+  const metadata = task.payload && typeof task.payload === "object" ? task.payload as Record<string, unknown> : {};
+  return patchJson("tasks", String(task.id), {
+    status: "completed",
+    payload: {
+      ...metadata,
+      ...payload,
+      status: "completed"
+    }
+  }, tenantId);
+}
+
+async function completeWeekTwoMaterialExecution(tenantId: string, materialId: string, payload: Record<string, unknown>) {
+  const result = await query("select * from content_items where id = $1 and tenant_id = $2", [materialId, tenantId]);
+  const content = result.rows[0] ?? null;
+  if (!content) return null;
+  const metadata = content.metadata && typeof content.metadata === "object" ? content.metadata as Record<string, unknown> : {};
+  const currentExecution = metadata.week_2_execution && typeof metadata.week_2_execution === "object"
+    ? metadata.week_2_execution as Record<string, unknown>
+    : {};
+  return patchJson("content_items", materialId, {
+    metadata: {
+      ...metadata,
+      week_2_execution: {
+        ...currentExecution,
+        ...payload,
+        status: "completed"
+      }
+    }
+  }, tenantId);
+}
+
 async function completeDaySevenReviewTask(tenantId: string, materialId: string, payload: Record<string, unknown>) {
   const result = await query("select * from tasks where tenant_id = $1 order by created_at desc limit 200", [tenantId]);
   const task = result.rows.find((row) => row.task_type === "pilot_day_7_review" && row.target_id === materialId);
@@ -1055,6 +1318,10 @@ async function completeDaySevenReviewTask(tenantId: string, materialId: string, 
 }
 
 function defaultDaySevenReviewNote(nextStep: "expand" | "reuse" | "update" | "leave") {
+  return defaultPilotReviewNote(nextStep);
+}
+
+function defaultPilotReviewNote(nextStep: "expand" | "reuse" | "update" | "leave") {
   if (nextStep === "expand") return "Expand the strongest angle into a larger content piece.";
   if (nextStep === "reuse") return "Reuse the strongest paragraph as the next material.";
   if (nextStep === "update") return "Update the published material with confirmed reactions and owner notes.";
@@ -1074,18 +1341,18 @@ function weekTwoDecisionLabel(nextStep: "expand" | "reuse" | "update" | "leave")
   return "keep the scope narrow and run one clean loop";
 }
 
-function weekTwoMaterialTitle(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string) {
-  if (nextStep === "expand") return `Week 2 expand: ${sourceTitle}`;
-  if (nextStep === "reuse") return `Week 2 reuse: ${sourceTitle}`;
-  if (nextStep === "update") return `Week 2 update brief: ${sourceTitle}`;
-  return `Week 2 controlled loop: ${sourceTitle}`;
+function weekTwoMaterialTitle(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string, week = 2) {
+  if (nextStep === "expand") return `Week ${week} expand: ${sourceTitle}`;
+  if (nextStep === "reuse") return `Week ${week} reuse: ${sourceTitle}`;
+  if (nextStep === "update") return `Week ${week} update brief: ${sourceTitle}`;
+  return `Week ${week} controlled loop: ${sourceTitle}`;
 }
 
-function weekTwoMaterialBrief(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string) {
+function weekTwoMaterialBrief(nextStep: "expand" | "reuse" | "update" | "leave", sourceTitle: string, week = 2) {
   if (nextStep === "expand") return `Expand the strongest angle from "${sourceTitle}" into a larger article outline. Keep claims practical and proof-bound.`;
   if (nextStep === "reuse") return `Reuse the strongest paragraph from "${sourceTitle}" as a second material in the same channel.`;
   if (nextStep === "update") return `Prepare an update brief for "${sourceTitle}" with confirmed reactions, corrections, and owner notes.`;
-  return `Run a narrow second loop after "${sourceTitle}" without adding a new channel or broadening claims.`;
+  return `Run a narrow week-${week} loop after "${sourceTitle}" without adding a new channel or broadening claims.`;
 }
 
 function textValue(value: unknown, fallback: string) {

@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add first-class week-2 execution surface
+Add backend-owned week-2 result review
 ```
 
 Before changing product or dashboard behavior, read:
@@ -58,6 +58,7 @@ Ready:
 - Backend week-2 execution surface is now `GET /pilot/week-2/execution`; it returns active material, material approval, board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
 - Dashboard Today renders active week-2 execution as a first-class working panel and P1 queue row, using backend action targets for material approval, QA/release handoff, URL confirmation, and result review.
 - Telegram owner-control supports `/week2_status`, `/week2_board`, and `/w2`; it renders the same backend week-2 execution view with targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
+- Backend week-2 result review is now `POST /pilot/week-2/review`; it closes active week-2 execution after confirmed URL, records `expand / reuse / update / leave`, completes the week-2 execution task, marks the week-2 result-review board item complete, creates backend-owned `week_3_scope`, updates workspace state, and writes owner-action audit. Week-3 scope uses the shared next-scope proposal builder instead of copying Day-7-specific logic.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -201,16 +202,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Close week-2 result review into a backend-owned week-3 scope decision:
+Expose week-2 result review command in dashboard and Telegram:
 
 ```text
-Add backend-owned week-2 result review command that records reuse / expand / update / leave after confirmed week-2 publication and creates the next scope proposal without copying Day-7-specific logic.
+Route dashboard result-review buttons and Telegram result-review commands through POST /pilot/week-2/review when active week-2 execution is at result_review.
 ```
 
 Why this is next:
 
 ```text
-Week-2 is now runnable from product surfaces. The next leverage point is closing the second loop with the same controlled production logic, without hard-coding everything as Day-7/week-1.
+The backend can now close week-2 safely. The next leverage point is making operators and owners close the second loop from product surfaces instead of raw API.
 ```
 
 Suggested first files to inspect:
