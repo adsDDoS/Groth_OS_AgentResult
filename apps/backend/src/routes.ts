@@ -6,6 +6,7 @@ import { registerCrudRoutes } from "./modules/common/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
 import { geoRoutes } from "./modules/geo/routes.js";
 import { hermesRoutes } from "./modules/hermes/index.js";
+import { pilotRoutes } from "./modules/pilot/routes.js";
 import { publishingRoutes } from "./modules/publishing/routes.js";
 import { distributionSignalRoutes } from "./modules/distribution-signals/routes.js";
 import { seoRoutes } from "./modules/seo/routes.js";
@@ -148,6 +149,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await seoRoutes(app);
   await geoRoutes(app);
   await hermesRoutes(app);
+  await pilotRoutes(app);
 
   registerCrudRoutes(app, { prefix: "/lead-magnets", table: "lead_magnets", tenantScoped: true });
   app.post("/lead-magnets/:id/generate", async (request) => ({

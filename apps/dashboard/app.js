@@ -5844,9 +5844,7 @@ async function submitContentEditForm() {
 }
 
 async function submitWeekOnePilotStart() {
-  const workspace = buildWeekOnePilotWorkspace({
-    mode: "starter",
-    prefix: `local-pilot-${Date.now()}`,
+  const payload = {
     icp: document.querySelector("#pilotStartIcp")?.value.trim() || "",
     channel: document.querySelector("#pilotStartChannel")?.value.trim() || "telegram",
     materialTitle: document.querySelector("#pilotStartMaterial")?.value.trim() || "",
@@ -5855,6 +5853,25 @@ async function submitWeekOnePilotStart() {
     resultOwner: document.querySelector("#pilotStartResultOwner")?.value.trim() || "",
     resultSource: document.querySelector("#pilotStartResultSource")?.value.trim() || "",
     forbiddenClaims: document.querySelector("#pilotStartForbiddenClaims")?.value.trim() || ""
+  };
+  if (state.online) {
+    const result = await api("/pilot/week-1/start", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+    if (result?.data) {
+      applyStartedWeekOnePilotWorkspace(result.data);
+      state.formModal = null;
+      showToast(text("Week-1 pilot workspace started.", "Week-1 pilot workspace запущен."));
+      openPublicationTab("approvals", state.selectedApprovalId);
+      return;
+    }
+  }
+
+  const workspace = buildWeekOnePilotWorkspace({
+    mode: "starter",
+    prefix: `local-pilot-${Date.now()}`,
+    ...payload
   });
   const offerDraft = {
     ...(state.offer || {}),
@@ -5908,6 +5925,37 @@ async function submitWeekOnePilotStart() {
   state.formModal = null;
   showToast(text("Week-1 pilot workspace started.", "Week-1 pilot workspace запущен."));
   openPublicationTab("approvals", state.selectedApprovalId);
+}
+
+function applyStartedWeekOnePilotWorkspace(data = {}) {
+  const content = data.content ? [data.content] : [];
+  const demand = data.demand ? [data.demand] : [];
+  const approvals = data.approval ? [data.approval] : [];
+  const calendar = Array.isArray(data.calendar) ? data.calendar : [];
+  const tasks = data.task ? [normalizeTask(data.task)] : [];
+  state.offer = data.company ? { ...state.offer, ...data.company } : state.offer;
+  state.demand = mergeLocalItems(state.demand, demand);
+  state.content = mergeLocalItems(state.content, content);
+  state.calendar = mergeLocalItems(state.calendar, calendar);
+  state.approvals = mergeLocalItems(state.approvals, approvals);
+  state.tasks = mergeLocalItems(state.tasks, tasks).map(normalizeVisibleTask);
+  state.workspaceState = data.workspace_state && typeof data.workspace_state === "object" ? data.workspace_state : state.workspaceState;
+  state.selectedApprovalId = data.approval?.id || state.selectedApprovalId;
+  state.publicationResults = [];
+  state.publicationResultsSource = "derived";
+  addActivity("Operator", "Started week-1 pilot workspace", { source: "backend_pilot_command" });
+  state.metrics = {
+    ...state.metrics,
+    content_items: state.content.length,
+    calendar_items: state.calendar.length,
+    pending_approvals: state.approvals.filter((item) => item.status === "pending").length,
+    approvals_total: state.approvals.length,
+    published_materials: shippedCalendarCount(state.calendar),
+    tasks_created: state.tasks.length,
+    distribution_signals: state.distributionSignals.length,
+    result_signals: state.resultSignals.length,
+    leads: 0
+  };
 }
 
 async function submitScheduleForm() {

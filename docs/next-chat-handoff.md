@@ -16,10 +16,10 @@ Local path:
 /Users/egorchik/Documents/Codex/2026-06-14/senior-product-engeneer-grothos-system-public/work/Groth_OS_AgentResult
 ```
 
-Current known baseline commit:
+Current known baseline:
 
 ```text
-a73aa6f Add pilot execution dashboard seed
+Add backend week one pilot command
 ```
 
 Before changing product or dashboard behavior, read:
@@ -43,7 +43,8 @@ Ready:
 - Results screen shows publication URL, channel, reactions, and selected next content step.
 - Result next-step action buttons are hidden in `demo=client`; the route is read-only for first-call safety.
 - Operator dashboard route `?demo=pilot-execution` shows the first ICP week-1 board, roles, first material brief, confirmed publication result, reactions, and Day-7 review path.
-- Operator dashboard now has `Start week-1 pilot`, which creates a repeatable local pilot workspace from intake: first ICP, first material, topic approval, QA/release board, URL confirmation path, and Day-7 review.
+- Operator dashboard now has `Start week-1 pilot`, which calls backend `POST /pilot/week-1/start` when API is online and falls back to local workspace only for offline/static demo mode.
+- Backend pilot command creates the repeatable week-1 workspace from intake: company profile, first ICP demand item, first material brief, owner approval, QA/release calendar board, URL confirmation path, Day-7 review task, tenant dashboard state, and owner-action audit.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -145,6 +146,9 @@ Do not add lead, CRM, demand, or money language to publication results without a
 
 Latest completed checks before this handoff:
 
+- `npm run pilot:week-one-command:check` passed.
+- `npm run build -w packages/shared` passed.
+- `npm run build -w apps/backend` passed.
 - `npm run dashboard:smoke` passed.
 - GitHub Actions `Dashboard smoke` passed through run #167.
 - Production `?demo=client&v=client-demo-v3` DOM check passed:
@@ -159,6 +163,14 @@ For dashboard changes, run:
 npm run dashboard:smoke
 ```
 
+For backend pilot command changes, run:
+
+```bash
+npm run build -w packages/shared
+npm run build -w apps/backend
+npm run pilot:week-one-command:check
+```
+
 For docs-only changes, at least run:
 
 ```bash
@@ -167,16 +179,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Move the week-1 pilot starter from browser-local workspace into backend-owned pilot commands:
+Expose backend-owned week-1 pilot start through Telegram owner-control:
 
 ```text
-Create backend command(s) for starting a week-1 pilot workspace from intake, then have dashboard call the command instead of only localStorage.
+Add a Telegram owner-control command/intent for starting a week-1 pilot from the same intake fields, calling the canonical `POST /pilot/week-1/start` workflow instead of duplicating pilot domain logic.
 ```
 
 Why this is next:
 
 ```text
-The dashboard can now start a repeatable pilot workspace. The next leverage point is making the same transition backend-owned, tenant-safe, and usable from dashboard plus Telegram owner-control without duplicating domain state in the UI.
+The dashboard can now start the tenant-safe backend pilot workspace. The next leverage point is giving the operator/owner the same command surface in Telegram, where real pilot operations already happen, while keeping dashboard and Telegram behind one backend command.
 ```
 
 Suggested first files to inspect:

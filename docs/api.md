@@ -67,6 +67,29 @@ Local development uses `x-tenant-id` for tenant context.
 
 Publishing creates jobs only after required approval exists.
 
+## Pilot Commands
+
+- `POST /pilot/week-1/start`
+
+`POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
+
+Request body:
+
+```json
+{
+  "icp": "Founder-led B2B service or expert team that sells complex work through trust content.",
+  "channel": "telegram",
+  "materialTitle": "Как не терять выпуск контента между идеей и публикацией",
+  "approvalOwner": "Founder / managing partner",
+  "releaseOwner": "Content operator or chief of staff",
+  "resultOwner": "Content operator or chief of staff",
+  "resultSource": "Telegram URL, comments, reposts, saves, reactions, owner mark after 24 hours.",
+  "forbiddenClaims": "No guaranteed leads, no guaranteed revenue, no fake ROI."
+}
+```
+
+Response includes `{ company, demand, content, approval, calendar, task, workspace_state }`. The command does not publish, autopost, or create revenue attribution.
+
 ## SEO/GEO
 
 - `POST /seo/analyze-page`
