@@ -168,6 +168,16 @@ try {
   }, tenantId);
   assert(week2ReviewStatus.data.text.includes("review результата"), "telegram week-2 status should move to result review gate");
   assert(week2ReviewStatus.data.buttons?.some((button) => button.command === "reuse" && button.targetId), "telegram week-2 result review button missing");
+  const week2ReviewButton = week2ReviewStatus.data.buttons.find((button) => button.command === "reuse" && button.targetId);
+  const closedWeek2 = await inject("POST", "/telegram/commands", {
+    command: "/reuse",
+    targetId: week2ReviewButton.targetId,
+    note: "Reuse week-2 proof into the next controlled scope."
+  }, tenantId);
+  assert(closedWeek2.response.statusCode === 200, `telegram week-2 review command failed: ${closedWeek2.response.statusCode} ${closedWeek2.response.body}`);
+  assert(closedWeek2.data.text.includes("Week-2 review закрыт"), "telegram week-2 review close text missing");
+  assert(closedWeek2.data.reviewResult?.week_3_scope?.approval?.scope === "pilot_week_3_scope", "telegram week-2 review should create week-3 scope");
+  assert(closedWeek2.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek2.data.reviewResult.week_3_scope.approval.id), "telegram week-3 approval button missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

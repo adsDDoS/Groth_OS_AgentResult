@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const port = Number(process.env.DASHBOARD_SMOKE_PORT || 4173);
 const baseUrl = process.env.DASHBOARD_SMOKE_URL || `http://127.0.0.1:${port}`;
@@ -48,6 +49,12 @@ async function waitForDashboard() {
     }
   }
   throw new Error(`Dashboard did not respond at ${baseUrl}`);
+}
+
+function assertDashboardScriptContract() {
+  const appJs = readFileSync("apps/dashboard/app.js", "utf8");
+  assert(appJs.includes('data-action="complete-week-two-review"'), "Dashboard week-2 review buttons are missing");
+  assert(appJs.includes('api("/pilot/week-2/review"'), "Dashboard week-2 review must call backend pilot command");
 }
 
 async function clickUnique(page, selector) {
@@ -330,6 +337,7 @@ async function assertStartWeekOnePilotFlow(page) {
 }
 
 async function run() {
+  assertDashboardScriptContract();
   await waitForDashboard();
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

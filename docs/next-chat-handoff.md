@@ -59,6 +59,7 @@ Ready:
 - Dashboard Today renders active week-2 execution as a first-class working panel and P1 queue row, using backend action targets for material approval, QA/release handoff, URL confirmation, and result review.
 - Telegram owner-control supports `/week2_status`, `/week2_board`, and `/w2`; it renders the same backend week-2 execution view with targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
 - Backend week-2 result review is now `POST /pilot/week-2/review`; it closes active week-2 execution after confirmed URL, records `expand / reuse / update / leave`, completes the week-2 execution task, marks the week-2 result-review board item complete, creates backend-owned `week_3_scope`, updates workspace state, and writes owner-action audit. Week-3 scope uses the shared next-scope proposal builder instead of copying Day-7-specific logic.
+- Dashboard and Telegram now route active week-2 `result_review` choices through `POST /pilot/week-2/review`; dashboard renders direct `reuse / expand / update / leave` buttons in the week-2 panel, and Telegram `reuse / expand / update / leave` closes week-2 only when the backend active execution is at `result_review`.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -202,16 +203,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Expose week-2 result review command in dashboard and Telegram:
+Make week-3 scope first-class approval flow in dashboard and Telegram:
 
 ```text
-Route dashboard result-review buttons and Telegram result-review commands through POST /pilot/week-2/review when active week-2 execution is at result_review.
+Generalize scope approval side effects beyond pilot_week_2_scope so pilot_week_3_scope can be inspected, approved, or adjusted from dashboard and Telegram before any week-3 execution starts.
 ```
 
 Why this is next:
 
 ```text
-The backend can now close week-2 safely. The next leverage point is making operators and owners close the second loop from product surfaces instead of raw API.
+Week-2 review now creates week_3_scope from product surfaces. The next leverage point is making that proposed scope operationally real instead of leaving it as a pending approval object with week-2-specific approval side effects.
 ```
 
 Suggested first files to inspect:

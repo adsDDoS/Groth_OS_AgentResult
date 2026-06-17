@@ -2240,9 +2240,28 @@ function weekTwoExecutionPanel() {
           </div>
         `).join("")}
       </div>
-      <button class="button primary" data-action="${escapeAttr(action.action)}" data-id="${escapeAttr(action.id || "")}">${escapeHtml(action.label)}</button>
+      <div class="button-row compact">
+        ${weekTwoExecutionActionButtons(execution, action)}
+      </div>
     </section>
   `;
+}
+
+function weekTwoExecutionActionButtons(execution, action) {
+  if (execution.current_gate !== "result_review") {
+    return `<button class="button primary" data-action="${escapeAttr(action.action)}" data-id="${escapeAttr(action.id || "")}">${escapeHtml(action.label)}</button>`;
+  }
+  const publicationResultId = execution.actions?.review_result?.publication_result_id || execution.publication_result?.id || "";
+  return ["reuse", "expand", "update", "leave"].map((step) => `
+    <button class="button ${step === "reuse" ? "primary" : "secondary"}" data-action="complete-week-two-review" data-id="${escapeAttr(`${publicationResultId}|${step}`)}">${escapeHtml(weekTwoReviewStepLabel(step))}</button>
+  `).join("");
+}
+
+function weekTwoReviewStepLabel(step) {
+  if (step === "expand") return text("Expand", "Расширить");
+  if (step === "reuse") return text("Reuse", "Переиспользовать");
+  if (step === "update") return text("Update", "Обновить");
+  return text("Leave", "Оставить");
 }
 
 function weekTwoExecutionPrimaryAction(execution) {
@@ -2268,9 +2287,9 @@ function weekTwoExecutionPrimaryAction(execution) {
     };
   }
   return {
-    action: "go-analytics",
-    id: execution.actions?.review_result?.publication_result_id || "",
-    label: text("Review result", "Review результата")
+    action: "complete-week-two-review",
+    id: `${execution.actions?.review_result?.publication_result_id || ""}|reuse`,
+    label: text("Reuse", "Переиспользовать")
   };
 }
 
@@ -5122,6 +5141,7 @@ async function handleAction(action, id) {
     "export-calendar": exportCalendarCsv,
     "mark-calendar-published": () => openPublicationResultModal(id),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
+    "complete-week-two-review": () => completeWeekTwoReviewFromDashboard(id),
     "select-publication-result": () => {
       state.selectedPublicationResultId = id;
       render();
@@ -5656,24 +5676,7 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
       state.metrics.tasks_created = state.tasks.length;
     }
-    if (data.week_2_scope && typeof data.week_2_scope === "object") {
-      const weekTwoScope = data.week_2_scope;
-      if (weekTwoScope.next_material) {
-        state.content = mergeLocalItems(state.content, [weekTwoScope.next_material]);
-        state.metrics.content_items = state.content.length;
-      }
-      if (Array.isArray(weekTwoScope.board)) {
-        state.calendar = mergeLocalItems(state.calendar, weekTwoScope.board);
-      }
-      if (weekTwoScope.task) {
-        state.tasks = mergeLocalItems(state.tasks, [normalizeTask(weekTwoScope.task)]).map(normalizeVisibleTask);
-        state.metrics.tasks_created = state.tasks.length;
-      }
-      if (weekTwoScope.approval) {
-        state.approvals = mergeLocalItems(state.approvals, [weekTwoScope.approval]);
-        state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
-      }
-    }
+    mergePilotScopeProposal(data.week_2_scope);
     if (data.task) {
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
     }
@@ -5684,6 +5687,69 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
     return data;
   } catch {
     return null;
+  }
+}
+
+async function completeWeekTwoReviewFromDashboard(encoded = "") {
+  if (!state.online) return null;
+  const [publicationResultId = "", rawStep = "reuse"] = String(encoded).split("|");
+  const nextStep = ["reuse", "expand", "update", "leave"].includes(rawStep) ? rawStep : "reuse";
+  try {
+    const response = await api("/pilot/week-2/review", {
+      method: "POST",
+      body: JSON.stringify({
+        publicationResultId,
+        nextStep,
+        note: publicationNextStepLabel(nextStep)
+      })
+    });
+    const data = response?.data || null;
+    if (!data) return null;
+    if (data.week_2_review) state.calendar = mergeLocalItems(state.calendar, [data.week_2_review]);
+    if (data.publication_result) {
+      state.publicationResults = mergeLocalItems(state.publicationResults, [data.publication_result]);
+      state.publicationResultsSource = "backend";
+    }
+    if (data.target_type === "content_item" && data.target) {
+      state.content = mergeLocalItems(state.content, [data.target]);
+      state.metrics.content_items = state.content.length;
+    }
+    if (data.target_type === "task" && data.target) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
+      state.metrics.tasks_created = state.tasks.length;
+    }
+    mergePilotScopeProposal(data.week_3_scope);
+    if (data.task) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
+      state.metrics.tasks_created = state.tasks.length;
+    }
+    if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
+    state.weekTwoExecution = null;
+    showToast(text("Week-2 review closed.", "Week-2 review закрыт."));
+    setRoute("publications");
+    return data;
+  } catch {
+    showToast(text("Could not close week-2 review.", "Не удалось закрыть week-2 review."));
+    return null;
+  }
+}
+
+function mergePilotScopeProposal(scope) {
+  if (!scope || typeof scope !== "object") return;
+  if (scope.next_material) {
+    state.content = mergeLocalItems(state.content, [scope.next_material]);
+    state.metrics.content_items = state.content.length;
+  }
+  if (Array.isArray(scope.board)) {
+    state.calendar = mergeLocalItems(state.calendar, scope.board);
+  }
+  if (scope.task) {
+    state.tasks = mergeLocalItems(state.tasks, [normalizeTask(scope.task)]).map(normalizeVisibleTask);
+    state.metrics.tasks_created = state.tasks.length;
+  }
+  if (scope.approval) {
+    state.approvals = mergeLocalItems(state.approvals, [scope.approval]);
+    state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
   }
 }
 
