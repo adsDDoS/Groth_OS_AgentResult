@@ -227,6 +227,8 @@ For handoff confirmation, `/published` or the natural phrase "вышло" starts
 
 For published material cards, `/telegram/commands` supports `reuse`, `expand`, and `update` with `targetId` set to a `publication_result.id`. These commands call the canonical `/publication-results/:id/reuse|expand|update` domain workflow: create reusable material, create article outline, or create an update task. `POST /telegram/intent` also maps ordinary owner phrases such as "переиспользуй", "расширь опубликованный материал", and "обнови материал" to the same backend commands.
 
+For week-1 pilot startup, `/telegram/commands` supports `/pilot`, `/start_pilot`, and `/week_1_pilot`. `POST /telegram/intent` also maps phrases such as "запусти пилот" and "week-1 pilot" to the same flow. Telegram parses optional intake fields from the command note/text, then calls the canonical `POST /pilot/week-1/start` workflow; it does not duplicate pilot domain state.
+
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 
 The same intent router can be used by the backend owner-control polling middleware. Enable it with `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` only after disabling Hermes polling for the same bot token. The middleware uses the Telegram allowlist, routes owner text through backend intent logic, and sends back only owner-facing text.
@@ -286,6 +288,7 @@ Supported commands:
 - `/reset`: restarts the Telegram owner-control dialogue without deleting AgentResult OS data;
 - `/demo_reset`: explicitly resets local demo state;
 - `/onboarding`: starts the Telegram setup flow: offer, client, release channel, release owner, first signal source, approval rules, first material.
+- `/pilot`: starts the backend-owned week-1 pilot workspace. Optional note/text fields: `icp`, `channel`, `material`, `approval owner`, `release owner`, `result owner`, `result source`, `forbidden`.
 
 Onboarding flow:
 

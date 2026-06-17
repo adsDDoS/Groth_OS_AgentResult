@@ -8,6 +8,7 @@ import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
+import { startWeekOnePilot } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -644,6 +645,91 @@ async function savePublicationResultConfirmationState(
   }, tenantId);
 
   return { ...payload, id: typeof row.id === "string" ? row.id : undefined };
+}
+
+function pilotStartCommandFromText(command: string) {
+  return command === "pilot"
+    || command === "start_pilot"
+    || command === "pilot_start"
+    || command === "week_1_pilot"
+    || command === "week-1-pilot"
+    || command === "week1_pilot"
+    || command.startsWith("pilot ")
+    || command.startsWith("start_pilot ")
+    || command.startsWith("week_1_pilot ")
+    || command.startsWith("week-1-pilot ")
+    || command.startsWith("week1_pilot ");
+}
+
+function parsePilotStartIntake(input: TelegramCommandInput) {
+  const raw = [input.command, input.note].filter(Boolean).join("\n");
+  const normalizedLines = raw
+    .split(/\r?\n|;/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const fields: Record<string, string> = {};
+
+  for (const line of normalizedLines) {
+    const match = line.match(/^([^:=—-]{2,60})\s*[:=—-]\s*(.+)$/);
+    if (!match) continue;
+    const key = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+    if (!value) continue;
+
+    if (["icp", "сегмент", "клиент", "клиенты", "кому"].includes(key)) fields.icp = value;
+    if (["channel", "канал", "площадка"].includes(key)) fields.channel = value;
+    if (["material", "materialtitle", "first material", "тема", "материал", "первый материал"].includes(key)) fields.materialTitle = value;
+    if (["approvalowner", "approval owner", "согласует", "собственник", "владелец согласования"].includes(key)) fields.approvalOwner = value;
+    if (["releaseowner", "release owner", "выпуск", "ответственный за выпуск", "релиз"].includes(key)) fields.releaseOwner = value;
+    if (["resultowner", "result owner", "результат", "ответственный за результат"].includes(key)) fields.resultOwner = value;
+    if (["resultsource", "result source", "signal", "сигнал", "источник сигнала", "источник результата"].includes(key)) fields.resultSource = value;
+    if (["forbiddenclaims", "forbidden claims", "forbidden", "запрет", "запрещено", "нельзя"].includes(key)) fields.forbiddenClaims = value;
+  }
+
+  const commandRemainder = input.command
+    .replace(/^\/?(pilot|start_pilot|pilot_start|week_1_pilot|week-1-pilot|week1_pilot)\b/i, "")
+    .trim();
+  if (!fields.materialTitle && commandRemainder.length >= 8 && !commandRemainder.includes(":")) {
+    fields.materialTitle = commandRemainder;
+  }
+
+  return fields;
+}
+
+function renderPilotStartMessage(input: { ownerBrief: OwnerBrief; pilot: Awaited<ReturnType<typeof startWeekOnePilot>> }) {
+  const contentTitle = textValue(input.pilot.content?.title, "первый материал");
+  const approvalId = textValue(input.pilot.approval?.id, "");
+  const day7 = Array.isArray(input.pilot.calendar)
+    ? input.pilot.calendar.find((item) => String(item.title).startsWith("Day 7:"))
+    : null;
+
+  return [
+    "Week-1 pilot запущен.",
+    "",
+    `Первый материал: ${contentTitle}`,
+    "Контур: тема -> черновик -> QA -> выпуск -> URL -> next content step.",
+    "Сейчас следующий шаг: согласовать тему недели.",
+    day7 ? `Day-7 review: ${textValue(day7.title, "review next content step")}` : "",
+    approvalId ? `Approval ID: ${approvalId}` : ""
+  ].filter(Boolean).join("\n");
+}
+
+async function startWeekOnePilotFromTelegram(input: TelegramCommandInput, context: TelegramExecutionContext) {
+  const pilot = await startWeekOnePilot({
+    ...parsePilotStartIntake(input),
+    tenantId: context.tenantId,
+    userId: context.userId
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  return {
+    command: "pilot",
+    text: renderPilotStartMessage({ ownerBrief, pilot }),
+    buttons: briefCommandButtons(ownerBrief),
+    ownerBrief,
+    pilot
+  };
 }
 
 async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
@@ -2121,6 +2207,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return executeTelegramPublicationResultCommand(publicationResultCommand, input, ownerBrief, context);
   }
 
+  if (pilotStartCommandFromText(command)) {
+    return startWeekOnePilotFromTelegram(input, context);
+  }
+
   if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
     return {
       command,
@@ -2632,6 +2722,24 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
       text: renderResultMessage(ownerBrief),
       buttons: publicationResultCommandButtons(ownerBrief),
       ownerBrief
+    };
+  }
+
+  if (includesAny(text, [
+    "запусти пилот",
+    "старт пилота",
+    "начать пилот",
+    "week-1 pilot",
+    "week 1 pilot",
+    "week-1 пилот",
+    "пилот первой недели",
+    "запусти первую неделю"
+  ])) {
+    const commandResult = await executeTelegramCommand({ command: "/pilot", note: input.text }, context);
+    return {
+      ...commandResult,
+      intent: "pilot_week_1_start",
+      command: null
     };
   }
 

@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add backend week one pilot command
+Add Telegram week-one pilot command
 ```
 
 Before changing product or dashboard behavior, read:
@@ -45,6 +45,7 @@ Ready:
 - Operator dashboard route `?demo=pilot-execution` shows the first ICP week-1 board, roles, first material brief, confirmed publication result, reactions, and Day-7 review path.
 - Operator dashboard now has `Start week-1 pilot`, which calls backend `POST /pilot/week-1/start` when API is online and falls back to local workspace only for offline/static demo mode.
 - Backend pilot command creates the repeatable week-1 workspace from intake: company profile, first ICP demand item, first material brief, owner approval, QA/release calendar board, URL confirmation path, Day-7 review task, tenant dashboard state, and owner-action audit.
+- Telegram owner-control now supports backend-owned week-1 pilot start through `/pilot`, `/start_pilot`, `/week_1_pilot`, and natural phrases such as `запусти пилот` / `week-1 pilot`. Telegram parses optional intake fields and calls the same canonical backend pilot command instead of duplicating pilot state.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -147,6 +148,8 @@ Do not add lead, CRM, demand, or money language to publication results without a
 Latest completed checks before this handoff:
 
 - `npm run pilot:week-one-command:check` passed.
+- `npm run telegram:pilot-week-one-command:check` passed.
+- `npm run telegram:regression` passed.
 - `npm run build -w packages/shared` passed.
 - `npm run build -w apps/backend` passed.
 - `npm run dashboard:smoke` passed.
@@ -169,6 +172,7 @@ For backend pilot command changes, run:
 npm run build -w packages/shared
 npm run build -w apps/backend
 npm run pilot:week-one-command:check
+npm run telegram:pilot-week-one-command:check
 ```
 
 For docs-only changes, at least run:
@@ -179,16 +183,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Expose backend-owned week-1 pilot start through Telegram owner-control:
+Add Day-7 review command as the next backend-owned pilot operator step:
 
 ```text
-Add a Telegram owner-control command/intent for starting a week-1 pilot from the same intake fields, calling the canonical `POST /pilot/week-1/start` workflow instead of duplicating pilot domain logic.
+Create a backend command for Day-7 review that reads the pilot workspace, confirmed publication result, reactions, QA/release delays, and owner notes, then records the selected next content step: expand / reuse / update / leave.
 ```
 
 Why this is next:
 
 ```text
-The dashboard can now start the tenant-safe backend pilot workspace. The next leverage point is giving the operator/owner the same command surface in Telegram, where real pilot operations already happen, while keeping dashboard and Telegram behind one backend command.
+Dashboard and Telegram can now start the same tenant-safe week-1 pilot. The next leverage point is closing the first pilot loop with a backend-owned review decision, so week 2 starts from product state rather than docs or manual notes.
 ```
 
 Suggested first files to inspect:

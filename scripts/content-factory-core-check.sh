@@ -10,9 +10,11 @@ run_step npm run build
 run_step npm run approval-side-effects:check
 run_step npm run publishing-commands:check
 run_step npm run auth:tenant-guard:check
+run_step npm run pilot:week-one-command:check
 run_step npm run telegram:polling-invariant
 
 if [ "${CONTENT_FACTORY_SKIP_TELEGRAM_REGRESSION:-0}" != "1" ]; then
+  run_step npm run telegram:pilot-week-one-command:check
   run_step npm run telegram:regression
 fi
 
