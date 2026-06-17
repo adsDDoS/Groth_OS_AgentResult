@@ -71,6 +71,7 @@ Publishing creates jobs only after required approval exists.
 
 - `POST /pilot/week-1/start`
 - `POST /pilot/week-1/day-7-review`
+- `POST /pilot/week-2/start`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -109,6 +110,16 @@ Request body:
 Response includes `{ decision, publication_result, action, target, target_type, week_2_scope, day_7_review, task, workspace_state }`. `week_2_scope` contains the week-2 next material, five board items, owner/release/result roles, one-channel constraint, `continue / repair / narrow` decision, and a pending `pilot_week_2_scope` approval. Dashboard and Telegram owner-control use this response; they do not create week-2 scope locally.
 
 Approving the returned `pilot_week_2_scope` approval marks the week-2 scope as approved on the next material, board items, and workspace state. Requesting changes stores the adjustment note on the same backend-owned objects so the operator can revise the scope before week-2 production starts.
+
+`POST /pilot/week-2/start` starts backend-owned week-2 execution only after the `pilot_week_2_scope` approval is approved. It moves the next material into review, marks the Day-8 board item as started, creates a `pilot_week_2_execution` task, opens the week-2 material approval, updates tenant workspace state, and writes owner-action audit. Repeating the command is idempotent and returns `status: "already_started"` with the existing execution objects.
+
+Request body:
+
+```json
+{
+  "note": "Start approved week-2 production."
+}
+```
 
 ## SEO/GEO
 
@@ -250,6 +261,8 @@ For published material cards, `/telegram/commands` supports `reuse`, `expand`, a
 For week-1 pilot startup, `/telegram/commands` supports `/pilot`, `/start_pilot`, and `/week_1_pilot`. `POST /telegram/intent` also maps phrases such as "запусти пилот" and "week-1 pilot" to the same flow. Telegram parses optional intake fields from the command note/text, then calls the canonical `POST /pilot/week-1/start` workflow; it does not duplicate pilot domain state.
 
 For Day-7 pilot review, `/telegram/commands` supports `/day7 expand|reuse|update|leave`, `/review ...`, and `/pilot_review ...`. `POST /telegram/intent` maps phrases such as "закрой day-7 review" or "закрой пилот" to the same backend `POST /pilot/week-1/day-7-review` workflow.
+
+For week-2 execution, `/telegram/commands` supports `/week2`, `/week_2`, `/week-2`, `/start_week2`, and `/start_week_2`. It calls the same backend `POST /pilot/week-2/start` workflow and is blocked until `pilot_week_2_scope` is approved. Telegram approval action on `pilot_week_2_scope` also starts week-2 execution automatically.
 
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 

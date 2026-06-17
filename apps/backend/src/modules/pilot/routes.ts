@@ -23,12 +23,19 @@ const daySevenReviewBody = z.object({
   ownerNotes: z.string().trim().optional(),
   publicationResultId: z.string().trim().optional()
 });
+const weekTwoStartBody = z.object({
+  note: z.string().trim().optional()
+});
 
 type WeekOnePilotInput = z.infer<typeof weekOnePilotBody> & {
   tenantId: string;
   userId?: string | null;
 };
 type DaySevenReviewInput = z.infer<typeof daySevenReviewBody> & {
+  tenantId: string;
+  userId?: string | null;
+};
+type WeekTwoStartInput = z.infer<typeof weekTwoStartBody> & {
   tenantId: string;
   userId?: string | null;
 };
@@ -57,6 +64,23 @@ export async function pilotRoutes(app: FastifyInstance) {
       return {
         error: "PilotReviewNotReady",
         message: "Week-1 pilot review requires an active pilot workspace and a confirmed publication result."
+      };
+    }
+    return { data: result };
+  });
+
+  app.post("/pilot/week-2/start", async (request, reply) => {
+    const body = weekTwoStartBody.parse(request.body ?? {});
+    const result = await startWeekTwoExecution({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekTwoNotReady",
+        message: "Week-2 execution requires an approved pilot_week_2_scope approval."
       };
     }
     return { data: result };
@@ -377,6 +401,141 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
   };
 }
 
+export async function startWeekTwoExecution(input: WeekTwoStartInput) {
+  const now = new Date().toISOString();
+  const dashboardState = await getDashboardState(input.tenantId);
+  const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
+    ? dashboardState.activePilotWorkspace as Record<string, unknown>
+    : {};
+  const weekTwoScope = activePilotWorkspace.week_2_scope && typeof activePilotWorkspace.week_2_scope === "object"
+    ? activePilotWorkspace.week_2_scope as Record<string, unknown>
+    : {};
+  const nextMaterialId = textValue(weekTwoScope.next_material_id, "");
+  const approvalId = textValue(weekTwoScope.approval_id, "");
+  if (!nextMaterialId || !approvalId) return null;
+
+  const approvalResult = await query("select * from approvals where id = $1 and tenant_id = $2", [
+    approvalId,
+    input.tenantId
+  ]);
+  const approval = approvalResult.rows[0] ?? null;
+  if (!approval || approval.scope !== "pilot_week_2_scope" || approval.status !== "approved") return null;
+
+  const contentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [
+    nextMaterialId,
+    input.tenantId
+  ]);
+  const currentContent = contentResult.rows[0] ?? null;
+  if (!currentContent) return null;
+  const currentMetadata = currentContent.metadata && typeof currentContent.metadata === "object"
+    ? currentContent.metadata as Record<string, unknown>
+    : {};
+  const currentExecution = currentMetadata.week_2_execution && typeof currentMetadata.week_2_execution === "object"
+    ? currentMetadata.week_2_execution as Record<string, unknown>
+    : {};
+  if (currentExecution.status === "started") {
+    const board = await listWeekTwoBoard(input.tenantId, nextMaterialId);
+    const task = await findWeekTwoExecutionTask(input.tenantId, nextMaterialId);
+    const materialApproval = await findWeekTwoMaterialApproval(input.tenantId, nextMaterialId);
+    return {
+      status: "already_started",
+      content: currentContent,
+      board,
+      task,
+      approval: materialApproval,
+      workspace_state: dashboardState
+    };
+  }
+
+  const content = await patchJson("content_items", nextMaterialId, {
+    status: "review",
+    metadata: {
+      ...currentMetadata,
+      week_2_execution: {
+        status: "started",
+        started_at: now,
+        started_by: input.userId ?? null,
+        note: input.note ?? "",
+        scope_approval_id: approvalId
+      }
+    }
+  }, input.tenantId);
+
+  const board = await startWeekTwoBoard(input.tenantId, nextMaterialId, {
+    started_at: now,
+    started_by: input.userId ?? null,
+    note: input.note ?? "",
+    scope_approval_id: approvalId
+  });
+  const task = await createAgentTask({
+    tenantId: input.tenantId,
+    role: "growth_orchestrator",
+    taskType: "pilot_week_2_execution",
+    targetType: "content_item",
+    targetId: nextMaterialId,
+    payload: {
+      title: `Week 2 execution: ${textValue(content?.title ?? currentContent.title, "next material")}`,
+      owner: "Founder + operator",
+      status: "queued",
+      source: "pilot_week_2_execution",
+      scopeApprovalId: approvalId,
+      note: input.note ?? "",
+      boardIds: board.map((item) => item.id)
+    },
+    createdBy: input.userId ?? undefined
+  });
+  const materialApproval = await createApprovalRequest({
+    tenantId: input.tenantId,
+    scope: "social_post",
+    targetType: "content_item",
+    targetId: nextMaterialId,
+    requestedBy: input.userId ?? undefined,
+    riskFlags: ["week-2 material", "public claim"],
+    summary: `Approve week-2 material: ${textValue(content?.title ?? currentContent.title, "next material")}`
+  });
+  const updatedWorkspaceState = await mergeDashboardState(input.tenantId, {
+    activePilotWorkspace: {
+      ...activePilotWorkspace,
+      mode: "week_2",
+      week_2_execution: {
+        status: "started",
+        started_at: now,
+        started_by: input.userId ?? null,
+        note: input.note ?? "",
+        content_item_id: nextMaterialId,
+        task_id: task.id ?? null,
+        material_approval_id: materialApproval.id ?? null,
+        board_ids: board.map((item) => item.id)
+      }
+    }
+  });
+
+  await recordOwnerActionAudit({
+    tenantId: input.tenantId,
+    action: "pilot.week_2.start",
+    targetType: "content_item",
+    targetId: nextMaterialId,
+    userId: input.userId ?? null,
+    source: "pilot_command",
+    metadata: {
+      scope_approval_id: approvalId,
+      task_id: task.id ?? null,
+      material_approval_id: materialApproval.id ?? null,
+      board_ids: board.map((item) => item.id),
+      note: input.note ?? null
+    }
+  });
+
+  return {
+    status: "started",
+    content,
+    board,
+    task,
+    approval: materialApproval,
+    workspace_state: updatedWorkspaceState
+  };
+}
+
 async function createWeekTwoScope(input: {
   tenantId: string;
   userId?: string | null;
@@ -541,6 +700,48 @@ async function createWeekTwoScope(input: {
     task,
     approval
   };
+}
+
+async function listWeekTwoBoard(tenantId: string, contentItemId: string) {
+  const result = await query("select * from publishing_calendar_items where tenant_id = $1 order by scheduled_for asc limit 300", [tenantId]);
+  return result.rows.filter((row) => row.content_item_id === contentItemId && row.metadata?.week_2_scope);
+}
+
+async function startWeekTwoBoard(tenantId: string, contentItemId: string, execution: Record<string, unknown>) {
+  const board = await listWeekTwoBoard(tenantId, contentItemId);
+  return Promise.all(board.map((item, index) => {
+    const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata as Record<string, unknown> : {};
+    const currentScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
+      ? metadata.week_2_scope as Record<string, unknown>
+      : {};
+    return patchJson("publishing_calendar_items", String(item.id), {
+      status: index === 0 ? "published" : item.status,
+      metadata: {
+        ...metadata,
+        week_2_scope: {
+          ...currentScope,
+          execution_status: "started",
+          execution_started_at: execution.started_at ?? null,
+          execution_started_by: execution.started_by ?? null,
+          execution_note: execution.note ?? "",
+          scope_approval_id: execution.scope_approval_id ?? null
+        }
+      }
+    }, tenantId);
+  }));
+}
+
+async function findWeekTwoExecutionTask(tenantId: string, contentItemId: string) {
+  const result = await query("select * from tasks where tenant_id = $1 order by created_at desc limit 300", [tenantId]);
+  return result.rows.find((row) => row.task_type === "pilot_week_2_execution" && row.target_id === contentItemId) ?? null;
+}
+
+async function findWeekTwoMaterialApproval(tenantId: string, contentItemId: string) {
+  const result = await query(
+    "select * from approvals where tenant_id = $1 and target_type = $2 and target_id = $3 and scope = $4 order by created_at desc limit 1",
+    [tenantId, "content_item", contentItemId, "social_post"]
+  );
+  return result.rows[0] ?? null;
 }
 
 async function ensureWeekTwoNextMaterial(

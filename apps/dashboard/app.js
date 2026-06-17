@@ -6639,12 +6639,48 @@ async function decideApproval(item, action, note = "") {
     item.decision_note = note;
     item.decided_at = new Date().toISOString();
     appendAudit(item, nextStatus, note);
+    if (item.scope === "pilot_week_2_scope" && nextStatus === "approved") {
+      await executeStartWeekTwoExecutionCommand({ note: note || "Started from dashboard scope approval." });
+    }
     state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
     await loadData();
     routeAfterDecision(nextStatus);
   } catch {
     showToast(text("Could not update the decision.", "Не удалось сохранить решение."));
+  }
+}
+
+async function executeStartWeekTwoExecutionCommand({ note = "" } = {}) {
+  if (!state.online) return null;
+  try {
+    const response = await api("/pilot/week-2/start", {
+      method: "POST",
+      body: JSON.stringify({ note })
+    });
+    const data = response?.data || null;
+    if (!data) return null;
+    if (data.content) {
+      state.content = mergeLocalItems(state.content, [data.content]);
+      state.metrics.content_items = state.content.length;
+    }
+    if (Array.isArray(data.board)) {
+      state.calendar = mergeLocalItems(state.calendar, data.board);
+    }
+    if (data.task) {
+      state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
+      state.metrics.tasks_created = state.tasks.length;
+    }
+    if (data.approval) {
+      state.approvals = mergeLocalItems(state.approvals, [data.approval]);
+      state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
+    }
+    if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
+    showToast(text("Week-2 execution started.", "Week-2 execution запущен."));
+    return data;
+  } catch {
+    showToast(text("Could not start week-2 execution.", "Не удалось запустить week-2 execution."));
+    return null;
   }
 }
 

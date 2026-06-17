@@ -8,7 +8,7 @@ import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
-import { completeDaySevenReview, startWeekOnePilot } from "../pilot/routes.js";
+import { completeDaySevenReview, startWeekOnePilot, startWeekTwoExecution } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -661,6 +661,21 @@ function pilotStartCommandFromText(command: string) {
     || command.startsWith("week1_pilot ");
 }
 
+function weekTwoStartCommandFromText(command: string) {
+  return command === "week2"
+    || command === "week_2"
+    || command === "week-2"
+    || command === "start_week2"
+    || command === "start_week_2"
+    || command === "week2_start"
+    || command === "week_2_start"
+    || command.startsWith("week2 ")
+    || command.startsWith("week_2 ")
+    || command.startsWith("week-2 ")
+    || command.startsWith("start_week2 ")
+    || command.startsWith("start_week_2 ");
+}
+
 function daySevenReviewCommandFromText(command: string): "expand" | "reuse" | "update" | "leave" | null {
   const normalized = command.replace(/^\/+/, "").trim().toLowerCase();
   if (!/^(day7|day_7|day-7|review|pilot_review|week_1_review|week-1-review)\b/.test(normalized)) return null;
@@ -820,8 +835,49 @@ async function completeDaySevenReviewFromTelegram(
   };
 }
 
+function renderWeekTwoExecutionMessage(result: NonNullable<Awaited<ReturnType<typeof startWeekTwoExecution>>>) {
+  const title = textValue(result.content?.title, "week-2 material");
+  if (result.status === "already_started") {
+    return `Week-2 execution уже запущен.\n\nМатериал: ${title}.`;
+  }
+  return [
+    "Week-2 execution запущен.",
+    "",
+    `Материал: ${title}.`,
+    "Следующий gate: согласовать week-2 material перед QA и release handoff."
+  ].join("\n");
+}
+
+async function startWeekTwoExecutionFromTelegram(input: TelegramCommandInput, context: TelegramExecutionContext) {
+  const result = await startWeekTwoExecution({
+    tenantId: context.tenantId,
+    userId: context.userId,
+    note: input.note
+  });
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+
+  if (!result) {
+    return {
+      command: "week2",
+      text: "Week-2 execution пока нельзя запустить: сначала согласуйте `pilot_week_2_scope`.",
+      buttons: briefCommandButtons(ownerBrief),
+      ownerBrief
+    };
+  }
+
+  return {
+    command: "week2",
+    text: renderWeekTwoExecutionMessage(result),
+    buttons: briefCommandButtons(ownerBrief),
+    ownerBrief,
+    weekTwoExecution: result
+  };
+}
+
 async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
   let result: Row | null = null;
+  let weekTwoExecution: Awaited<ReturnType<typeof startWeekTwoExecution>> | null = null;
 
   if (input.action === "approval.approve") {
     result = await decideApproval({
@@ -831,6 +887,13 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
       decidedBy: context.userId,
       decisionNote: input.note
     });
+    if (result?.scope === "pilot_week_2_scope" && result.status === "approved") {
+      weekTwoExecution = await startWeekTwoExecution({
+        tenantId: context.tenantId,
+        userId: context.userId,
+        note: input.note || "Started from Telegram scope approval."
+      });
+    }
   }
 
   if (input.action === "approval.request_changes") {
@@ -858,7 +921,8 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
   return {
     action: input.action,
     result,
-    ownerBrief: buildOwnerBrief(briefData)
+    ownerBrief: buildOwnerBrief(briefData),
+    weekTwoExecution
   };
 }
 
@@ -2318,6 +2382,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return startWeekOnePilotFromTelegram(input, context);
   }
 
+  if (weekTwoStartCommandFromText(command)) {
+    return startWeekTwoExecutionFromTelegram(input, context);
+  }
+
   if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
     return {
       command,
@@ -3062,6 +3130,10 @@ function isTelegramOwnerAllowed(update: TelegramUpdate, allowedUsers: Set<string
 
 function renderTelegramActionResultMessage(actionResult: Awaited<ReturnType<typeof executeTelegramAction>>) {
   if ("text" in actionResult && typeof actionResult.text === "string") return actionResult.text;
+
+  if (actionResult.weekTwoExecution) {
+    return renderWeekTwoExecutionMessage(actionResult.weekTwoExecution);
+  }
 
   if (actionResult.action === "approval.approve") {
     return "Решение зафиксировано: согласовано.";

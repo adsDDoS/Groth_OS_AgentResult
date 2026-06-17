@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add week-2 scope approval flow
+Add approved week-2 execution start
 ```
 
 Before changing product or dashboard behavior, read:
@@ -52,6 +52,9 @@ Ready:
 - Dashboard merges returned week-2 scope into content, calendar, task, approval, and workspace state after Day-7 review, then renders `pilot_week_2_scope` in the existing decision queue.
 - Telegram owner-control now supports Day-7 review through `/day7 expand|reuse|update|leave`, `/review ...`, `/pilot_review ...`, and natural phrases such as `закрой day-7 review`; responses show that week-2 scope was created and include approve/request-changes commands for the scope.
 - Approving/requesting changes on `pilot_week_2_scope` writes backend-owned side effects to next material metadata, week-2 board item metadata, and tenant workspace state.
+- Backend week-2 execution start is now `POST /pilot/week-2/start`; it is blocked until `pilot_week_2_scope` is approved, then moves the next material into review, marks Day 8 started, creates `pilot_week_2_execution`, opens week-2 material approval, updates workspace state, and writes owner-action audit.
+- Dashboard starts week-2 execution automatically after approving `pilot_week_2_scope`.
+- Telegram owner-control supports `/week2` / `/start_week2`, and approving `pilot_week_2_scope` from Telegram starts week-2 execution automatically.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -155,6 +158,7 @@ Latest completed checks before this handoff:
 
 - `npm run pilot:week-one-command:check` passed.
 - `npm run pilot:day-seven-review:check` passed.
+- `npm run pilot:week-two-execution:check` passed.
 - `npm run telegram:pilot-week-one-command:check` passed.
 - `npm run telegram:day-seven-review:check` passed.
 - `npm run telegram:regression` passed.
@@ -181,6 +185,7 @@ npm run build -w packages/shared
 npm run build -w apps/backend
 npm run pilot:week-one-command:check
 npm run pilot:day-seven-review:check
+npm run pilot:week-two-execution:check
 npm run telegram:pilot-week-one-command:check
 npm run telegram:day-seven-review:check
 ```
@@ -193,16 +198,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Start week-2 execution from approved scope:
+Make week-2 execution visible as an operator board:
 
 ```text
-Add backend command and dashboard/Telegram entry points that start week-2 production only after `pilot_week_2_scope` is approved.
+Add focused dashboard/Telegram views for active week-2 execution: material approval, Day 8/9/10/11/14 board, QA/release owner, URL confirmation, and week-2 result review.
 ```
 
 Why this is next:
 
 ```text
-Week-2 scope can now be created, reviewed, approved, or sent back for changes. The next leverage point is converting approved scope into active week-2 execution without bypassing the owner gate.
+Week-2 can now start safely after owner approval. The next leverage point is making the active execution loop visible enough for an operator to run it without digging through generic queues.
 ```
 
 Suggested first files to inspect:
