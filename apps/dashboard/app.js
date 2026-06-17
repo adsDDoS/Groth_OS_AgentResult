@@ -979,214 +979,26 @@ function applyClientDemoSeed() {
 function applyPilotExecutionSeed() {
   if (!isPilotExecutionDemo) return;
 
-  const materialId = "pilot-execution-material-week-1";
-  const releaseId = "pilot-execution-release-week-1";
-  const reviewId = "pilot-execution-day-7-review";
-  const livePublishedAt = "2026-06-20 10:00";
-  const liveUrl = "https://t.me/founder_channel/42";
-  const liveReactions = {
-    comments: 3,
-    reposts: 1,
-    saves: 7,
-    reactions: 19
-  };
+  const workspace = buildWeekOnePilotWorkspace({ mode: "seed" });
 
   state.offer = {
     ...state.offer,
     profile: {
       ...(state.offer?.profile || {}),
-      icp: "Founder-led B2B service or expert team that sells complex work through trust content.",
-      channels: "Week 1: Telegram founder channel only. Second channel is intentionally out of scope until Day 7.",
-      approvalOwner: "Founder / managing partner approves topic boundary within 24 hours.",
-      releaseOwner: "Content operator or chief of staff owns QA, handoff, manual Telegram release, URL confirmation.",
-      firstSignalSource: "Telegram post URL, comments, reposts, saves, reactions, and owner mark after 24 hours.",
-      forbiddenClaims: "No guaranteed leads, no guaranteed revenue, no fake ROI, no named clients or competitor mentions without owner approval.",
-      authorVoiceContract: "Фразы автора: рабочий контур, без каши, через решение. Стоп-слова: гарантированные лиды, магия, автоматические продажи. AI-шаблоны: убрать общие вступления и пустые benefit lists. Прямота: practical founder voice. Proof/risk: no numbers or client names without approval. Решение QA: похоже / не похоже на автора."
+      ...workspace.profile
     }
   };
 
-  state.demand = [
-    {
-      id: "pilot-execution-icp",
-      title: "Founder-led B2B service / expert team",
-      item_type: "icp",
-      intent: "pilot",
-      audience: "Owner who sells complex work through trust content",
-      priority: 100,
-      status: "approved",
-      metadata: {
-        reason: "Expert knowledge exists but gets stuck across voice notes, chats, drafts, QA, and release."
-      }
-    }
-  ];
-
-  state.content = [
-    {
-      id: materialId,
-      title: "Как не терять выпуск контента между идеей и публикацией",
-      content_type: "telegram_post",
-      channel: "telegram",
-      status: "published",
-      owner: "Content operator",
-      metadata: {
-        owner: "Content operator",
-        audience: "Founder-led B2B service or expert team",
-        brief: [
-          "Angle: большинство команд проигрывают не потому, что не могут написать текст, а потому что тема, черновик, QA, выпуск и результат живут в разных чатах.",
-          "Structure: operational pain -> broken flow -> controlled flow -> practical conclusion.",
-          "Required flow: topic boundary -> draft -> QA -> release -> URL -> next step.",
-          "Forbidden: AI writes everything by itself; guaranteed leads; fake metrics; named clients without approval."
-        ].join("\n"),
-        body: "Большинство команд не теряют контент на этапе написания. Он теряется между идеей, голосовым, черновиком, QA, выпуском и проверкой результата.\n\nРабочий контур проще: тема и граница согласованы, черновик подготовлен, QA проверил факты и стиль, менеджер выпустил, URL зафиксирован, следующий шаг выбран.",
-        quality_gate: {
-          status: "passed",
-          checked_by: "QA/release owner",
-          checked_at: "2026-06-19 16:00",
-          summary: "QA passed: facts, founder voice, owner boundaries, no forbidden claims, Telegram format."
-        },
-        publication_result: {
-          publication_url: liveUrl,
-          format: "telegram_post",
-          confirmed_at: livePublishedAt,
-          reactions: liveReactions,
-          next_step: "expand",
-          next_step_note: "Day 7: expand into a larger article if comments/saves hold; otherwise reuse strongest paragraph as the second post."
-        }
-      }
-    }
-  ];
-
-  state.approvals = [
-    {
-      id: "pilot-execution-topic-approval",
-      summary: "Согласовать тему недели: как не терять выпуск контента",
-      scope: "social_post",
-      target_type: "content_item",
-      target_id: materialId,
-      content_item_id: materialId,
-      status: "approved",
-      risk_flags: ["channel publishing", "public claim"],
-      requested_by: "AgentResult",
-      decided_by: "founder",
-      decision_note: "Topic boundary approved: production control, no revenue or lead promises, no client names.",
-      preview: "Тема: как контент теряется между идеей, черновиком, QA, выпуском и подтверждённым URL."
-    }
-  ];
-
-  state.calendar = [
-    {
-      id: "pilot-execution-day-0",
-      title: "Day 0: setup intake, one channel, one format, three owners",
-      channel: "telegram",
-      scheduled_for: "2026-06-16 10:00",
-      status: "published",
-      metadata: { result_note: "Pilot context ready: Telegram founder channel, Telegram post, founder/operator/result owners." }
-    },
-    {
-      id: "pilot-execution-day-1",
-      title: "Day 1: approve topic boundary",
-      content_item_id: materialId,
-      channel: "telegram",
-      scheduled_for: "2026-06-17 12:00",
-      status: "published",
-      metadata: { result_note: "Approved topic boundary: no revenue/lead promise; no client names." }
-    },
-    {
-      id: "pilot-execution-day-2",
-      title: "Day 2: prepare Telegram draft in founder voice",
-      content_item_id: materialId,
-      channel: "telegram",
-      scheduled_for: "2026-06-18 18:00",
-      status: "published",
-      metadata: { result_note: "Draft ready for QA: practical lesson, one example, no forbidden claims." }
-    },
-    {
-      id: "pilot-execution-day-3",
-      title: "Day 3: QA facts, voice, claims, channel format",
-      content_item_id: materialId,
-      channel: "telegram",
-      scheduled_for: "2026-06-19 16:00",
-      status: "published",
-      metadata: { result_note: "QA passed 5/5." }
-    },
-    {
-      id: releaseId,
-      title: "Day 4/5: Telegram post released and URL confirmed",
-      content_item_id: materialId,
-      channel: "telegram",
-      scheduled_for: "2026-06-20 10:00",
-      status: "published",
-      updated_at: livePublishedAt,
-      metadata: {
-        format: "telegram_post",
-        publication_url: liveUrl,
-        published_confirmed_at: livePublishedAt,
-        published_confirmed_by: "result owner",
-        publication_result: {
-          publication_url: liveUrl,
-          format: "telegram_post",
-          confirmed_at: livePublishedAt,
-          reactions: liveReactions,
-          next_step: "expand",
-          next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
-        }
-      }
-    },
-    {
-      id: reviewId,
-      title: "Day 7: review next content step and week-2 scope",
-      content_item_id: materialId,
-      channel: "manual_export",
-      scheduled_for: "2026-06-23 12:00",
-      status: "scheduled",
-      metadata: {
-        handoff_note: "Review what went out, where published, primary reactions, owner response time, QA rework, manual publishing delay, URL confirmation delay.",
-        next_step: "expand / reuse / update / leave",
-        week_2_gate: "No second channel unless the first loop is clean."
-      }
-    }
-  ];
-
-  state.tasks = [
-    {
-      id: "pilot-execution-day-7-task",
-      title: "Day 7 review: choose expand / reuse / update / leave",
-      owner: "Founder + operator",
-      status: "queued",
-      note: "Default: expand if comments/saves appear; otherwise reuse strongest paragraph as second post.",
-      source: "pilot_execution"
-    }
-  ];
-
-  state.distributionSignals = [{
-    id: "pilot-execution-signal-week-1",
-    calendar_item_id: releaseId,
-    content_item_id: materialId,
-    status: "confirmed",
-    source: "telegram",
-    signal_type: "distribution_signal.confirmed",
-    title: "Telegram-пост: как не терять выпуск контента",
-    note: "URL, reactions, and Day-7 next-step decision are ready for review.",
-    occurred_at: livePublishedAt,
-    confirmed_by: "result owner",
-    metadata: {
-      publication_url: liveUrl,
-      format: "telegram_post",
-      reactions: liveReactions,
-      next_step: "expand",
-      next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
-    }
-  }];
+  state.demand = workspace.demand;
+  state.content = workspace.content;
+  state.approvals = workspace.approvals;
+  state.calendar = workspace.calendar;
+  state.tasks = workspace.tasks;
+  state.distributionSignals = workspace.distributionSignals;
   state.resultSignals = state.distributionSignals;
   state.publicationResultsSource = "derived";
-  state.selectedPublicationResultId = "publication-result-pilot-execution-signal-week-1";
-  state.activity = [
-    { at: "Day 7 12:00", actor: "Founder + operator", event: "Review next content step and week-2 scope" },
-    { at: "Day 5 10:00", actor: "Result owner", event: "Confirmed Telegram URL and primary reactions" },
-    { at: "Day 4 12:00", actor: "QA/release owner", event: "Published manually in Telegram after handoff" },
-    { at: "Day 3 16:00", actor: "QA/release owner", event: "QA passed 5/5" },
-    { at: "Day 1 12:00", actor: "Founder", event: "Approved topic boundary" }
-  ];
+  state.selectedPublicationResultId = workspace.selectedPublicationResultId;
+  state.activity = workspace.activity;
   state.metrics = {
     ...state.metrics,
     content_items: state.content.length,
@@ -1197,6 +1009,233 @@ function applyPilotExecutionSeed() {
     distribution_signals: state.distributionSignals.length,
     result_signals: state.distributionSignals.length,
     leads: 0
+  };
+}
+
+function buildWeekOnePilotWorkspace(options = {}) {
+  const mode = options.mode === "starter" ? "starter" : "seed";
+  const prefix = options.prefix || (mode === "starter" ? `week-1-pilot-${Date.now()}` : "pilot-execution");
+  const materialId = `${prefix}-material-week-1`;
+  const releaseId = `${prefix}-release-week-1`;
+  const reviewId = `${prefix}-day-7-review`;
+  const approvalId = `${prefix}-topic-approval`;
+  const signalId = `${prefix}-signal-week-1`;
+  const materialTitle = options.materialTitle || "Как не терять выпуск контента между идеей и публикацией";
+  const channel = options.channel || "telegram";
+  const approvalOwner = options.approvalOwner || "Founder / managing partner";
+  const releaseOwner = options.releaseOwner || "Content operator or chief of staff";
+  const resultOwner = options.resultOwner || releaseOwner;
+  const icp = options.icp || "Founder-led B2B service or expert team that sells complex work through trust content.";
+  const resultSource = options.resultSource || "Telegram post URL, comments, reposts, saves, reactions, and owner mark after 24 hours.";
+  const forbiddenClaims = options.forbiddenClaims || "No guaranteed leads, no guaranteed revenue, no fake ROI, no named clients or competitor mentions without approval.";
+  const livePublishedAt = options.livePublishedAt || "2026-06-20 10:00";
+  const liveUrl = options.liveUrl || "https://t.me/founder_channel/42";
+  const liveReactions = options.liveReactions || {
+    comments: 3,
+    reposts: 1,
+    saves: 7,
+    reactions: 19
+  };
+  const brief = [
+    "Angle: большинство команд проигрывают не потому, что не могут написать текст, а потому что тема, черновик, QA, выпуск и результат живут в разных чатах.",
+    "Structure: operational pain -> broken flow -> controlled flow -> practical conclusion.",
+    "Required flow: topic boundary -> draft -> QA -> release -> URL -> next step.",
+    "Forbidden: AI writes everything by itself; guaranteed leads; fake metrics; named clients without approval."
+  ].join("\n");
+  const profile = {
+    icp,
+    channels: `Week 1: ${displayChannel(channel)} only. Second channel is intentionally out of scope until Day 7.`,
+    approvalOwner: `${approvalOwner} approves topic boundary within 24 hours.`,
+    releaseOwner: `${releaseOwner} owns QA, handoff, manual release, URL confirmation.`,
+    firstSignalSource: resultSource,
+    forbiddenClaims,
+    authorVoiceContract: "Фразы автора: рабочий контур, без каши, через решение. Стоп-слова: гарантированные лиды, магия, автоматические продажи. AI-шаблоны: убрать общие вступления и пустые benefit lists. Прямота: practical founder voice. Proof/risk: no numbers or client names without approval. Решение QA: похоже / не похоже на автора."
+  };
+
+  const contentStatus = mode === "starter" ? "review" : "published";
+  const approvalStatus = mode === "starter" ? "pending" : "approved";
+  const releaseStatus = mode === "starter" ? "scheduled" : "published";
+  const contentMetadata = {
+    owner: releaseOwner,
+    audience: icp,
+    brief,
+    body: "Большинство команд не теряют контент на этапе написания. Он теряется между идеей, голосовым, черновиком, QA, выпуском и проверкой результата.\n\nРабочий контур проще: тема и граница согласованы, черновик подготовлен, QA проверил факты и стиль, менеджер выпустил, URL зафиксирован, следующий шаг выбран."
+  };
+  if (mode === "seed") {
+    contentMetadata.quality_gate = {
+      status: "passed",
+      checked_by: "QA/release owner",
+      checked_at: "2026-06-19 16:00",
+      summary: "QA passed: facts, founder voice, owner boundaries, no forbidden claims, Telegram format."
+    };
+    contentMetadata.publication_result = {
+      publication_url: liveUrl,
+      format: "telegram_post",
+      confirmed_at: livePublishedAt,
+      reactions: liveReactions,
+      next_step: "expand",
+      next_step_note: "Day 7: expand into a larger article if comments/saves hold; otherwise reuse strongest paragraph as the second post."
+    };
+  }
+
+  const releaseMetadata = mode === "seed"
+    ? {
+      format: "telegram_post",
+      publication_url: liveUrl,
+      published_confirmed_at: livePublishedAt,
+      published_confirmed_by: resultOwner,
+      publication_result: {
+        publication_url: liveUrl,
+        format: "telegram_post",
+        confirmed_at: livePublishedAt,
+        reactions: liveReactions,
+        next_step: "expand",
+        next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
+      }
+    }
+    : {
+      handoff_note: "Day 4: hand off final text, publish manually, then confirm URL and reactions. Handoff is not the result."
+    };
+
+  return {
+    profile,
+    demand: [{
+      id: `${prefix}-icp`,
+      title: "Founder-led B2B service / expert team",
+      item_type: "icp",
+      intent: "pilot",
+      audience: "Owner who sells complex work through trust content",
+      priority: 100,
+      status: "approved",
+      metadata: {
+        reason: "Expert knowledge exists but gets stuck across voice notes, chats, drafts, QA, and release."
+      }
+    }],
+    content: [{
+      id: materialId,
+      title: materialTitle,
+      content_type: "telegram_post",
+      channel,
+      status: contentStatus,
+      owner: releaseOwner,
+      metadata: contentMetadata,
+      created_at: new Date().toISOString()
+    }],
+    approvals: [{
+      id: approvalId,
+      summary: `Согласовать тему недели: ${materialTitle}`,
+      scope: "social_post",
+      target_type: "content_item",
+      target_id: materialId,
+      content_item_id: materialId,
+      status: approvalStatus,
+      risk_flags: ["channel publishing", "public claim"],
+      requested_by: "AgentResult",
+      decided_by: mode === "seed" ? "founder" : "",
+      decision_note: mode === "seed" ? "Topic boundary approved: production control, no revenue or lead promises, no client names." : "",
+      preview: "Тема: как контент теряется между идеей, черновиком, QA, выпуском и подтверждённым URL.",
+      created_at: new Date().toISOString()
+    }],
+    calendar: [
+      {
+        id: `${prefix}-day-0`,
+        title: "Day 0: setup intake, one channel, one format, three owners",
+        channel,
+        scheduled_for: "2026-06-16 10:00",
+        status: "published",
+        metadata: { result_note: "Pilot context ready: channel, format, approval owner, QA/release owner, result owner." }
+      },
+      {
+        id: `${prefix}-day-1`,
+        title: "Day 1: approve topic boundary",
+        content_item_id: materialId,
+        channel,
+        scheduled_for: "2026-06-17 12:00",
+        status: mode === "starter" ? "review" : "published",
+        metadata: { result_note: "Approved topic boundary: no revenue/lead promise; no client names." }
+      },
+      {
+        id: `${prefix}-day-2`,
+        title: "Day 2: prepare Telegram draft in founder voice",
+        content_item_id: materialId,
+        channel,
+        scheduled_for: "2026-06-18 18:00",
+        status: mode === "starter" ? "scheduled" : "published",
+        metadata: { result_note: "Draft ready for QA: practical lesson, one example, no forbidden claims." }
+      },
+      {
+        id: `${prefix}-day-3`,
+        title: "Day 3: QA facts, voice, claims, channel format",
+        content_item_id: materialId,
+        channel,
+        scheduled_for: "2026-06-19 16:00",
+        status: mode === "starter" ? "scheduled" : "published",
+        metadata: { result_note: "QA passed 5/5." }
+      },
+      {
+        id: releaseId,
+        title: "Day 4/5: Telegram post released and URL confirmed",
+        content_item_id: materialId,
+        channel,
+        scheduled_for: "2026-06-20 10:00",
+        status: releaseStatus,
+        updated_at: mode === "seed" ? livePublishedAt : "",
+        metadata: releaseMetadata
+      },
+      {
+        id: reviewId,
+        title: "Day 7: review next content step and week-2 scope",
+        content_item_id: materialId,
+        channel: "manual_export",
+        scheduled_for: "2026-06-23 12:00",
+        status: "scheduled",
+        metadata: {
+          handoff_note: "Review what went out, where published, primary reactions, owner response time, QA rework, manual publishing delay, URL confirmation delay.",
+          next_step: "expand / reuse / update / leave",
+          week_2_gate: "No second channel unless the first loop is clean."
+        }
+      }
+    ],
+    tasks: [{
+      id: `${prefix}-day-7-task`,
+      title: "Day 7 review: choose expand / reuse / update / leave",
+      owner: "Founder + operator",
+      status: "queued",
+      note: "Default: expand if comments/saves appear; otherwise reuse strongest paragraph as second post.",
+      source: "pilot_execution"
+    }],
+    distributionSignals: mode === "seed" ? [{
+      id: signalId,
+      calendar_item_id: releaseId,
+      content_item_id: materialId,
+      status: "confirmed",
+      source: channel,
+      signal_type: "distribution_signal.confirmed",
+      title: "Telegram-пост: как не терять выпуск контента",
+      note: "URL, reactions, and Day-7 next-step decision are ready for review.",
+      occurred_at: livePublishedAt,
+      confirmed_by: resultOwner,
+      metadata: {
+        publication_url: liveUrl,
+        format: "telegram_post",
+        reactions: liveReactions,
+        next_step: "expand",
+        next_step_note: "Day 7 review path: expand if comments/saves appear; otherwise reuse strongest paragraph as a second Telegram post."
+      }
+    }] : [],
+    selectedPublicationResultId: `publication-result-${signalId}`,
+    activity: mode === "seed"
+      ? [
+        { at: "Day 7 12:00", actor: "Founder + operator", event: "Review next content step and week-2 scope" },
+        { at: "Day 5 10:00", actor: resultOwner, event: "Confirmed Telegram URL and primary reactions" },
+        { at: "Day 4 12:00", actor: releaseOwner, event: "Published manually after handoff" },
+        { at: "Day 3 16:00", actor: releaseOwner, event: "QA passed 5/5" },
+        { at: "Day 1 12:00", actor: approvalOwner, event: "Approved topic boundary" }
+      ]
+      : [
+        { at: "Today", actor: "Operator", event: "Started week-1 pilot workspace" },
+        { at: "Day 0", actor: "Operator + founder", event: "Pilot context ready" }
+      ]
   };
 }
 
@@ -1610,6 +1649,29 @@ function renderFormModal() {
         ${textarea(text("Why this matters", "Зачем это нужно"), "taskNote", "")}
       `
     },
+    pilotStart: {
+      eyebrow: text("Pilot", "Пилот"),
+      title: text("Start week-1 pilot", "Запустить week-1 pilot"),
+      submit: "submit-week-one-pilot-start",
+      button: text("Start week-1 pilot", "Запустить week-1 pilot"),
+      body: `
+        ${field("ICP", "pilotStartIcp", "Founder-led B2B service or expert team that sells complex work through trust content.")}
+        <div class="form-grid two-col">
+          ${field(text("Channel", "Канал"), "pilotStartChannel", "telegram")}
+          ${field(text("First material", "Первый материал"), "pilotStartMaterial", "Как не терять выпуск контента между идеей и публикацией")}
+        </div>
+        <div class="form-grid two-col">
+          ${field(text("Approval owner", "Владелец решения"), "pilotStartApprovalOwner", "Founder / managing partner")}
+          ${field(text("QA/release owner", "QA/release owner"), "pilotStartReleaseOwner", "Content operator or chief of staff")}
+        </div>
+        <div class="form-grid two-col">
+          ${field(text("Result owner", "Владелец результата"), "pilotStartResultOwner", "Content operator or chief of staff")}
+          ${field(text("Result source", "Источник результата"), "pilotStartResultSource", "Telegram post URL, comments, reposts, saves, reactions, and owner mark after 24 hours.")}
+        </div>
+        ${textarea(text("Forbidden claims", "Запрещённые утверждения"), "pilotStartForbiddenClaims", "No guaranteed leads, no guaranteed revenue, no fake ROI, no named clients or competitor mentions without approval.")}
+        <div class="modal-warning">${escapeHtml(text("Creates topic approval, first material brief, QA/release board, URL confirmation path, and Day-7 review. It does not publish anything.", "Создаёт согласование темы, бриф первого материала, доску QA/выпуска, путь подтверждения URL и Day-7 review. Ничего не публикует."))}</div>
+      `
+    },
     schedule: {
       eyebrow: text("Release", "Выпуск"),
       title: text("Plan item", "Пункт плана"),
@@ -1848,6 +1910,9 @@ function renderNav() {
 
 function renderActions() {
   const routeKey = canonicalRoute();
+  const pilotStartAction = !isClientDemo
+    ? [actionButton(text("Start week-1 pilot", "Запустить week-1 pilot"), "primary", "open-week-one-pilot-start")]
+    : [];
   const publicationActions = {
     approvals: [],
     calendar: [],
@@ -1858,7 +1923,7 @@ function renderActions() {
     ]
   };
   const actions = {
-    overview: [],
+    overview: pilotStartAction,
     "growth-plan": [],
     "offer-brain": [actionButton(text("Save", "Сохранить"), "secondary", "save-offer")],
     "content-pipeline": [],
@@ -1867,7 +1932,7 @@ function renderActions() {
     settings: currentSettingsTab() === "tools"
       ? []
       : currentSettingsTab() === "technical"
-        ? []
+        ? pilotStartAction
         : []
   };
   const detailHomeAction = routeKey === "overview" ? [] : [actionButton(text("Back to Today", "К Сегодня"), "secondary", "go-overview")];
@@ -4813,6 +4878,8 @@ async function handleAction(action, id) {
     "submit-demand-form": () => submitDemandForm(),
     "submit-content-form": () => submitContentForm(),
     "submit-content-edit-form": () => submitContentEditForm(),
+    "open-week-one-pilot-start": () => openFormModal("pilotStart"),
+    "submit-week-one-pilot-start": () => submitWeekOnePilotStart(),
     "submit-metrics-form": () => submitMetricsForm(),
     "submit-content-comment": () => submitContentComment(id),
     "submit-schedule-form": () => submitScheduleForm(),
@@ -5774,6 +5841,73 @@ async function submitContentEditForm() {
   state.formModal = null;
   showToast(text("Material saved.", "Материал сохранён."));
   setRoute("content-pipeline");
+}
+
+async function submitWeekOnePilotStart() {
+  const workspace = buildWeekOnePilotWorkspace({
+    mode: "starter",
+    prefix: `local-pilot-${Date.now()}`,
+    icp: document.querySelector("#pilotStartIcp")?.value.trim() || "",
+    channel: document.querySelector("#pilotStartChannel")?.value.trim() || "telegram",
+    materialTitle: document.querySelector("#pilotStartMaterial")?.value.trim() || "",
+    approvalOwner: document.querySelector("#pilotStartApprovalOwner")?.value.trim() || "",
+    releaseOwner: document.querySelector("#pilotStartReleaseOwner")?.value.trim() || "",
+    resultOwner: document.querySelector("#pilotStartResultOwner")?.value.trim() || "",
+    resultSource: document.querySelector("#pilotStartResultSource")?.value.trim() || "",
+    forbiddenClaims: document.querySelector("#pilotStartForbiddenClaims")?.value.trim() || ""
+  });
+  const offerDraft = {
+    ...(state.offer || {}),
+    profile: {
+      ...(state.offer?.profile || {}),
+      ...workspace.profile
+    }
+  };
+  state.offer = offerDraft;
+  localStorage.setItem("aiGrowthOsOfferDraft", JSON.stringify(offerDraft));
+
+  workspace.demand.forEach((item) => upsertLocalItem("aiGrowthOsLocalDemand", state.localDemand, item));
+  workspace.content.forEach((item) => upsertLocalItem("aiGrowthOsLocalContent", state.localContent, item));
+  workspace.calendar.forEach((item) => upsertLocalItem("aiGrowthOsLocalCalendar", state.localCalendar, item));
+  workspace.approvals.forEach((item) => upsertLocalItem("aiGrowthOsLocalApprovals", state.localApprovals, item));
+  workspace.tasks.forEach((item) => upsertLocalItem("aiGrowthOsLocalTasks", state.localTasks, item));
+
+  state.demand = mergeLocalItems(state.demand, workspace.demand);
+  state.content = mergeLocalItems(state.content, workspace.content);
+  state.calendar = mergeLocalItems(state.calendar, workspace.calendar);
+  state.approvals = mergeLocalItems(state.approvals, workspace.approvals);
+  state.tasks = mergeLocalItems(state.tasks, workspace.tasks).map(normalizeVisibleTask);
+  state.selectedApprovalId = workspace.approvals[0]?.id || state.selectedApprovalId;
+  state.distributionSignals = [];
+  state.resultSignals = [];
+  state.publicationResults = [];
+  state.publicationResultsSource = "derived";
+  state.activity = [...workspace.activity, ...state.activity].slice(0, 20);
+  saveLocalJson("aiGrowthOsActivity", state.activity);
+  state.metrics = {
+    ...state.metrics,
+    content_items: state.content.length,
+    calendar_items: state.calendar.length,
+    pending_approvals: state.approvals.filter((item) => item.status === "pending").length,
+    approvals_total: state.approvals.length,
+    published_materials: shippedCalendarCount(state.calendar),
+    tasks_created: state.tasks.length,
+    distribution_signals: 0,
+    result_signals: 0,
+    leads: 0
+  };
+  await persistWorkspaceState({
+    activePilotWorkspace: {
+      started_at: new Date().toISOString(),
+      mode: "week_1",
+      material_id: workspace.content[0]?.id || "",
+      approval_id: workspace.approvals[0]?.id || "",
+      day_7_review_id: workspace.calendar.find((item) => item.id.includes("day-7-review"))?.id || ""
+    }
+  });
+  state.formModal = null;
+  showToast(text("Week-1 pilot workspace started.", "Week-1 pilot workspace запущен."));
+  openPublicationTab("approvals", state.selectedApprovalId);
 }
 
 async function submitScheduleForm() {

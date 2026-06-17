@@ -276,6 +276,59 @@ async function assertPilotExecutionSeed(page) {
   await assertNoConsoleErrors(page);
 }
 
+async function assertStartWeekOnePilotFlow(page) {
+  await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}-start-pilot#/overview`, { timeout: waitTimeoutMs });
+  await page.waitForSelector("#screenRoot", { timeout: waitTimeoutMs });
+  await clickUnique(page, '[data-action="open-week-one-pilot-start"]');
+  await page.waitForSelector("#pilotStartIcp", { timeout: waitTimeoutMs });
+  await clickUnique(page, '[data-action="submit-week-one-pilot-start"]');
+  await page.waitForURL(`${baseUrl}/?demo=reset&v=${smokeVersion}-start-pilot#/publications`);
+  await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
+
+  const started = await page.evaluate(() => {
+    const localContent = JSON.parse(localStorage.getItem("aiGrowthOsLocalContent") || "[]");
+    const localCalendar = JSON.parse(localStorage.getItem("aiGrowthOsLocalCalendar") || "[]");
+    const localApprovals = JSON.parse(localStorage.getItem("aiGrowthOsLocalApprovals") || "[]");
+    const workspace = JSON.parse(localStorage.getItem("aiGrowthOsWorkspaceState") || "{}");
+    return {
+      hasApproval: localApprovals.some((item) => item.status === "pending" && String(item.summary || "").includes("Согласовать тему недели")),
+      hasFirstMaterial: localContent.some((item) => String(item.title || "").includes("Как не терять выпуск контента") && item.status === "review"),
+      hasBrief: localContent.some((item) => String(item.metadata?.brief || "").includes("тема, черновик, QA, выпуск и результат живут в разных чатах")),
+      hasReleasePath: localCalendar.some((item) => String(item.title || "").includes("Day 4/5") && item.status === "scheduled"),
+      hasDay7Review: localCalendar.some((item) => String(item.title || "").includes("Day 7: review") && item.status === "scheduled"),
+      hasWorkspaceMarker: Boolean(workspace.activePilotWorkspace?.day_7_review_id),
+      visibleApproval: document.body.innerText.includes("Согласовать тему недели: Как не терять выпуск контента между идеей и публикацией"),
+      width: document.documentElement.scrollWidth,
+      viewport: window.innerWidth
+    };
+  });
+  assert(started.hasApproval, "Start week-1 pilot did not create pending topic approval");
+  assert(started.hasFirstMaterial, "Start week-1 pilot did not create first material");
+  assert(started.hasBrief, "Start week-1 pilot did not create material brief");
+  assert(started.hasReleasePath, "Start week-1 pilot did not create release confirmation path");
+  assert(started.hasDay7Review, "Start week-1 pilot did not create Day-7 review");
+  assert(started.hasWorkspaceMarker, "Start week-1 pilot did not persist workspace marker");
+  assert(started.visibleApproval, "Started pilot approval is not visible in Publication Desk");
+  assert(started.width <= started.viewport + 2, `Started pilot publications overflow: ${started.width} > ${started.viewport}`);
+
+  await page.evaluate((version) => history.replaceState(null, "", `/?v=${version}-start-pilot-persist#/publications`), smokeVersion);
+  await page.reload();
+  await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
+  const persisted = await page.evaluate(() => {
+    const localCalendar = JSON.parse(localStorage.getItem("aiGrowthOsLocalCalendar") || "[]");
+    return {
+      hasDay7Review: localCalendar.some((item) => String(item.title || "").includes("Day 7: review next content step and week-2 scope")),
+      hasApproval: document.body.innerText.includes("Согласовать тему недели: Как не терять выпуск контента между идеей и публикацией"),
+      width: document.documentElement.scrollWidth,
+      viewport: window.innerWidth
+    };
+  });
+  assert(persisted.hasDay7Review, "Reload lost started pilot Day-7 review");
+  assert(persisted.hasApproval, "Reload lost started pilot approval");
+  assert(persisted.width <= persisted.viewport + 2, `Started pilot reload overflow: ${persisted.width} > ${persisted.viewport}`);
+  await assertNoConsoleErrors(page);
+}
+
 async function run() {
   await waitForDashboard();
   const browser = await chromium.launch();
@@ -295,6 +348,7 @@ async function run() {
   try {
     await assertClientDemoSeed(page);
     await assertPilotExecutionSeed(page);
+    await assertStartWeekOnePilotFlow(page);
 
     await page.goto(`${baseUrl}/?demo=reset&v=${smokeVersion}#/publications`, { timeout: waitTimeoutMs });
     await page.waitForSelector(".tabs-panel", { timeout: waitTimeoutMs });
