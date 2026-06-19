@@ -53,10 +53,11 @@ async function waitForDashboard() {
 
 function assertDashboardScriptContract() {
   const appJs = readFileSync("apps/dashboard/app.js", "utf8");
-  assert(appJs.includes('"complete-week-two-review"'), "Dashboard week-2 review buttons are missing");
-  assert(appJs.includes('api("/pilot/week-2/review"'), "Dashboard week-2 review must call backend pilot command");
+  assert(appJs.includes('"complete-pilot-week-review"'), "Dashboard week-N review buttons are missing");
+  assert(appJs.includes("api(`/pilot/week-${week}/review`"), "Dashboard week-N review must call backend pilot command");
   assert(appJs.includes('api("/pilot/week-3/execution"'), "Dashboard must load backend week-3 execution state");
   assert(appJs.includes("state.weekThreeExecution"), "Dashboard week-3 execution state slot is missing");
+  assert(appJs.includes("state.weekThreeExecution = null"), "Dashboard must clear week-3 execution after backend review");
   assert(appJs.includes("executeStartPilotWeekExecutionCommand(3"), "Dashboard must start week-3 execution from approved scope");
   assert(appJs.includes("function pilotWeekExecutionPanel"), "Dashboard must render week-N execution with a generic panel");
   assert(appJs.includes("function pilotScopeWeek(scope)"), "Dashboard pilot scope approval helper is missing");

@@ -2278,9 +2278,8 @@ function pilotWeekExecutionActionButtons(execution, action) {
   }
   const week = pilotExecutionWeek(execution);
   const publicationResultId = execution.actions?.review_result?.publication_result_id || execution.publication_result?.id || "";
-  const calendarId = execution.publication_result?.calendar_item_id || execution.actions?.confirm_url?.calendar_item_id || "";
   return ["reuse", "expand", "update", "leave"].map((step) => `
-    <button class="button ${step === "reuse" ? "primary" : "secondary"}" data-action="${week === 2 ? "complete-week-two-review" : "set-publication-result-step"}" data-id="${escapeAttr(week === 2 ? `${publicationResultId}|${step}` : `${publicationResultId}|${calendarId}|${step}`)}">${escapeHtml(weekTwoReviewStepLabel(step))}</button>
+    <button class="button ${step === "reuse" ? "primary" : "secondary"}" data-action="complete-pilot-week-review" data-id="${escapeAttr(`${week}|${publicationResultId}|${step}`)}">${escapeHtml(weekTwoReviewStepLabel(step))}</button>
   `).join("");
 }
 
@@ -2318,8 +2317,8 @@ function pilotWeekExecutionPrimaryAction(execution) {
     };
   }
   return {
-    action: "complete-week-two-review",
-    id: `${execution.actions?.review_result?.publication_result_id || ""}|reuse`,
+    action: "complete-pilot-week-review",
+    id: `${pilotExecutionWeek(execution)}|${execution.actions?.review_result?.publication_result_id || ""}|reuse`,
     label: text("Reuse", "Переиспользовать")
   };
 }
@@ -5212,7 +5211,7 @@ async function handleAction(action, id) {
     "export-calendar": exportCalendarCsv,
     "mark-calendar-published": () => openPublicationResultModal(id),
     "mark-calendar-exported": () => updateCalendarStatus(id, "handed_off"),
-    "complete-week-two-review": () => completeWeekTwoReviewFromDashboard(id),
+    "complete-pilot-week-review": () => completePilotWeekReviewFromDashboard(id),
     "select-publication-result": () => {
       state.selectedPublicationResultId = id;
       render();
@@ -5761,12 +5760,13 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
   }
 }
 
-async function completeWeekTwoReviewFromDashboard(encoded = "") {
+async function completePilotWeekReviewFromDashboard(encoded = "") {
   if (!state.online) return null;
-  const [publicationResultId = "", rawStep = "reuse"] = String(encoded).split("|");
+  const [rawWeek = "2", publicationResultId = "", rawStep = "reuse"] = String(encoded).split("|");
+  const week = Number(rawWeek) === 3 ? 3 : 2;
   const nextStep = ["reuse", "expand", "update", "leave"].includes(rawStep) ? rawStep : "reuse";
   try {
-    const response = await api("/pilot/week-2/review", {
+    const response = await api(`/pilot/week-${week}/review`, {
       method: "POST",
       body: JSON.stringify({
         publicationResultId,
@@ -5776,7 +5776,8 @@ async function completeWeekTwoReviewFromDashboard(encoded = "") {
     });
     const data = response?.data || null;
     if (!data) return null;
-    if (data.week_2_review) state.calendar = mergeLocalItems(state.calendar, [data.week_2_review]);
+    const reviewItem = data[`week_${week}_review`];
+    if (reviewItem) state.calendar = mergeLocalItems(state.calendar, [reviewItem]);
     if (data.publication_result) {
       state.publicationResults = mergeLocalItems(state.publicationResults, [data.publication_result]);
       state.publicationResultsSource = "backend";
@@ -5789,18 +5790,19 @@ async function completeWeekTwoReviewFromDashboard(encoded = "") {
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.target)]).map(normalizeVisibleTask);
       state.metrics.tasks_created = state.tasks.length;
     }
-    mergePilotScopeProposal(data.week_3_scope);
+    mergePilotScopeProposal(data[`week_${week + 1}_scope`]);
     if (data.task) {
       state.tasks = mergeLocalItems(state.tasks, [normalizeTask(data.task)]).map(normalizeVisibleTask);
       state.metrics.tasks_created = state.tasks.length;
     }
     if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
-    state.weekTwoExecution = null;
-    showToast(text("Week-2 review closed.", "Week-2 review закрыт."));
+    if (week === 2) state.weekTwoExecution = null;
+    if (week === 3) state.weekThreeExecution = null;
+    showToast(text(`Week-${week} review closed.`, `Week-${week} review закрыт.`));
     setRoute("publications");
     return data;
   } catch {
-    showToast(text("Could not close week-2 review.", "Не удалось закрыть week-2 review."));
+    showToast(text(`Could not close week-${week} review.`, `Не удалось закрыть week-${week} review.`));
     return null;
   }
 }
