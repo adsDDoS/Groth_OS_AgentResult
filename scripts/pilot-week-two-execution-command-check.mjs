@@ -210,6 +210,18 @@ try {
   assert(startedWeekThree.data.board.some((item) => item.title.includes("Day 15") && item.status === "published"), "week-3 Day 15 should be marked started");
   assert(startedWeekThree.data.workspace_state?.activePilotWorkspace?.mode === "week_3", "workspace mode should be week_3");
   assert(startedWeekThree.data.workspace_state?.activePilotWorkspace?.week_3_execution?.status === "started", "workspace week-3 execution marker missing");
+  const activeWeekThree = await inject("GET", "/pilot/week-3/execution", undefined, tenantId);
+  assert(activeWeekThree.response.statusCode === 200, `week-3 execution view failed: ${activeWeekThree.response.statusCode} ${activeWeekThree.response.body}`);
+  assert(activeWeekThree.data?.status === "active", "week-3 execution view should be active");
+  assert(activeWeekThree.data?.week === 3, "week-3 execution view week marker mismatch");
+  assert(activeWeekThree.data?.current_gate === "material_approval", "week-3 execution should wait for material approval first");
+  assert(activeWeekThree.data?.material?.id === startedWeekThree.data.content.id, "week-3 execution view material mismatch");
+  assert(activeWeekThree.data?.material_approval?.id === startedWeekThree.data.approval.id, "week-3 execution material approval mismatch");
+  assert(activeWeekThree.data?.board?.length === 5, "week-3 execution view board missing");
+  assert(activeWeekThree.data?.roles?.release_owner, "week-3 execution view release owner missing");
+  assert(activeWeekThree.data?.actions?.approve_material?.approval_id === startedWeekThree.data.approval.id, "week-3 execution approve material action mismatch");
+  assert(activeWeekThree.data?.actions?.handoff_release?.calendar_item_id, "week-3 execution handoff action missing");
+  assert(activeWeekThree.data?.actions?.confirm_url?.calendar_item_id, "week-3 execution confirm URL action missing");
 
   const repeated = await inject("POST", "/pilot/week-2/start", {
     note: "Idempotent repeat."

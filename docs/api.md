@@ -75,6 +75,7 @@ Publishing creates jobs only after required approval exists.
 - `GET /pilot/week-2/execution`
 - `POST /pilot/week-2/review`
 - `POST /pilot/week-3/start`
+- `GET /pilot/week-3/execution`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -177,6 +178,8 @@ Request body:
   "note": "Start approved week-3 production."
 }
 ```
+
+`GET /pilot/week-3/execution` returns the active backend-owned week-3 working surface for dashboard and Telegram. It uses the same execution read model as week 2 and returns `week: 3`, active material, material approval, week-3 board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
 
 ## SEO/GEO
 
@@ -320,6 +323,8 @@ For week-1 pilot startup, `/telegram/commands` supports `/pilot`, `/start_pilot`
 For Day-7 pilot review, `/telegram/commands` supports `/day7 expand|reuse|update|leave`, `/review ...`, and `/pilot_review ...`. `POST /telegram/intent` maps phrases such as "закрой day-7 review" or "закрой пилот" to the same backend `POST /pilot/week-1/day-7-review` workflow.
 
 For week-2 execution, `/telegram/commands` supports `/week2`, `/week_2`, `/week-2`, `/start_week2`, and `/start_week_2`. It calls the same backend `POST /pilot/week-2/start` workflow and is blocked until `pilot_week_2_scope` is approved. Telegram approval action on `pilot_week_2_scope` also starts week-2 execution automatically. `/week2_status`, `/week2_board`, and `/w2` render the active backend `GET /pilot/week-2/execution` view with current gate, roles, board, material approval, QA/release handoff target, URL confirmation target, and result-review commands. When active week-2 execution is at `result_review`, Telegram `reuse`, `expand`, `update`, and `leave` commands call `POST /pilot/week-2/review` and return the created `week_3_scope` approval buttons instead of using the generic publication-result workflow.
+
+For week-3 execution, `/telegram/commands` supports `/week3`, `/week_3`, `/week-3`, `/start_week3`, and `/start_week_3`. It calls the same backend `POST /pilot/week-3/start` workflow and is blocked until `pilot_week_3_scope` is approved. `/week3_status`, `/week3_board`, and `/w3` render `GET /pilot/week-3/execution` with the same gate/action controls as week 2: material approval, QA/release handoff, URL confirmation, and result-review buttons.
 
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 

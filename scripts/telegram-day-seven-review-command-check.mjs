@@ -178,6 +178,12 @@ try {
   assert(closedWeek2.data.text.includes("Week-2 review закрыт"), "telegram week-2 review close text missing");
   assert(closedWeek2.data.reviewResult?.week_3_scope?.approval?.scope === "pilot_week_3_scope", "telegram week-2 review should create week-3 scope");
   assert(closedWeek2.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek2.data.reviewResult.week_3_scope.approval.id), "telegram week-3 approval button missing");
+  const blockedWeek3 = await inject("POST", "/telegram/commands", {
+    command: "/week3",
+    note: "Try before approving week-3 scope."
+  }, tenantId);
+  assert(blockedWeek3.response.statusCode === 200, `telegram week-3 blocked command failed: ${blockedWeek3.response.statusCode} ${blockedWeek3.response.body}`);
+  assert(blockedWeek3.data.text.includes("сначала согласуйте"), "telegram week-3 should be blocked before approval");
   const approvedWeekThreeScope = await inject("POST", "/telegram/actions", {
     action: "approval.approve",
     targetId: closedWeek2.data.reviewResult.week_3_scope.approval.id,
@@ -189,6 +195,62 @@ try {
   assert(!approvedWeekThreeScope.data.weekTwoExecution, "telegram week-3 scope approval should not start week-2 execution");
   const weekThreeMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [closedWeek2.data.reviewResult.week_3_scope.next_material.id, tenantId]);
   assert(weekThreeMaterialRows.rows[0]?.metadata?.week_3_scope?.approval_status === "approved", "telegram approved week-3 material metadata missing");
+  const startedWeek3 = await inject("POST", "/telegram/commands", {
+    command: "/week3",
+    note: "Start week-3 from Telegram."
+  }, tenantId);
+  assert(startedWeek3.response.statusCode === 200, `telegram week-3 start failed: ${startedWeek3.response.statusCode} ${startedWeek3.response.body}`);
+  assert(startedWeek3.data.weekThreeExecution?.status === "started", "telegram week-3 command should start execution");
+  assert(startedWeek3.data.weekThreeExecution?.task?.task_type === "pilot_week_3_execution", "telegram week-3 execution task missing");
+  const week3Status = await inject("POST", "/telegram/commands", {
+    command: "/week3_status"
+  }, tenantId);
+  assert(week3Status.response.statusCode === 200, `telegram week-3 status failed: ${week3Status.response.statusCode} ${week3Status.response.body}`);
+  assert(week3Status.data.text.includes("Week-3 execution"), "telegram week-3 status title missing");
+  assert(week3Status.data.text.includes("согласование материала"), "telegram week-3 status should show material approval gate");
+  assert(week3Status.data.text.includes("Доска:"), "telegram week-3 status should show board");
+  assert(week3Status.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === startedWeek3.data.weekThreeExecution.approval.id), "telegram week-3 material approval button missing");
+  const week3MaterialApproval = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: startedWeek3.data.weekThreeExecution.approval.id,
+    note: "Approve week-3 material from Telegram."
+  }, tenantId);
+  assert(week3MaterialApproval.response.statusCode === 200, `telegram week-3 material approve failed: ${week3MaterialApproval.response.statusCode} ${week3MaterialApproval.response.body}`);
+  const week3QaStatus = await inject("POST", "/telegram/commands", {
+    command: "/w3"
+  }, tenantId);
+  assert(week3QaStatus.data.text.includes("QA и передача на выпуск"), "telegram week-3 status should move to QA/release gate");
+  const week3HandoffButton = week3QaStatus.data.buttons?.find((button) => button.command === "handoff" && button.targetId);
+  assert(week3HandoffButton?.targetId, "telegram week-3 handoff button missing");
+  const week3Handoff = await inject("POST", "/telegram/commands", {
+    command: "/handoff",
+    targetId: week3HandoffButton.targetId,
+    note: "Week-3 QA passed."
+  }, tenantId);
+  assert(week3Handoff.response.statusCode === 200, `telegram week-3 handoff failed: ${week3Handoff.response.statusCode} ${week3Handoff.response.body}`);
+  const week3UrlStatus = await inject("POST", "/telegram/commands", {
+    command: "/week3_status"
+  }, tenantId);
+  assert(week3UrlStatus.data.text.includes("подтверждение URL"), "telegram week-3 status should move to URL confirmation gate");
+  const confirmedWeek3 = await inject("POST", `/publishing/items/${week3HandoffButton.targetId}/confirm-live`, {
+    note: "Week-3 URL confirmed.",
+    publicationUrl: "https://t.me/agentresult/805",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 1,
+      reposts: 0,
+      saves: 2,
+      reactions: 5
+    },
+    nextStep: "leave",
+    nextStepNote: "Review week-3 result in product."
+  }, tenantId);
+  assert(confirmedWeek3.response.statusCode === 200, `week-3 confirm-live failed: ${confirmedWeek3.response.statusCode} ${confirmedWeek3.response.body}`);
+  const week3ReviewStatus = await inject("POST", "/telegram/commands", {
+    command: "/week3_status"
+  }, tenantId);
+  assert(week3ReviewStatus.data.text.includes("review результата"), "telegram week-3 status should move to result review gate");
+  assert(week3ReviewStatus.data.buttons?.some((button) => button.command === "reuse" && button.targetId), "telegram week-3 result review button missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

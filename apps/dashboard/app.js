@@ -1,6 +1,6 @@
-import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-121";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-133";
-import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-121";
+import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-122";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-134";
+import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-122";
 
 const params = new URLSearchParams(window.location.search);
 const demoMode = params.get("demo");
@@ -555,6 +555,7 @@ const state = {
   publicationResultsSource: "derived",
   selectedPublicationResultId: "",
   weekTwoExecution: null,
+  weekThreeExecution: null,
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -700,7 +701,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution, weekThreeExecution] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -712,7 +713,8 @@ async function loadData() {
       api("/distribution-signals").catch(() => api("/result-signals").catch(() => ({ data: [] }))),
       api("/publication-results").catch(() => ({ data: [] })),
       api("/workspace/state").catch(() => ({ data: {} })),
-      api("/pilot/week-2/execution").catch(() => ({ data: null }))
+      api("/pilot/week-2/execution").catch(() => ({ data: null })),
+      api("/pilot/week-3/execution").catch(() => ({ data: null }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
 
@@ -732,7 +734,9 @@ async function loadData() {
     state.resultSignals = state.distributionSignals;
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.weekTwoExecution = weekTwoExecution.data && typeof weekTwoExecution.data === "object" ? weekTwoExecution.data : null;
-    mergeWeekTwoExecutionState(state.weekTwoExecution);
+    state.weekThreeExecution = weekThreeExecution.data && typeof weekThreeExecution.data === "object" ? weekThreeExecution.data : null;
+    mergePilotWeekExecutionState(state.weekTwoExecution);
+    mergePilotWeekExecutionState(state.weekThreeExecution);
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
       ...deriveMetrics(metrics.data || {}),
@@ -761,6 +765,7 @@ async function loadData() {
     state.publicationResults = derivePublicationResults(state.distributionSignals, state.calendar, state.content);
     state.publicationResultsSource = "derived";
     state.weekTwoExecution = null;
+    state.weekThreeExecution = null;
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -1359,6 +1364,10 @@ function derivePublicationResults(signals = [], calendarItems = [], contentItems
 }
 
 function mergeWeekTwoExecutionState(execution) {
+  mergePilotWeekExecutionState(execution);
+}
+
+function mergePilotWeekExecutionState(execution) {
   if (!execution || typeof execution !== "object") return;
   if (execution.material) {
     state.content = mergeLocalItems(state.content, [execution.material]);
@@ -2013,7 +2022,7 @@ function ownerCommandCenter(pending) {
           </article>
         `).join("")}
       </div>
-      ${weekTwoExecutionPanel()}
+      ${activePilotWeekExecutions().map((execution) => pilotWeekExecutionPanel(execution)).join("")}
       <div class="command-center-workbench">
         <div class="command-center-table-head">
           <div>
@@ -2043,23 +2052,23 @@ function ownerCommandCenter(pending) {
 
 function commandCenterRows(pending) {
   const rows = [];
-  const weekTwo = state.weekTwoExecution;
-  if (weekTwo?.status === "active") {
-    const action = weekTwoExecutionPrimaryAction(weekTwo);
+  activePilotWeekExecutions().forEach((execution) => {
+    const week = pilotExecutionWeek(execution);
+    const action = pilotWeekExecutionPrimaryAction(execution);
     rows.push({
       priority: text("P1", "P1"),
-      kind: text("Week-2 execution", "Week-2 execution"),
-      title: weekTwo.material?.title || text("Week-2 material", "Материал недели 2"),
-      meta: weekTwoGateLabel(weekTwo.current_gate),
-      owner: weekTwoGateOwner(weekTwo),
-      state: weekTwo.current_gate === "result_review" ? "queued" : "active",
-      status: weekTwoGateLabel(weekTwo.current_gate),
-      due: formatDate(weekTwoNextBoardItem(weekTwo)?.scheduled_for || weekTwo.material?.updated_at),
+      kind: text(`Week-${week} execution`, `Week-${week} execution`),
+      title: execution.material?.title || text(`Week-${week} material`, `Материал недели ${week}`),
+      meta: weekTwoGateLabel(execution.current_gate),
+      owner: weekTwoGateOwner(execution),
+      state: execution.current_gate === "result_review" ? "queued" : "active",
+      status: weekTwoGateLabel(execution.current_gate),
+      due: formatDate(pilotWeekNextBoardItem(execution)?.scheduled_for || execution.material?.updated_at),
       action: action.action,
       id: action.id,
       label: action.label
     });
-  }
+  });
 
   pending.forEach((approval) => {
     if (isActiveWeekTwoApproval(approval)) return;
@@ -2176,30 +2185,33 @@ function commandPriorityRank(priority) {
 }
 
 function isActiveWeekTwoApproval(approval) {
-  const execution = state.weekTwoExecution;
-  if (!execution?.material_approval?.id) return false;
-  return approval.id === execution.material_approval.id;
+  return activePilotWeekExecutions().some((execution) => execution?.material_approval?.id && approval.id === execution.material_approval.id);
 }
 
 function isActiveWeekTwoCalendar(item) {
-  const execution = state.weekTwoExecution;
-  const board = Array.isArray(execution?.board) ? execution.board : [];
-  return board.some((entry) => entry.id === item.id);
+  return activePilotWeekExecutions().some((execution) => {
+    const board = Array.isArray(execution?.board) ? execution.board : [];
+    return board.some((entry) => entry.id === item.id);
+  });
 }
 
 function weekTwoExecutionPanel() {
-  const execution = state.weekTwoExecution;
+  return pilotWeekExecutionPanel(state.weekTwoExecution);
+}
+
+function pilotWeekExecutionPanel(execution) {
   if (!execution || execution.status !== "active") return "";
-  const action = weekTwoExecutionPrimaryAction(execution);
+  const week = pilotExecutionWeek(execution);
+  const action = pilotWeekExecutionPrimaryAction(execution);
   const board = Array.isArray(execution.board) ? execution.board : [];
   const roles = execution.roles || {};
   const result = execution.publication_result || null;
   return `
-    <section class="panel full pilot-execution-brief-panel" aria-label="${escapeAttr(text("Week-2 execution", "Week-2 execution"))}">
+    <section class="panel full pilot-execution-brief-panel" aria-label="${escapeAttr(text(`Week-${week} execution`, `Week-${week} execution`))}">
       <div class="panel-heading compact">
         <div>
-          <p class="eyebrow">${text("Week-2 execution", "Week-2 execution")}</p>
-          <h3>${escapeHtml(execution.material?.title || text("Week-2 material", "Материал недели 2"))}</h3>
+          <p class="eyebrow">${text(`Week-${week} execution`, `Week-${week} execution`)}</p>
+          <h3>${escapeHtml(execution.material?.title || text(`Week-${week} material`, `Материал недели ${week}`))}</h3>
         </div>
         <span class="status-chip">${escapeHtml(weekTwoGateLabel(execution.current_gate))}</span>
       </div>
@@ -2225,35 +2237,50 @@ function weekTwoExecutionPanel() {
           <p>${escapeHtml(result?.publication_url || text("Choose next content step after URL.", "Выберите следующий шаг после URL."))}</p>
         </article>
       </div>
-      <div class="command-center-table compact" role="table" aria-label="${escapeAttr(text("Week-2 board", "Доска недели 2"))}">
+      <div class="command-center-table compact" role="table" aria-label="${escapeAttr(text(`Week-${week} board`, `Доска недели ${week}`))}">
         ${board.map((item) => `
-          <div class="command-center-row ${weekTwoBoardRowState(item, execution)}" role="row">
-            <span role="cell"><em class="queue-priority">${escapeHtml(text("W2", "W2"))}</em></span>
+          <div class="command-center-row ${pilotWeekBoardRowState(item, execution)}" role="row">
+            <span role="cell"><em class="queue-priority">${escapeHtml(text(`W${week}`, `W${week}`))}</em></span>
             <span role="cell" class="queue-title">
-              <strong>${escapeHtml(item.title || text("Week-2 board item", "Пункт недели 2"))}</strong>
+              <strong>${escapeHtml(item.title || text(`Week-${week} board item`, `Пункт недели ${week}`))}</strong>
               <small>${escapeHtml(displayChannel(item.channel || execution.material?.channel || "manual"))}</small>
             </span>
-            <span role="cell">${escapeHtml(weekTwoBoardOwner(item, execution))}</span>
+            <span role="cell">${escapeHtml(pilotWeekBoardOwner(item, execution))}</span>
             <span role="cell"><mark>${escapeHtml(labelize(item.status || "scheduled"))}</mark></span>
             <span role="cell">${escapeHtml(formatDate(item.scheduled_for || item.updated_at))}</span>
-            <span role="cell">${escapeHtml(weekTwoBoardGate(item))}</span>
+            <span role="cell">${escapeHtml(pilotWeekBoardGate(item, execution))}</span>
           </div>
         `).join("")}
       </div>
       <div class="button-row compact">
-        ${weekTwoExecutionActionButtons(execution, action)}
+        ${pilotWeekExecutionActionButtons(execution, action)}
       </div>
     </section>
   `;
 }
 
+function activePilotWeekExecutions() {
+  return [state.weekTwoExecution, state.weekThreeExecution].filter((execution) => execution?.status === "active");
+}
+
+function pilotExecutionWeek(execution) {
+  const week = Number(execution?.week || 2);
+  return Number.isFinite(week) && week >= 2 ? week : 2;
+}
+
 function weekTwoExecutionActionButtons(execution, action) {
+  return pilotWeekExecutionActionButtons(execution, action);
+}
+
+function pilotWeekExecutionActionButtons(execution, action) {
   if (execution.current_gate !== "result_review") {
     return `<button class="button primary" data-action="${escapeAttr(action.action)}" data-id="${escapeAttr(action.id || "")}">${escapeHtml(action.label)}</button>`;
   }
+  const week = pilotExecutionWeek(execution);
   const publicationResultId = execution.actions?.review_result?.publication_result_id || execution.publication_result?.id || "";
+  const calendarId = execution.publication_result?.calendar_item_id || execution.actions?.confirm_url?.calendar_item_id || "";
   return ["reuse", "expand", "update", "leave"].map((step) => `
-    <button class="button ${step === "reuse" ? "primary" : "secondary"}" data-action="complete-week-two-review" data-id="${escapeAttr(`${publicationResultId}|${step}`)}">${escapeHtml(weekTwoReviewStepLabel(step))}</button>
+    <button class="button ${step === "reuse" ? "primary" : "secondary"}" data-action="${week === 2 ? "complete-week-two-review" : "set-publication-result-step"}" data-id="${escapeAttr(week === 2 ? `${publicationResultId}|${step}` : `${publicationResultId}|${calendarId}|${step}`)}">${escapeHtml(weekTwoReviewStepLabel(step))}</button>
   `).join("");
 }
 
@@ -2265,6 +2292,10 @@ function weekTwoReviewStepLabel(step) {
 }
 
 function weekTwoExecutionPrimaryAction(execution) {
+  return pilotWeekExecutionPrimaryAction(execution);
+}
+
+function pilotWeekExecutionPrimaryAction(execution) {
   if (execution.current_gate === "material_approval") {
     return {
       action: "go-approval",
@@ -2316,39 +2347,69 @@ function weekTwoReleaseStatus(execution) {
 }
 
 function weekTwoNextBoardItem(execution) {
+  return pilotWeekNextBoardItem(execution);
+}
+
+function pilotWeekNextBoardItem(execution) {
   const board = Array.isArray(execution.board) ? execution.board : [];
-  if (execution.current_gate === "qa_release_handoff") return weekTwoReleaseItem(execution);
-  if (execution.current_gate === "url_confirmation") return weekTwoReleaseItem(execution);
-  if (execution.current_gate === "result_review") return weekTwoConfirmationItem(execution);
-  return board.find((item) => String(item.title || "").includes("Day 10")) || board[0] || null;
+  const week = pilotExecutionWeek(execution);
+  const baseDay = week === 2 ? 8 : ((week - 1) * 7) + 1;
+  if (execution.current_gate === "qa_release_handoff") return pilotWeekReleaseItem(execution);
+  if (execution.current_gate === "url_confirmation") return pilotWeekReleaseItem(execution);
+  if (execution.current_gate === "result_review") return pilotWeekConfirmationItem(execution);
+  return board.find((item) => String(item.title || "").includes(`Day ${baseDay + 2}`)) || board[0] || null;
 }
 
 function weekTwoReleaseItem(execution) {
+  return pilotWeekReleaseItem(execution);
+}
+
+function pilotWeekReleaseItem(execution) {
   const board = Array.isArray(execution.board) ? execution.board : [];
-  return board.find((item) => String(item.title || "").includes("Day 11"))
+  const week = pilotExecutionWeek(execution);
+  const baseDay = week === 2 ? 8 : ((week - 1) * 7) + 1;
+  return board.find((item) => String(item.title || "").includes(`Day ${baseDay + 3}`))
     || board.find((item) => ["scheduled", "handed_off", "review"].includes(String(item.status || "")))
     || null;
 }
 
 function weekTwoConfirmationItem(execution) {
+  return pilotWeekConfirmationItem(execution);
+}
+
+function pilotWeekConfirmationItem(execution) {
   const board = Array.isArray(execution.board) ? execution.board : [];
-  return board.find((item) => String(item.title || "").includes("Day 14")) || null;
+  const week = pilotExecutionWeek(execution);
+  const baseDay = week === 2 ? 8 : ((week - 1) * 7) + 1;
+  return board.find((item) => String(item.title || "").includes(`Day ${baseDay + 6}`)) || null;
 }
 
 function weekTwoBoardRowState(item, execution) {
+  return pilotWeekBoardRowState(item, execution);
+}
+
+function pilotWeekBoardRowState(item, execution) {
   if (item.status === "published") return "done";
-  if (weekTwoNextBoardItem(execution)?.id === item.id) return "active";
+  if (pilotWeekNextBoardItem(execution)?.id === item.id) return "active";
   if (["handed_off", "scheduled", "review"].includes(String(item.status || ""))) return "queued";
   return "muted";
 }
 
 function weekTwoBoardOwner(item, execution) {
-  const scope = item.metadata?.week_2_scope || {};
+  return pilotWeekBoardOwner(item, execution);
+}
+
+function pilotWeekBoardOwner(item, execution) {
+  const scope = item.metadata?.[`week_${pilotExecutionWeek(execution)}_scope`] || {};
   return textValue(scope.owner, weekTwoGateOwner(execution));
 }
 
 function weekTwoBoardGate(item) {
-  return textValue(item.metadata?.week_2_scope?.gate, text("Gate", "Gate"));
+  return pilotWeekBoardGate(item, { week: 2 });
+}
+
+function pilotWeekBoardGate(item, execution) {
+  return textValue(item.metadata?.[`week_${pilotExecutionWeek(execution)}_scope`]?.gate, text("Gate", "Gate"));
 }
 
 function commandCenterRow(row) {
@@ -2408,11 +2469,13 @@ function weeklyRhythmPanel() {
 }
 
 function ownerCommandPriority(pending) {
-  if (state.weekTwoExecution?.status === "active") {
-    const action = weekTwoExecutionPrimaryAction(state.weekTwoExecution);
+  const activeExecution = activePilotWeekExecutions()[0];
+  if (activeExecution) {
+    const week = pilotExecutionWeek(activeExecution);
+    const action = pilotWeekExecutionPrimaryAction(activeExecution);
     return {
-      title: text(`Week-2 execution: ${state.weekTwoExecution.material?.title || "active material"}`, `Week-2 execution: ${state.weekTwoExecution.material?.title || "активный материал"}`),
-      note: weekTwoGateLabel(state.weekTwoExecution.current_gate),
+      title: text(`Week-${week} execution: ${activeExecution.material?.title || "active material"}`, `Week-${week} execution: ${activeExecution.material?.title || "активный материал"}`),
+      note: weekTwoGateLabel(activeExecution.current_gate),
       action: action.action,
       id: action.id,
       label: action.label
@@ -6929,7 +6992,10 @@ async function decideApproval(item, action, note = "") {
     item.decided_at = new Date().toISOString();
     appendAudit(item, nextStatus, note);
     if (item.scope === "pilot_week_2_scope" && nextStatus === "approved") {
-      await executeStartWeekTwoExecutionCommand({ note: note || "Started from dashboard scope approval." });
+      await executeStartPilotWeekExecutionCommand(2, { note: note || "Started from dashboard scope approval." });
+    }
+    if (item.scope === "pilot_week_3_scope" && nextStatus === "approved") {
+      await executeStartPilotWeekExecutionCommand(3, { note: note || "Started from dashboard scope approval." });
     }
     state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
@@ -6941,9 +7007,13 @@ async function decideApproval(item, action, note = "") {
 }
 
 async function executeStartWeekTwoExecutionCommand({ note = "" } = {}) {
+  return executeStartPilotWeekExecutionCommand(2, { note });
+}
+
+async function executeStartPilotWeekExecutionCommand(week, { note = "" } = {}) {
   if (!state.online) return null;
   try {
-    const response = await api("/pilot/week-2/start", {
+    const response = await api(`/pilot/week-${week}/start`, {
       method: "POST",
       body: JSON.stringify({ note })
     });
@@ -6965,24 +7035,35 @@ async function executeStartWeekTwoExecutionCommand({ note = "" } = {}) {
       state.metrics.approvals_pending = state.approvals.filter((approval) => approval.status === "pending").length;
     }
     if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
-    await refreshWeekTwoExecution();
-    showToast(text("Week-2 execution started.", "Week-2 execution запущен."));
+    await refreshPilotWeekExecution(week);
+    showToast(text(`Week-${week} execution started.`, `Week-${week} execution запущен.`));
     return data;
   } catch {
-    showToast(text("Could not start week-2 execution.", "Не удалось запустить week-2 execution."));
+    showToast(text(`Could not start week-${week} execution.`, `Не удалось запустить week-${week} execution.`));
     return null;
   }
 }
 
 async function refreshWeekTwoExecution() {
+  return refreshPilotWeekExecution(2);
+}
+
+async function refreshWeekThreeExecution() {
+  return refreshPilotWeekExecution(3);
+}
+
+async function refreshPilotWeekExecution(week) {
   if (!state.online) return null;
   try {
-    const response = await api("/pilot/week-2/execution");
-    state.weekTwoExecution = response?.data || null;
-    mergeWeekTwoExecutionState(state.weekTwoExecution);
-    return state.weekTwoExecution;
+    const response = await api(`/pilot/week-${week}/execution`);
+    const execution = response?.data || null;
+    if (week === 3) state.weekThreeExecution = execution;
+    else state.weekTwoExecution = execution;
+    mergePilotWeekExecutionState(execution);
+    return execution;
   } catch {
-    state.weekTwoExecution = null;
+    if (week === 3) state.weekThreeExecution = null;
+    else state.weekTwoExecution = null;
     return null;
   }
 }

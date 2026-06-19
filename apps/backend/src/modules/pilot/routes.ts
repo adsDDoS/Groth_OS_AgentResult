@@ -91,6 +91,18 @@ export async function pilotRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.get("/pilot/week-3/execution", async (request, reply) => {
+    const result = await getActiveWeekThreeExecution(request.tenantId);
+    if (!result) {
+      reply.status(404);
+      return {
+        error: "PilotWeekThreeExecutionNotFound",
+        message: "No active week-3 execution workspace is available."
+      };
+    }
+    return { data: result };
+  });
+
   app.post("/pilot/week-2/start", async (request, reply) => {
     const body = weekTwoStartBody.parse(request.body ?? {});
     const result = await startWeekTwoExecution({
@@ -451,31 +463,41 @@ export async function completeDaySevenReview(input: DaySevenReviewInput) {
 }
 
 export async function getActiveWeekTwoExecution(tenantId: string) {
+  return getActivePilotWeekExecution(tenantId, 2);
+}
+
+export async function getActiveWeekThreeExecution(tenantId: string) {
+  return getActivePilotWeekExecution(tenantId, 3);
+}
+
+async function getActivePilotWeekExecution(tenantId: string, week: number) {
+  const scopeKey = `week_${week}_scope`;
+  const executionKey = `week_${week}_execution`;
   const dashboardState = await getDashboardState(tenantId);
   const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
     ? dashboardState.activePilotWorkspace as Record<string, unknown>
     : {};
-  const weekTwoExecution = activePilotWorkspace.week_2_execution && typeof activePilotWorkspace.week_2_execution === "object"
-    ? activePilotWorkspace.week_2_execution as Record<string, unknown>
+  const pilotWeekExecution = activePilotWorkspace[executionKey] && typeof activePilotWorkspace[executionKey] === "object"
+    ? activePilotWorkspace[executionKey] as Record<string, unknown>
     : {};
-  const weekTwoScope = activePilotWorkspace.week_2_scope && typeof activePilotWorkspace.week_2_scope === "object"
-    ? activePilotWorkspace.week_2_scope as Record<string, unknown>
+  const pilotWeekScope = activePilotWorkspace[scopeKey] && typeof activePilotWorkspace[scopeKey] === "object"
+    ? activePilotWorkspace[scopeKey] as Record<string, unknown>
     : {};
-  const contentItemId = textValue(weekTwoExecution.content_item_id || weekTwoScope.next_material_id, "");
-  if (activePilotWorkspace.mode !== "week_2" || !contentItemId) return null;
+  const contentItemId = textValue(pilotWeekExecution.content_item_id || pilotWeekScope.next_material_id, "");
+  if (activePilotWorkspace.mode !== `week_${week}` || !contentItemId) return null;
 
   const contentResult = await query("select * from content_items where id = $1 and tenant_id = $2", [contentItemId, tenantId]);
   const material = contentResult.rows[0] ?? null;
   if (!material) return null;
 
-  const board = await listWeekTwoBoard(tenantId, contentItemId);
+  const board = await listPilotWeekBoard(tenantId, contentItemId, week);
   const materialApproval = await findWeekTwoMaterialApproval(tenantId, contentItemId);
-  const task = await findWeekTwoExecutionTask(tenantId, contentItemId);
+  const task = await findPilotWeekExecutionTask(tenantId, contentItemId, week);
   const publicationResults = await listPublicationResults(tenantId);
   const publicationResult = publicationResults.find((item) => item.content_item_id === contentItemId) ?? null;
-  const releaseItem = weekTwoReleaseItem(board);
-  const confirmationItem = weekTwoConfirmationItem(board) ?? releaseItem;
-  const roles = weekTwoRolesFromMaterial(material, board, weekTwoScope);
+  const releaseItem = pilotWeekReleaseItem(board, week);
+  const confirmationItem = pilotWeekConfirmationItem(board, week) ?? releaseItem;
+  const roles = pilotWeekRolesFromMaterial(material, board, pilotWeekScope, week);
   const materialApproved = materialApproval?.status === "approved";
   const releaseStatus = textValue(releaseItem?.status, "");
   const currentGate = publicationResult
@@ -488,6 +510,7 @@ export async function getActiveWeekTwoExecution(tenantId: string) {
 
   return {
     status: "active",
+    week,
     current_gate: currentGate,
     material,
     material_approval: materialApproval,
@@ -495,7 +518,7 @@ export async function getActiveWeekTwoExecution(tenantId: string) {
     task,
     publication_result: publicationResult,
     roles,
-    channel_constraint: textValue(weekTwoScope.channel_constraint, ""),
+    channel_constraint: textValue(pilotWeekScope.channel_constraint, ""),
     actions: {
       approve_material: materialApproval ? {
         approval_id: materialApproval.id,
@@ -1059,13 +1082,23 @@ async function findWeekTwoMaterialApproval(tenantId: string, contentItemId: stri
 }
 
 function weekTwoReleaseItem(board: Record<string, unknown>[]) {
-  return board.find((item) => String(item.title || "").includes("Day 11"))
+  return pilotWeekReleaseItem(board, 2);
+}
+
+function pilotWeekReleaseItem(board: Record<string, unknown>[], week: number) {
+  const baseDay = week === 2 ? 8 : ((week - 1) * 7) + 1;
+  return board.find((item) => String(item.title || "").includes(`Day ${baseDay + 3}`))
     ?? board.find((item) => ["handed_off", "scheduled", "review"].includes(textValue(item.status, "")))
     ?? null;
 }
 
 function weekTwoConfirmationItem(board: Record<string, unknown>[]) {
-  return board.find((item) => String(item.title || "").includes("Day 14")) ?? null;
+  return pilotWeekConfirmationItem(board, 2);
+}
+
+function pilotWeekConfirmationItem(board: Record<string, unknown>[], week: number) {
+  const baseDay = week === 2 ? 8 : ((week - 1) * 7) + 1;
+  return board.find((item) => String(item.title || "").includes(`Day ${baseDay + 6}`)) ?? null;
 }
 
 function weekTwoRolesFromMaterial(
@@ -1073,30 +1106,40 @@ function weekTwoRolesFromMaterial(
   board: Record<string, unknown>[],
   weekTwoScope: Record<string, unknown>
 ) {
+  return pilotWeekRolesFromMaterial(material, board, weekTwoScope, 2);
+}
+
+function pilotWeekRolesFromMaterial(
+  material: Record<string, unknown>,
+  board: Record<string, unknown>[],
+  pilotWeekScope: Record<string, unknown>,
+  week: number
+) {
+  const scopeKey = `week_${week}_scope`;
   const metadata = material.metadata && typeof material.metadata === "object"
     ? material.metadata as Record<string, unknown>
     : {};
-  const materialScope = metadata.week_2_scope && typeof metadata.week_2_scope === "object"
-    ? metadata.week_2_scope as Record<string, unknown>
+  const materialScope = metadata[scopeKey] && typeof metadata[scopeKey] === "object"
+    ? metadata[scopeKey] as Record<string, unknown>
     : {};
   const roles = materialScope.roles && typeof materialScope.roles === "object"
     ? materialScope.roles as Record<string, unknown>
-    : weekTwoScope.roles && typeof weekTwoScope.roles === "object"
-      ? weekTwoScope.roles as Record<string, unknown>
+    : pilotWeekScope.roles && typeof pilotWeekScope.roles === "object"
+      ? pilotWeekScope.roles as Record<string, unknown>
       : {};
-  const releaseItem = weekTwoReleaseItem(board);
-  const confirmationItem = weekTwoConfirmationItem(board);
+  const releaseItem = pilotWeekReleaseItem(board, week);
+  const confirmationItem = pilotWeekConfirmationItem(board, week);
   const releaseMetadata = releaseItem?.metadata && typeof releaseItem.metadata === "object"
     ? releaseItem.metadata as Record<string, unknown>
     : {};
   const confirmationMetadata = confirmationItem?.metadata && typeof confirmationItem.metadata === "object"
     ? confirmationItem.metadata as Record<string, unknown>
     : {};
-  const releaseScope = releaseMetadata.week_2_scope && typeof releaseMetadata.week_2_scope === "object"
-    ? releaseMetadata.week_2_scope as Record<string, unknown>
+  const releaseScope = releaseMetadata[scopeKey] && typeof releaseMetadata[scopeKey] === "object"
+    ? releaseMetadata[scopeKey] as Record<string, unknown>
     : {};
-  const confirmationScope = confirmationMetadata.week_2_scope && typeof confirmationMetadata.week_2_scope === "object"
-    ? confirmationMetadata.week_2_scope as Record<string, unknown>
+  const confirmationScope = confirmationMetadata[scopeKey] && typeof confirmationMetadata[scopeKey] === "object"
+    ? confirmationMetadata[scopeKey] as Record<string, unknown>
     : {};
 
   return {
