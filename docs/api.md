@@ -76,6 +76,7 @@ Publishing creates jobs only after required approval exists.
 - `POST /pilot/week-2/review`
 - `POST /pilot/week-3/start`
 - `GET /pilot/week-3/execution`
+- `POST /pilot/week-3/review`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -180,6 +181,21 @@ Request body:
 ```
 
 `GET /pilot/week-3/execution` returns the active backend-owned week-3 working surface for dashboard and Telegram. It uses the same execution read model as week 2 and returns `week: 3`, active material, material approval, week-3 board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
+
+`POST /pilot/week-3/review` closes the active week-3 loop after the week-3 publication URL is confirmed. It uses the same backend-owned week review command path as week 2: records `expand / reuse / update / leave`, completes `pilot_week_3_execution`, marks the week-3 result-review board item complete, creates a backend-owned `week_4_scope` proposal, updates tenant workspace state, and writes owner-action audit.
+
+Request body:
+
+```json
+{
+  "publicationResultId": "optional publication_result.id, calendar_item_id, or distribution_signal_id",
+  "nextStep": "reuse",
+  "note": "Reuse week-3 proof into week-4 scope.",
+  "ownerNotes": "The week-3 URL and reactions justify the next controlled scope."
+}
+```
+
+Response includes `{ decision, publication_result, action, target, target_type, week_4_scope, week_3_review, task, workspace_state }`. `week_4_scope` is created by the shared next-scope proposal builder with `pilot_week_4_scope` approval, next material, board, roles, and one-channel constraint.
 
 ## SEO/GEO
 

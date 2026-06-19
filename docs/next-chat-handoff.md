@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Expose week-3 execution surfaces
+Add backend week-3 result review
 ```
 
 Before changing product or dashboard behavior, read:
@@ -65,6 +65,7 @@ Ready:
 - Backend week-3 execution surface is now `GET /pilot/week-3/execution`; dashboard and Telegram owner-control render active week-3 production with the same backend gate/action model as week 2: material approval, QA/release handoff, URL confirmation, and result review.
 - Dashboard starts week-3 execution automatically after approving `pilot_week_3_scope`, renders active week-3 as a first-class Today panel/P1 queue item, and keeps result-review buttons inside product controls.
 - Telegram owner-control supports `/week3`, `/start_week3`, `/week3_status`, `/week3_board`, and `/w3`; it starts week-3 only after approved `pilot_week_3_scope` and renders targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
+- Backend week-3 result review is now `POST /pilot/week-3/review`; it closes active week-3 execution after confirmed URL, records `expand / reuse / update / leave`, completes `pilot_week_3_execution`, marks the week-3 result-review board item complete, creates backend-owned `week_4_scope`, updates workspace state, and writes owner-action audit. Week-2 and week-3 reviews now share the same week review command path instead of copying week-specific logic.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -208,16 +209,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Add backend-owned week-3 result review command:
+Expose week-3 result review in dashboard and Telegram owner-control:
 
 ```text
-Close the third loop through a backend command that records expand / reuse / update / leave, completes pilot_week_3_execution, and creates the next scope proposal without hard-coding week-3-specific review logic.
+Route active week-3 result-review choices through POST /pilot/week-3/review from dashboard and Telegram, so operator/owner close the third loop through product buttons instead of generic publication-result actions.
 ```
 
 Why this is next:
 
 ```text
-Week-3 execution can now be run from dashboard and Telegram through product controls. The next leverage point is closing that loop with the same backend-owned review discipline as week 2, so week-4 planning can emerge from a confirmed result instead of raw publication-result actions.
+The backend can now close week-3 safely and create week-4 scope. The next leverage point is exposing that command in the same surfaces that already run week-3 execution, without duplicating review domain logic in UI or Telegram.
 ```
 
 Suggested first files to inspect:
@@ -241,5 +242,5 @@ docs/client-demo-call-dry-run-v3.md
 Продолжаем GrothOS / AgentResult из repo adsDDoS/Groth_OS_AgentResult.
 Сначала прочитай docs/next-chat-handoff.md, knowledge.md и docs/product-course.md.
 Текущий production demo: https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
-Следующая цель: добавить backend-owned week-3 result review command, который закрывает третий loop и создает следующий scope proposal без копирования week-2 review logic.
+Следующая цель: вывести week-3 result review в dashboard и Telegram owner-control через POST /pilot/week-3/review, без raw API и без generic publication-result fallback для активного week-3 loop.
 ```

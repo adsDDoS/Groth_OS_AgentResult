@@ -153,6 +153,23 @@ export async function pilotRoutes(app: FastifyInstance) {
     }
     return { data: result };
   });
+
+  app.post("/pilot/week-3/review", async (request, reply) => {
+    const body = weekTwoReviewBody.parse(request.body ?? {});
+    const result = await completeWeekThreeReview({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekThreeReviewNotReady",
+        message: "Week-3 review requires active week-3 execution and a confirmed week-3 publication result."
+      };
+    }
+    return { data: result };
+  });
 }
 
 export async function startWeekOnePilot(input: WeekOnePilotInput) {
@@ -546,9 +563,21 @@ async function getActivePilotWeekExecution(tenantId: string, week: number) {
 }
 
 export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
+  return completePilotWeekReview(input, 2);
+}
+
+export async function completeWeekThreeReview(input: WeekTwoReviewInput) {
+  return completePilotWeekReview(input, 3);
+}
+
+async function completePilotWeekReview(input: WeekTwoReviewInput, sourceWeek: number) {
   const now = new Date().toISOString();
-  const execution = await getActiveWeekTwoExecution(input.tenantId);
+  const execution = await getActivePilotWeekExecution(input.tenantId, sourceWeek);
   if (!execution || execution.current_gate !== "result_review") return null;
+  const targetWeek = sourceWeek + 1;
+  const reviewKey = `week_${sourceWeek}_review`;
+  const executionKey = `week_${sourceWeek}_execution`;
+  const nextScopeKey = `week_${targetWeek}_scope`;
   const materialId = textValue(execution.material?.id, "");
   const publicationResult = execution.publication_result && typeof execution.publication_result === "object"
     ? execution.publication_result as Record<string, unknown>
@@ -568,9 +597,9 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
   if (!actionResult) return null;
 
   const board = Array.isArray(execution.board) ? execution.board as Record<string, unknown>[] : [];
-  const reviewItem = weekTwoConfirmationItem(board);
-  const weekTwoReview = reviewItem?.id
-    ? await patchPilotReviewBoardItem(input.tenantId, String(reviewItem.id), "week_2_review", {
+  const reviewItem = pilotWeekConfirmationItem(board, sourceWeek);
+  const pilotWeekReview = reviewItem?.id
+    ? await patchPilotReviewBoardItem(input.tenantId, String(reviewItem.id), reviewKey, {
         decided_at: now,
         decided_by: input.userId ?? null,
         material_id: materialId,
@@ -581,9 +610,9 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
         action: actionResult.action ?? null
       })
     : null;
-  const task = await completePilotTask(input.tenantId, "pilot_week_2_execution", materialId, {
+  const task = await completePilotTask(input.tenantId, `pilot_week_${sourceWeek}_execution`, materialId, {
     status: "completed",
-    week_2_review: {
+    [reviewKey]: {
       decided_at: now,
       publication_result_id: publicationResult.id ?? null,
       next_step: input.nextStep,
@@ -591,18 +620,18 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
       owner_notes: input.ownerNotes ?? null
     }
   });
-  await completeWeekTwoMaterialExecution(input.tenantId, materialId, {
+  await completePilotWeekMaterialExecution(input.tenantId, materialId, sourceWeek, {
     completed_at: now,
     completed_by: input.userId ?? null,
     review_decision: input.nextStep,
     review_note: note,
     publication_result_id: publicationResult.id ?? null
   });
-  const weekThreeScope = await createPilotScopeProposal({
+  const nextScope = await createPilotScopeProposal({
     tenantId: input.tenantId,
     userId: input.userId,
-    sourceWeek: 2,
-    targetWeek: 3,
+    sourceWeek,
+    targetWeek,
     materialId,
     nextStep: input.nextStep,
     note,
@@ -615,38 +644,38 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
   const activePilotWorkspace = dashboardState.activePilotWorkspace && typeof dashboardState.activePilotWorkspace === "object"
     ? dashboardState.activePilotWorkspace as Record<string, unknown>
     : {};
-  const weekTwoExecution = activePilotWorkspace.week_2_execution && typeof activePilotWorkspace.week_2_execution === "object"
-    ? activePilotWorkspace.week_2_execution as Record<string, unknown>
+  const pilotWeekExecution = activePilotWorkspace[executionKey] && typeof activePilotWorkspace[executionKey] === "object"
+    ? activePilotWorkspace[executionKey] as Record<string, unknown>
     : {};
   const updatedWorkspaceState = await mergeDashboardState(input.tenantId, {
     activePilotWorkspace: {
       ...activePilotWorkspace,
-      mode: "week_2_reviewed",
-      week_2_execution: {
-        ...weekTwoExecution,
+      mode: `week_${sourceWeek}_reviewed`,
+      [executionKey]: {
+        ...pilotWeekExecution,
         status: "completed",
         completed_at: now,
         review_decision: input.nextStep,
         review_note: note,
         publication_result_id: publicationResult.id ?? null
       },
-      week_3_scope: {
-        created_at: weekThreeScope.created_at,
-        decision: weekThreeScope.decision,
-        repair_decision: weekThreeScope.repair_decision,
-        channel_constraint: weekThreeScope.channel_constraint,
-        next_material_id: weekThreeScope.next_material?.id ?? null,
-        task_id: weekThreeScope.task?.id ?? null,
-        approval_id: weekThreeScope.approval?.id ?? null,
-        approval_status: weekThreeScope.approval?.status ?? "pending",
-        board_ids: weekThreeScope.board.map((item) => item.id)
+      [nextScopeKey]: {
+        created_at: nextScope.created_at,
+        decision: nextScope.decision,
+        repair_decision: nextScope.repair_decision,
+        channel_constraint: nextScope.channel_constraint,
+        next_material_id: nextScope.next_material?.id ?? null,
+        task_id: nextScope.task?.id ?? null,
+        approval_id: nextScope.approval?.id ?? null,
+        approval_status: nextScope.approval?.status ?? "pending",
+        board_ids: nextScope.board.map((item) => item.id)
       }
     }
   });
 
   await recordOwnerActionAudit({
     tenantId: input.tenantId,
-    action: "pilot.week_2.review",
+    action: `pilot.week_${sourceWeek}.review`,
     targetType: "publication_result",
     targetId: String(publicationResult.id),
     userId: input.userId ?? null,
@@ -658,12 +687,12 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
       owner_notes: input.ownerNotes ?? null,
       next_target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
       next_target_id: actionResult.target?.id ?? actionResult.action?.target_id ?? null,
-      week_3_scope: {
-        repair_decision: weekThreeScope.repair_decision,
-        channel_constraint: weekThreeScope.channel_constraint,
-        next_material_id: weekThreeScope.next_material?.id ?? null,
-        task_id: weekThreeScope.task?.id ?? null,
-        approval_id: weekThreeScope.approval?.id ?? null
+      [nextScopeKey]: {
+        repair_decision: nextScope.repair_decision,
+        channel_constraint: nextScope.channel_constraint,
+        next_material_id: nextScope.next_material?.id ?? null,
+        task_id: nextScope.task?.id ?? null,
+        approval_id: nextScope.approval?.id ?? null
       }
     }
   });
@@ -680,8 +709,8 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
     action: actionResult.action ?? null,
     target: actionResult.target ?? null,
     target_type: actionResult.target_type ?? actionResult.action?.target_type ?? null,
-    week_3_scope: weekThreeScope,
-    week_2_review: weekTwoReview,
+    [nextScopeKey]: nextScope,
+    [reviewKey]: pilotWeekReview,
     task,
     workspace_state: updatedWorkspaceState
   };
@@ -1368,17 +1397,22 @@ async function completePilotTask(tenantId: string, taskType: string, targetId: s
 }
 
 async function completeWeekTwoMaterialExecution(tenantId: string, materialId: string, payload: Record<string, unknown>) {
+  return completePilotWeekMaterialExecution(tenantId, materialId, 2, payload);
+}
+
+async function completePilotWeekMaterialExecution(tenantId: string, materialId: string, week: number, payload: Record<string, unknown>) {
+  const executionKey = `week_${week}_execution`;
   const result = await query("select * from content_items where id = $1 and tenant_id = $2", [materialId, tenantId]);
   const content = result.rows[0] ?? null;
   if (!content) return null;
   const metadata = content.metadata && typeof content.metadata === "object" ? content.metadata as Record<string, unknown> : {};
-  const currentExecution = metadata.week_2_execution && typeof metadata.week_2_execution === "object"
-    ? metadata.week_2_execution as Record<string, unknown>
+  const currentExecution = metadata[executionKey] && typeof metadata[executionKey] === "object"
+    ? metadata[executionKey] as Record<string, unknown>
     : {};
   return patchJson("content_items", materialId, {
     metadata: {
       ...metadata,
-      week_2_execution: {
+      [executionKey]: {
         ...currentExecution,
         ...payload,
         status: "completed"
