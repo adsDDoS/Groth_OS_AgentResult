@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Add first-class week-3 scope approvals
+Add backend week-3 execution start
 ```
 
 Before changing product or dashboard behavior, read:
@@ -61,6 +61,7 @@ Ready:
 - Backend week-2 result review is now `POST /pilot/week-2/review`; it closes active week-2 execution after confirmed URL, records `expand / reuse / update / leave`, completes the week-2 execution task, marks the week-2 result-review board item complete, creates backend-owned `week_3_scope`, updates workspace state, and writes owner-action audit. Week-3 scope uses the shared next-scope proposal builder instead of copying Day-7-specific logic.
 - Dashboard and Telegram now route active week-2 `result_review` choices through `POST /pilot/week-2/review`; dashboard renders direct `reuse / expand / update / leave` buttons in the week-2 panel, and Telegram `reuse / expand / update / leave` closes week-2 only when the backend active execution is at `result_review`.
 - Pilot scope approvals are now first-class for `pilot_week_N_scope`: approving/requesting changes on `pilot_week_2_scope`, `pilot_week_3_scope`, or later generated scope approvals writes matching `week_N_scope` side effects to next material metadata, board item metadata, and tenant workspace state. Dashboard renders week-N pilot scope approval copy dynamically; Telegram uses the same approval actions and only auto-starts week-2 execution for approved `pilot_week_2_scope`.
+- Backend week-3 execution start is now `POST /pilot/week-3/start`; it is blocked until `pilot_week_3_scope` is approved, then uses the generic week execution path to move the next material into review, mark Day 15 started, create `pilot_week_3_execution`, open week-3 material approval, update workspace `mode: "week_3"`, and write owner-action audit.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -204,16 +205,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Add backend-owned start week-3 execution command:
+Expose week-3 execution in dashboard and Telegram owner-control:
 
 ```text
-Start week-3 production only after approved pilot_week_3_scope, reusing the generic week execution pattern instead of copying week-2-specific execution logic.
+Make active week-3 production first-class in product surfaces: start from approved pilot_week_3_scope, inspect active board/material approval/QA-release/URL confirmation/result review, and avoid raw API state for the third loop.
 ```
 
 Why this is next:
 
 ```text
-Week-3 scope can now be approved or adjusted from product surfaces. The next leverage point is turning an approved week-3 scope into real execution: active board, material approval, QA/release ownership, URL confirmation, and result review.
+The backend can now start week-3 execution tenant-safely. The next leverage point is letting operator and owner run that loop from the same dashboard and Telegram controls they already use for week 2, without duplicating week execution domain logic in either surface.
 ```
 
 Suggested first files to inspect:
@@ -237,5 +238,5 @@ docs/client-demo-call-dry-run-v3.md
 Продолжаем GrothOS / AgentResult из repo adsDDoS/Groth_OS_AgentResult.
 Сначала прочитай docs/next-chat-handoff.md, knowledge.md и docs/product-course.md.
 Текущий production demo: https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
-Следующая цель: перенести Start week-1 pilot flow из browser-local dashboard action в backend-owned pilot command.
+Следующая цель: вывести week-3 execution в dashboard и Telegram owner-control поверх backend-owned week execution command.
 ```

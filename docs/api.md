@@ -74,6 +74,7 @@ Publishing creates jobs only after required approval exists.
 - `POST /pilot/week-2/start`
 - `GET /pilot/week-2/execution`
 - `POST /pilot/week-2/review`
+- `POST /pilot/week-3/start`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -166,6 +167,16 @@ Request body:
 ```
 
 Response includes `{ decision, publication_result, action, target, target_type, week_3_scope, week_2_review, task, workspace_state }`. `week_3_scope` uses the same backend next-scope proposal builder as week-2 scope creation, with `pilot_week_3_scope` approval, next material, board, roles, and one-channel constraint.
+
+`POST /pilot/week-3/start` starts backend-owned week-3 execution only after the `pilot_week_3_scope` approval is approved. It uses the generic week execution command path shared with week 2: the next material moves into review, the first week-3 board item is marked started, a `pilot_week_3_execution` task is created, a week-3 material approval is opened, tenant workspace state moves to `mode: "week_3"`, and owner-action audit records `pilot.week_3.start`. Repeating the command is idempotent and returns the existing execution objects when week-3 execution is already started or completed.
+
+Request body:
+
+```json
+{
+  "note": "Start approved week-3 production."
+}
+```
 
 ## SEO/GEO
 
