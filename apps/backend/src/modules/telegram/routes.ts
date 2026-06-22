@@ -8,7 +8,7 @@ import { createApprovalRequest, decideApproval } from "../approvals/service.js";
 import { insertJson, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
-import { completeDaySevenReview, completeWeekThreeReview, completeWeekTwoReview, getActiveWeekFourExecution, getActiveWeekThreeExecution, getActiveWeekTwoExecution, startWeekFourExecution, startWeekOnePilot, startWeekThreeExecution, startWeekTwoExecution } from "../pilot/routes.js";
+import { completeDaySevenReview, completeWeekFourReview, completeWeekThreeReview, completeWeekTwoReview, getActiveWeekFourExecution, getActiveWeekThreeExecution, getActiveWeekTwoExecution, startWeekFourExecution, startWeekOnePilot, startWeekThreeExecution, startWeekTwoExecution } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -922,10 +922,10 @@ function renderWeekTwoExecutionMessage(result: PilotWeekStartResult) {
   return renderPilotWeekExecutionMessage(result, 2);
 }
 
-type PilotWeekReviewResult = NonNullable<Awaited<ReturnType<typeof completeWeekTwoReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekThreeReview>>>;
+type PilotWeekReviewResult = NonNullable<Awaited<ReturnType<typeof completeWeekTwoReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekThreeReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekFourReview>>>;
 
 function renderPilotWeekReviewMessage(input: {
-  week: 2 | 3;
+  week: PilotExecutionWeek;
   nextStep: "expand" | "reuse" | "update" | "leave";
   review: PilotWeekReviewResult;
 }) {
@@ -1055,13 +1055,27 @@ async function completeWeekThreeReviewFromTelegram(
   return completePilotWeekReviewFromTelegram(3, nextStep, input, context);
 }
 
-async function completePilotWeekReviewFromTelegram(
-  week: 2 | 3,
+async function completeWeekFourReviewFromTelegram(
   nextStep: "expand" | "reuse" | "update" | "leave",
   input: TelegramCommandInput,
   context: TelegramExecutionContext
 ) {
-  const completeReview = week === 3 ? completeWeekThreeReview : completeWeekTwoReview;
+  return completePilotWeekReviewFromTelegram(4, nextStep, input, context);
+}
+
+function pilotWeekReviewCommand(week: PilotExecutionWeek) {
+  if (week === 4) return completeWeekFourReview;
+  if (week === 3) return completeWeekThreeReview;
+  return completeWeekTwoReview;
+}
+
+async function completePilotWeekReviewFromTelegram(
+  week: PilotExecutionWeek,
+  nextStep: "expand" | "reuse" | "update" | "leave",
+  input: TelegramCommandInput,
+  context: TelegramExecutionContext
+) {
+  const completeReview = pilotWeekReviewCommand(week);
   const result = await completeReview({
     tenantId: context.tenantId,
     userId: context.userId,
@@ -2715,13 +2729,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
   if (publicationResultCommand) {
     const activeWeekFourExecution = await getActiveWeekFourExecution(context.tenantId);
     if (activeWeekFourExecution?.current_gate === "result_review") {
-      return {
-        command: publicationResultCommand,
-        text: "Week-4 result review пока не подключен: используйте week-4 execution gates и дождитесь следующего review command.",
-        buttons: pilotWeekExecutionCommandButtons(activeWeekFourExecution, 4),
-        ownerBrief,
-        weekFourExecution: activeWeekFourExecution
-      };
+      return completeWeekFourReviewFromTelegram(publicationResultCommand, input, context);
     }
     const activeWeekThreeExecution = await getActiveWeekThreeExecution(context.tenantId);
     if (activeWeekThreeExecution?.current_gate === "result_review") {
@@ -2734,7 +2742,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     if (publicationResultCommand === "leave") {
       return {
         command: "leave",
-        text: "Для обычного результата публикации `leave` уже означает оставить материал как есть. Для week-2/week-3 review используйте эту команду на gate `result_review`.",
+        text: "Для обычного результата публикации `leave` уже означает оставить материал как есть. Для week-2/week-3/week-4 review используйте эту команду на gate `result_review`.",
         buttons: publicationResultCommandButtons(ownerBrief),
         ownerBrief
       };

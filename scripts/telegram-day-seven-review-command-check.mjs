@@ -293,6 +293,57 @@ try {
   assert(week4Status.data.text.includes("согласование материала"), "telegram week-4 status should show material approval gate");
   assert(week4Status.data.text.includes("Доска:"), "telegram week-4 status should show board");
   assert(week4Status.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === startedWeek4.data.weekFourExecution.approval.id), "telegram week-4 material approval button missing");
+  const week4MaterialApproval = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: startedWeek4.data.weekFourExecution.approval.id,
+    note: "Approve week-4 material from Telegram."
+  }, tenantId);
+  assert(week4MaterialApproval.response.statusCode === 200, `telegram week-4 material approve failed: ${week4MaterialApproval.response.statusCode} ${week4MaterialApproval.response.body}`);
+  const week4QaStatus = await inject("POST", "/telegram/commands", {
+    command: "/w4"
+  }, tenantId);
+  assert(week4QaStatus.data.text.includes("QA и передача на выпуск"), "telegram week-4 status should move to QA/release gate");
+  const week4HandoffButton = week4QaStatus.data.buttons?.find((button) => button.command === "handoff" && button.targetId);
+  assert(week4HandoffButton?.targetId, "telegram week-4 handoff button missing");
+  const week4Handoff = await inject("POST", "/telegram/commands", {
+    command: "/handoff",
+    targetId: week4HandoffButton.targetId,
+    note: "Week-4 QA passed."
+  }, tenantId);
+  assert(week4Handoff.response.statusCode === 200, `telegram week-4 handoff failed: ${week4Handoff.response.statusCode} ${week4Handoff.response.body}`);
+  const week4UrlStatus = await inject("POST", "/telegram/commands", {
+    command: "/week4_status"
+  }, tenantId);
+  assert(week4UrlStatus.data.text.includes("подтверждение URL"), "telegram week-4 status should move to URL confirmation gate");
+  const confirmedWeek4 = await inject("POST", `/publishing/items/${week4HandoffButton.targetId}/confirm-live`, {
+    note: "Week-4 URL confirmed.",
+    publicationUrl: "https://t.me/agentresult/806",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 2,
+      reposts: 1,
+      saves: 3,
+      reactions: 6
+    },
+    nextStep: "reuse",
+    nextStepNote: "Review week-4 result in product."
+  }, tenantId);
+  assert(confirmedWeek4.response.statusCode === 200, `week-4 confirm-live failed: ${confirmedWeek4.response.statusCode} ${confirmedWeek4.response.body}`);
+  const week4ReviewStatus = await inject("POST", "/telegram/commands", {
+    command: "/week4_status"
+  }, tenantId);
+  assert(week4ReviewStatus.data.text.includes("review результата"), "telegram week-4 status should move to result review gate");
+  const week4ReuseButton = week4ReviewStatus.data.buttons?.find((button) => button.command === "reuse" && button.targetId);
+  assert(week4ReuseButton?.targetId, "telegram week-4 result review button missing");
+  const closedWeek4 = await inject("POST", "/telegram/commands", {
+    command: "/reuse",
+    targetId: week4ReuseButton.targetId,
+    note: "Reuse week-4 proof into week-5 scope."
+  }, tenantId);
+  assert(closedWeek4.response.statusCode === 200, `telegram week-4 review command failed: ${closedWeek4.response.statusCode} ${closedWeek4.response.body}`);
+  assert(closedWeek4.data.text.includes("Week-4 review закрыт"), "telegram week-4 review close text missing");
+  assert(closedWeek4.data.reviewResult?.week_5_scope?.approval?.scope === "pilot_week_5_scope", "telegram week-4 review should create week-5 scope");
+  assert(closedWeek4.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek4.data.reviewResult.week_5_scope.approval.id), "telegram week-5 approval button missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

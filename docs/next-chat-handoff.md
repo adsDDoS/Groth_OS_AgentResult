@@ -69,7 +69,9 @@ Ready:
 - Dashboard and Telegram now route active week-3 `result_review` choices through `POST /pilot/week-3/review`; dashboard uses generic week-N review buttons for active pilot executions, and Telegram gives active week-3 result review priority before generic publication-result commands.
 - Backend week-4 execution start is now `POST /pilot/week-4/start`; it is blocked until `pilot_week_4_scope` is approved, then uses the same generic week execution path to move the next material into review, mark Day 22 started, create `pilot_week_4_execution`, open week-4 material approval, update workspace `mode: "week_4"`, and write owner-action audit.
 - Backend week-4 execution surface is now `GET /pilot/week-4/execution`; dashboard loads/renders active week-4 production through the generic week execution panel, and approval side effects start approved `pilot_week_N_scope` from the parsed scope week instead of week-2/week-3 hardcoding.
-- Telegram owner-control supports `/week4`, `/start_week4`, `/week4_status`, `/week4_board`, and `/w4`; it starts week-4 only after approved `pilot_week_4_scope` and renders targeted buttons for `osapprove`, `handoff`, and `published`. Week-4 result review is intentionally left for a separate backend-owned command.
+- Telegram owner-control supports `/week4`, `/start_week4`, `/week4_status`, `/week4_board`, and `/w4`; it starts week-4 only after approved `pilot_week_4_scope` and renders targeted buttons for `osapprove`, `handoff`, and `published`.
+- Backend week-4 result review is now `POST /pilot/week-4/review`; it closes active week-4 execution after confirmed URL, records `expand / reuse / update / leave`, completes `pilot_week_4_execution`, marks the week-4 result-review board item complete, creates backend-owned `week_5_scope`, updates workspace state, and writes owner-action audit. Week-2/week-3/week-4 reviews share the same week review command path.
+- Dashboard and Telegram now route active week-4 `result_review` choices through `POST /pilot/week-4/review`; dashboard uses the existing generic week-N review buttons, and Telegram gives active week-4 result review priority before generic publication-result commands.
 - Production Telegram owner-control runtime is expected to run as `agentresult-os-telegram-owner-control` on `127.0.0.1:18831` with polling enabled for `@groth_os_bot`; `npm run telegram:pilot-production-smoke` validates `/pilot` and sends the owner-facing response to Telegram.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
@@ -215,16 +217,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Make pilot week-4 scope approval first-class:
+Make pilot week-5 scope approval/start first-class:
 
 ```text
-Extend the generic pilot scope approval/start pattern to `pilot_week_4_scope`, so the week-4 proposal created by week-3 review can be inspected, approved, adjusted, and then started without docs or raw API.
+Extend the generic pilot scope approval/start pattern to `pilot_week_5_scope`, so the week-5 proposal created by week-4 review can be inspected, approved, adjusted, and then started without docs or raw API.
 ```
 
 Why this is next:
 
 ```text
-Week-3 review now creates `week_4_scope` from product buttons. The next leverage point is letting the operator/owner approve or adjust that scope and convert it into week-4 production through the same backend-owned path.
+Week-4 review now creates `week_5_scope` from product buttons. The next leverage point is letting the operator/owner approve or adjust that scope and convert it into week-5 production through the same backend-owned path.
 ```
 
 Suggested first files to inspect:
@@ -248,5 +250,5 @@ docs/client-demo-call-dry-run-v3.md
 Продолжаем GrothOS / AgentResult из repo adsDDoS/Groth_OS_AgentResult.
 Сначала прочитай docs/next-chat-handoff.md, knowledge.md и docs/product-course.md.
 Текущий production demo: https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
-Следующая цель: сделать `pilot_week_4_scope` first-class approval/start flow в dashboard и Telegram, чтобы week-4 proposal после закрытого week-3 review можно было inspect / approve / adjust и запустить без raw API.
+Следующая цель: сделать `pilot_week_5_scope` first-class approval/start flow в dashboard и Telegram, чтобы week-5 proposal после закрытого week-4 review можно было inspect / approve / adjust и запустить без raw API.
 ```

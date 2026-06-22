@@ -199,6 +199,23 @@ export async function pilotRoutes(app: FastifyInstance) {
     }
     return { data: result };
   });
+
+  app.post("/pilot/week-4/review", async (request, reply) => {
+    const body = weekTwoReviewBody.parse(request.body ?? {});
+    const result = await completeWeekFourReview({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekFourReviewNotReady",
+        message: "Week-4 review requires active week-4 execution and a confirmed week-4 publication result."
+      };
+    }
+    return { data: result };
+  });
 }
 
 export async function startWeekOnePilot(input: WeekOnePilotInput) {
@@ -601,6 +618,10 @@ export async function completeWeekTwoReview(input: WeekTwoReviewInput) {
 
 export async function completeWeekThreeReview(input: WeekTwoReviewInput) {
   return completePilotWeekReview(input, 3);
+}
+
+export async function completeWeekFourReview(input: WeekTwoReviewInput) {
+  return completePilotWeekReview(input, 4);
 }
 
 async function completePilotWeekReview(input: WeekTwoReviewInput, sourceWeek: number) {
