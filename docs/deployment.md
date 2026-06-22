@@ -467,6 +467,10 @@ backup_file="$(npm run --silent vps:backup-postgres)"
 BACKUP_FILE="$backup_file" npm run vps:restore-drill
 ```
 
+The VPS backup script targets the active `agentresult-postgres` container by
+default. That container is attached to `agentresult-os-net` with the
+`agentresult-os-postgres` alias used by the AgentResult OS backend.
+
 The VPS drill uses a disposable Postgres container on the VPS and removes it on
 exit.
 

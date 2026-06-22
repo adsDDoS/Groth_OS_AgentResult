@@ -1,6 +1,6 @@
 # GrothOS Next Chat Handoff
 
-Last updated: 2026-06-17
+Last updated: 2026-06-22
 
 Use this file to restart work in a new Codex chat without replaying the whole history.
 
@@ -19,7 +19,7 @@ Local path:
 Current known baseline:
 
 ```text
-Expose week-3 result review in dashboard and Telegram
+Paid Pilot Production Readiness Cut on be3b96a
 ```
 
 Before changing product or dashboard behavior, read:
@@ -79,6 +79,13 @@ Ready:
 - Dashboard and Telegram now route active week-5 `result_review` choices through `POST /pilot/week-5/review`; dashboard uses the existing generic week-N review buttons, and Telegram gives active week-5 result review priority before generic publication-result commands.
 - Telegram owner-control now has backend-owned `advisor_question` intent for free-form owner questions such as "что сейчас главное", "что делать дальше", and "почему такой scope". The backend builds a tenant-safe read-only context pack from owner brief, pending approvals, active pilot execution, confirmed publication results, preparing tasks, and the latest short advisor context history; Hermes can answer when configured, otherwise deterministic advisor text is returned. Follow-up questions such as "а почему?" can reference the previous advisor context. Advisor never mutates state, publishes, approves, starts weeks, closes reviews, exposes raw API/VPS/env details, or promises guaranteed leads/sales/revenue attribution.
 - Production Telegram owner-control runtime is expected to run as `agentresult-os-telegram-owner-control` on `127.0.0.1:18831` with polling enabled for `@groth_os_bot`; `npm run telegram:pilot-production-smoke` validates `/pilot` and sends the owner-facing response to Telegram.
+- Production backend and Telegram owner-control are deployed on `agentresult-os-backend:be3b96a`.
+- Production backend runs without Telegram bot env; owner-control is the only container holding the owner-control bot token and polling env.
+- Production backend and owner-control use Postgres storage, require `AGENTRESULT_API_KEY`, and restrict tenants to `00000000-0000-0000-0000-000000000001` plus `10000000-0000-4000-8000-000000000001`.
+- Production readiness cut passed on 2026-06-22: `npm run content-factory:check`, `npm run telegram:regression`, `npm run dashboard:smoke`, `npm run telegram:production-smoke`, `npm run telegram:pilot-production-smoke`, `npm run vps:agentresult-health`, advisor/follow-up production probe, week-5 boundary production probe, API-key guard probe, blocked-tenant probe, and VPS backup restore drill.
+- Fresh VPS backup restored successfully from `/opt/agentresult-os/backups/agentresult-20260622-201748.sql` into a disposable Postgres container with 51 public tables.
+- Tenant reset policy: demo tenant `00000000-0000-0000-0000-000000000001` may be reset by demo smoke/reset scripts; pilot tenant `10000000-0000-4000-8000-000000000001` must not be reset without explicit operator action.
+- Remaining paid-pilot blocker: rotate the Telegram owner-control bot token through BotFather with `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`. No new token was available in this cut, so rotation was documented as an operator gate rather than performed.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -180,13 +187,26 @@ Do not add lead, CRM, demand, or money language to publication results without a
 
 Latest completed checks before this handoff:
 
+- Production deploy: backend and owner-control are both `agentresult-os-backend:be3b96a`.
+- `npm run content-factory:check` passed.
+- `npm run telegram:regression` passed.
+- `npm run dashboard:smoke` passed.
+- `npm run telegram:production-smoke` passed.
+- `npm run telegram:pilot-production-smoke` passed and sent Telegram smoke message `messageId: 225`.
+- `EXPECTED_OWNER_IMAGE_TAG=be3b96a npm run vps:agentresult-health` passed.
+- Production advisor/follow-up probe passed: `advisor_question`, previous context present.
+- Production week-5 command boundary probe passed: `/week5` is blocked until `pilot_week_5_scope` approval.
+- Production API-key guard probe passed: missing API key returns `401`.
+- Production tenant allowlist probe passed: blocked tenant returns `403`.
+- Fresh VPS backup + restore drill passed: 51 public tables restored.
+- GitHub Actions `Dashboard smoke` passed on `be3b96a`.
 - `npm run pilot:week-one-command:check` passed.
 - `npm run pilot:day-seven-review:check` passed.
 - `npm run pilot:week-two-execution:check` passed.
 - `npm run telegram:pilot-week-one-command:check` passed.
 - `npm run telegram:day-seven-review:check` passed.
 - `npm run telegram:regression` passed.
-- `npm run telegram:pilot-production-smoke` should pass after owner-control VPS changes.
+- `npm run telegram:pilot-production-smoke` passed after owner-control VPS changes.
 - `npm run build -w packages/shared` passed.
 - `npm run build -w apps/backend` passed.
 - `npm run dashboard:smoke` passed.
@@ -223,16 +243,16 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Make generic week execution/review routes first-class:
+Rotate owner-control token and open the first paid private pilot:
 
 ```text
-Replace the remaining public week-specific route wrappers with a guarded generic backend command/read-model layer, while keeping `/pilot/week-2...week-5/...` compatibility routes stable.
+Use a fresh BotFather token for @groth_os_bot, run `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`, rerun production smokes, then start the first paid Telegram-first private pilot.
 ```
 
 Why this is next:
 
 ```text
-The domain core is already generic and week-5 proves the pattern through `week_6_scope`. The next leverage point is reducing route/UI/Telegram week-specific branches before adding week-6+ product surfaces.
+The software/runtime readiness cut is green. The only remaining blocker before a real paid pilot is replacing the old owner-control bot token and confirming the smoke suite still passes after rotation.
 ```
 
 Suggested first files to inspect:
@@ -246,6 +266,9 @@ apps/backend/src/modules/telegram/routes.ts
 apps/backend/src/routes.ts
 apps/backend/src/modules
 scripts/dashboard-smoke.mjs
+scripts/rotate-telegram-owner-control-token-vps.sh
+scripts/agentresult-vps-health.sh
+docs/pre-production-milestone.md
 docs/pilot-first-icp-execution-example.md
 docs/client-demo-call-dry-run-v3.md
 ```
@@ -256,5 +279,6 @@ docs/client-demo-call-dry-run-v3.md
 Продолжаем GrothOS / AgentResult из repo adsDDoS/Groth_OS_AgentResult.
 Сначала прочитай docs/next-chat-handoff.md, knowledge.md и docs/product-course.md.
 Текущий production demo: https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
-Следующая цель: заменить оставшиеся week-specific public wrappers на generic week command/read-model layer с совместимыми `/pilot/week-N/...` routes, чтобы week-6+ не требовал копирования dashboard/Telegram/API веток.
+Production backend + owner-control deployed on be3b96a; content-factory, Telegram production smokes, VPS health, advisor probe, tenant guard, and backup restore drill passed.
+Следующая цель: повернуть Telegram owner-control token через BotFather, rerun production smokes, и открыть первого paid Telegram-first private pilot.
 ```

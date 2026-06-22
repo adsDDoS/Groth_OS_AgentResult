@@ -1,11 +1,12 @@
 # AgentResult Production Readiness Checklist
 
-Last checked: 2026-06-14.
+Last checked: 2026-06-22.
 
 ## Current Verdict
 
-AgentResult is ready for controlled demo and private-beta operation, not full
-customer production.
+AgentResult is ready for controlled demo, private-beta operation, and the first
+Telegram-first paid private pilot after Telegram owner-control token rotation.
+It is not full customer-production SaaS.
 
 The working contour is:
 
@@ -78,6 +79,10 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 - VPS health has both systemd timer and GitHub manual workflow coverage.
 - GitHub Actions VPS health also runs every 30 minutes.
 - API-key and tenant whitelist guard exists for pilot deployments.
+- Production backend and owner-control are deployed on `be3b96a`.
+- Production API-key guard and tenant allowlist are enabled.
+- Production advisor/follow-up and week command boundary probes pass.
+- Fresh VPS backup and restore drill passed on 2026-06-22.
 
 ## Demo / Private-Beta Only
 
@@ -108,14 +113,10 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 
 1. Rotate the leaked Telegram owner-control bot token through BotFather and run
    `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`.
-2. Deploy pilot backend with `AGENTRESULT_REQUIRE_API_KEY=1`,
-   `AGENTRESULT_API_KEY`, and `AGENTRESULT_ALLOWED_TENANT_IDS`.
-3. Define tenant provisioning and reset policy outside demo-only flows.
-4. Run a fresh backup restore drill with `npm run db:restore-drill`.
-5. Lock down production secrets and rotate anything pasted into chat, logs, or
+2. Lock down production secrets and rotate anything pasted into chat, logs, or
    screenshots.
-6. Keep scheduled GitHub Actions health checks green.
-7. Decide which external channels are manual-only and which will become native
+3. Keep scheduled GitHub Actions health checks green.
+4. Decide which external channels are manual-only and which will become native
    integrations.
 
 ## Product Gaps Before Visual Dashboard Work
@@ -138,7 +139,9 @@ Before any production or private-pilot claim, these must be true:
 - `npm run content-factory:check` passes.
 - `npm run auth:tenant-guard:check` passes.
 - `npm run telegram:production-smoke` passes.
+- `npm run telegram:pilot-production-smoke` passes.
 - `npm run vps:agentresult-health` passes.
+- `npm run vps:restore-drill` passes after a fresh VPS backup.
 - The latest `AgentResult VPS health` GitHub Actions run is green.
 - No known leaked token remains active.
 - The demo story matches `docs/customer-demo-contract.md`.

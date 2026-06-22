@@ -4,7 +4,10 @@ Use this milestone before claiming readiness for the first customer pilot.
 
 ## Status
 
-Current state: in progress.
+Current state: production readiness cut completed for software/runtime gates.
+
+Paid pilot status: ready to schedule the first private paid pilot after the
+operator rotates the Telegram owner-control token through BotFather.
 
 Closed:
 
@@ -19,6 +22,12 @@ Closed:
   `pilot_week_6_scope` from the shared scope proposal builder.
 - Telegram advisor intent is read-only and supports short follow-up context
   history without state mutation.
+- Production backend and Telegram owner-control are deployed on `be3b96a`.
+- Production backend and owner-control enforce `AGENTRESULT_REQUIRE_API_KEY=1`.
+- Production tenant allowlist is restricted to the demo tenant and pilot tenant.
+- Production Telegram owner-control `/pilot`, advisor, follow-up, week command
+  boundary, API-key guard, and blocked-tenant guard have been smoke-tested.
+- Fresh VPS Postgres backup and restore drill passed on 2026-06-22.
 
 Blocked by operator action:
 
@@ -26,13 +35,9 @@ Blocked by operator action:
 
 Still required before customer pilot:
 
-- Deploy backend with `AGENTRESULT_REQUIRE_API_KEY=1`.
-- Set `AGENTRESULT_API_KEY` to a generated secret.
-- Set `AGENTRESULT_ALLOWED_TENANT_IDS` to the pilot tenant IDs only.
-- Run a fresh Postgres backup and restore drill.
-- Rotate all pasted or exposed production secrets.
-- Confirm tenant provisioning/reset policy for paid pilot: demo tenants may be
-  reset, pilot tenants require explicit operator action.
+- Rotate the Telegram owner-control bot token through BotFather with
+  `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`.
+- Rotate any other pasted or exposed production secrets.
 
 ## Required Gates
 
@@ -71,6 +76,10 @@ backup_file="$(npm run --silent vps:backup-postgres)"
 BACKUP_FILE="$backup_file" npm run vps:restore-drill
 ```
 
+The VPS backup command defaults to the active `agentresult-postgres` container,
+which is attached to `agentresult-os-net` with the `agentresult-os-postgres`
+alias used by the backend `DATABASE_URL`.
+
 ## Pilot Auth Env
 
 ```text
@@ -81,3 +90,12 @@ AGENTRESULT_ALLOWED_TENANT_IDS=00000000-0000-0000-0000-000000000001,10000000-000
 
 `/health` remains public for uptime probes. All other backend API routes require
 `x-agentresult-api-key` when the guard is enabled.
+
+## Tenant Reset Policy
+
+Demo tenant `00000000-0000-0000-0000-000000000001` may be reset by demo smoke
+and reset scripts.
+
+Pilot tenant `10000000-0000-4000-8000-000000000001` must not be reset during
+client demo or paid pilot operation without an explicit operator action recorded
+for that tenant.

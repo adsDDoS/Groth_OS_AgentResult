@@ -2,7 +2,7 @@
 set -euo pipefail
 
 VPS_HOST="${VPS_HOST:-root@91.103.140.101}"
-POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-agentresult-os-postgres}"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-agentresult-postgres}"
 BACKUP_DIR="${BACKUP_DIR:-/opt/agentresult-os/backups}"
 POSTGRES_USER="${POSTGRES_USER:-ai_growth_os}"
 POSTGRES_DB="${POSTGRES_DB:-ai_growth_os}"
