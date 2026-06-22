@@ -312,8 +312,11 @@ async function main() {
   expectNoCommandUx(nextTopic, "prepare next material");
 
   const nextBrief = await request("/telegram/intent", { text: "что дальше" });
-  expectIncludes(nextBrief.text, "Готовится", "brief preparing block");
+  expectEquals(nextBrief.intent, "advisor_question", "advisor question intent");
+  expectIncludes(nextBrief.text, "Сейчас главное", "advisor priority block");
+  expectIncludes(nextBrief.text, "не меняю состояние", "advisor read-only boundary");
   expectNoCommandUx(nextBrief, "brief after prepare");
+  expectNoOwnerNoise(nextBrief, "brief after prepare");
 
   const published = await request("/telegram/intent", { text: "что вышло" });
   expectEquals(published.intent, "published_status", "published status intent");

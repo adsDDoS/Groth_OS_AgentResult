@@ -344,6 +344,16 @@ try {
   assert(closedWeek4.data.text.includes("Week-4 review закрыт"), "telegram week-4 review close text missing");
   assert(closedWeek4.data.reviewResult?.week_5_scope?.approval?.scope === "pilot_week_5_scope", "telegram week-4 review should create week-5 scope");
   assert(closedWeek4.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek4.data.reviewResult.week_5_scope.approval.id), "telegram week-5 approval button missing");
+  const advisorScope = await inject("POST", "/telegram/intent", {
+    text: "почему такой scope и что делать дальше?"
+  }, tenantId);
+  assert(advisorScope.response.statusCode === 200, `telegram advisor scope question failed: ${advisorScope.response.statusCode} ${advisorScope.response.body}`);
+  assert(advisorScope.data.intent === "advisor_question", "telegram advisor scope intent mismatch");
+  assert(advisorScope.data.text.includes("Почему такой scope"), "telegram advisor should explain scope");
+  assert(advisorScope.data.text.includes("не меняю состояние"), "telegram advisor should be advisory-only");
+  assert(advisorScope.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek4.data.reviewResult.week_5_scope.approval.id), "telegram advisor should return week-5 scope approval button");
+  assert(!advisorScope.data.text.includes("guaranteed leads"), "telegram advisor must not promise guaranteed leads");
+  assert(!advisorScope.data.text.includes("revenue attribution"), "telegram advisor must not mention revenue attribution");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

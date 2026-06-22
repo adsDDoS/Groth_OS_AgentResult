@@ -122,6 +122,13 @@ type TelegramApiResponse<T> = {
   result?: T;
   description?: string;
 };
+type HermesAdvisorCompletion = {
+  choices?: Array<{
+    message?: {
+      content?: string | Array<string | { text?: string }>;
+    };
+  }>;
+};
 type TelegramUpdate = {
   update_id: number;
   message?: {
@@ -145,6 +152,18 @@ function ownerFacingText(value: unknown, fallback = "") {
   return textValue(value, fallback)
     .replace(/\bHermes\b/g, "AgentResult")
     .replace(/\bhermes\b/g, "AgentResult");
+}
+
+function telegramCompletionText(value: unknown) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map((part) => {
+      if (typeof part === "string") return part;
+      if (part && typeof part === "object" && "text" in part) return textValue((part as Row).text, "");
+      return "";
+    }).filter(Boolean).join("\n");
+  }
+  return "";
 }
 
 function truncateText(value: string, maxLength = 120) {
@@ -2452,6 +2471,249 @@ function ownerControlButtons(brief: OwnerBrief): TelegramCommandButton[] {
   return [commandButton("prepare", "Поставить тему"), commandButton("result", "Результат")];
 }
 
+function isAdvisorQuestion(text: string) {
+  if (includesAny(text, [
+    "что сейчас главное",
+    "что главное сейчас",
+    "что дальше",
+    "что делать дальше",
+    "что мне делать дальше",
+    "почему такой scope",
+    "почему этот scope",
+    "зачем такой scope",
+    "объясни scope",
+    "почему такой скоуп",
+    "зачем такой скоуп",
+    "объясни скоуп",
+    "почему предложен",
+    "что блокирует",
+    "что мешает",
+    "что посоветуешь",
+    "как лучше поступить",
+    "reuse или expand",
+    "expand или reuse"
+  ])) return true;
+
+  return isQuestionLike(text) && !includesAny(text, [
+    "что готово",
+    "что согласовать",
+    "покажи материал",
+    "покажи пост",
+    "что по результату",
+    "результат",
+    "что вышло",
+    "что опубликовано",
+    "что готовится",
+    "что в работе"
+  ]);
+}
+
+function compactApprovalForAdvisor(decision: Row) {
+  return {
+    title: textValue(decision.contentTitle || decision.title, "Материал ждёт решения"),
+    scope: decision.scope ?? null,
+    channel: decision.channel ?? null,
+    contentType: decision.contentType ?? null,
+    preview: truncateText(textValue(decision.contentPreview, ""), 280)
+  };
+}
+
+function compactExecutionForAdvisor(execution: ActivePilotWeekExecution | null) {
+  if (!execution) return null;
+  const result = execution.publication_result && typeof execution.publication_result === "object"
+    ? execution.publication_result as Row
+    : null;
+  return {
+    week: execution.week,
+    gate: execution.current_gate,
+    materialTitle: textValue(execution.material?.title, `week-${execution.week} material`),
+    materialApprovalStatus: textValue(execution.material_approval?.status, "pending"),
+    board: Array.isArray(execution.board)
+      ? execution.board.slice(0, 5).map((item) => ({
+          title: textValue(item.title, "board item"),
+          status: textValue(item.status, "scheduled")
+        }))
+      : [],
+    publicationUrl: result?.publication_url ?? null,
+    nextStep: result?.next_step ?? null
+  };
+}
+
+function advisorContextSummary(contextPack: Row) {
+  return JSON.stringify(contextPack, null, 2).slice(0, 5000);
+}
+
+function sanitizeAdvisorText(value: string) {
+  return value
+    .replace(/\bHermes\b/g, "AgentResult")
+    .replace(/\bAPI\b/g, "backend")
+    .replace(/guaranteed leads?/gi, "content signals")
+    .replace(/guaranteed sales?/gi, "confirmed publication results")
+    .replace(/revenue attribution/gi, "publication result review")
+    .trim();
+}
+
+function deterministicAdvisorText(input: { question: string; ownerBrief: OwnerBrief; activeExecution: ActivePilotWeekExecution | null; contextPack: Row }) {
+  const priority = ownerPriority({
+    decisions: input.ownerBrief.decisions,
+    handoffs: input.ownerBrief.handoffs,
+    preparing: input.ownerBrief.preparing
+  });
+  const lines = ["AgentResult advisor", ""];
+  if (input.activeExecution) {
+    const week = Number(input.activeExecution.week || 0);
+    lines.push(`Сейчас главное: закрыть week-${week} gate "${weekTwoGateTelegramLabel(textValue(input.activeExecution.current_gate, "active"))}".`);
+    lines.push(`Материал: ${textValue(input.activeExecution.material?.title, `week-${week} material`)}.`);
+    if (input.activeExecution.current_gate === "result_review") {
+      lines.push("Дальше нужно выбрать следующий контент-шаг: reuse, expand, update или leave.");
+    } else {
+      lines.push(`Следующее действие: ${weekTwoGateTelegramAction(textValue(input.activeExecution.current_gate, "active"))}.`);
+    }
+  } else if (priority.type === "confirm_publication") {
+    lines.push(`Сейчас главное: подтвердить URL выхода для "${textValue(priority.handoff.title, "переданного материала")}".`);
+    lines.push("Без URL loop не закрывается и следующий content step остается предположением.");
+  } else if (priority.type === "approval") {
+    lines.push(`Сейчас главное: принять решение по "${textValue(priority.decision.contentTitle || priority.decision.title, "материалу")}".`);
+    if (String(priority.decision.scope || "").startsWith("pilot_week_")) {
+      lines.push("Этот scope нужен, чтобы следующий week board стартовал из согласованного owner boundary, а не из документа или ручной правки seed.");
+    } else {
+      lines.push("Можно согласовать, запросить правки или сначала посмотреть текст.");
+    }
+  } else if (priority.type === "preparing") {
+    lines.push(`Сейчас главное: дождаться черновика. Готовится: ${textValue(priority.preparingTask.title, "материал")}.`);
+  } else {
+    lines.push("Сейчас главное: поставить следующую тему в работу или проверить последний опубликованный результат.");
+  }
+
+  if (includesAny(input.question.toLowerCase(), ["почему", "зачем", "scope", "скоуп"])) {
+    const scopeDecision = input.ownerBrief.decisions.find((decision) => String(decision.scope || "").startsWith("pilot_week_"));
+    lines.push("");
+    lines.push(scopeDecision
+      ? `Почему такой scope: он продолжает закрытый loop и сохраняет один канал, owner approval, QA/release handoff, URL confirmation и следующий review. Scope: ${textValue(scopeDecision.scope, "pilot scope")}.`
+      : "Почему такой scope: в текущем состоянии нет активного pilot scope approval, поэтому опираюсь на ближайший gate и подтвержденные публикации.");
+  }
+
+  lines.push("");
+  lines.push("Я не меняю состояние без отдельной кнопки или явной команды.");
+  return lines.join("\n");
+}
+
+async function callHermesAdvisor(input: { question: string; contextPack: Row }) {
+  if (!config.hermesApiKey) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.min(config.hermesRequestTimeoutMs, 30_000));
+  try {
+    const response = await fetch(`${config.hermesBaseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${config.hermesApiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: config.hermesModel,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content: [
+              "Ты AgentResult advisor внутри Telegram owner-control.",
+              "Отвечай только по переданному tenant context pack.",
+              "Не меняй состояние, не обещай лиды, продажи или revenue attribution.",
+              "Не упоминай raw API, VPS, env, stack trace, tools или внутренние команды.",
+              "Дай короткий owner-facing ответ на русском: сейчас главное, почему, следующий безопасный шаг."
+            ].join(" ")
+          },
+          {
+            role: "user",
+            content: [
+              `Вопрос owner: ${input.question}`,
+              "",
+              "Tenant-safe context pack:",
+              advisorContextSummary(input.contextPack)
+            ].join("\n")
+          }
+        ]
+      }),
+      signal: controller.signal
+    });
+    const rawText = await response.text();
+    if (!response.ok) return null;
+    const parsed = JSON.parse(rawText) as HermesAdvisorCompletion;
+    const text = telegramCompletionText(parsed.choices?.[0]?.message?.content);
+    return text ? sanitizeAdvisorText(text) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function advisorButtons(input: { ownerBrief: OwnerBrief; activeExecution: ActivePilotWeekExecution | null }) {
+  if (input.activeExecution) {
+    return pilotWeekExecutionCommandButtons(input.activeExecution, Number(input.activeExecution.week || 2));
+  }
+  const scopeDecision = input.ownerBrief.decisions.find((decision) => String(decision.scope || "").startsWith("pilot_week_"));
+  if (scopeDecision && typeof scopeDecision.id === "string") {
+    return [
+      commandButton("osapprove", "Согласовать scope", scopeDecision.id),
+      commandButton("changes", "Правки scope", scopeDecision.id)
+    ];
+  }
+  return ownerControlButtons(input.ownerBrief);
+}
+
+async function executeTelegramAdvisorIntent(input: TelegramIntentInput, context: TelegramExecutionContext) {
+  const briefData = await loadOwnerBriefData(context.tenantId);
+  const ownerBrief = buildOwnerBrief(briefData);
+  const activeExecutions = await Promise.all([
+    getActiveWeekFourExecution(context.tenantId),
+    getActiveWeekThreeExecution(context.tenantId),
+    getActiveWeekTwoExecution(context.tenantId)
+  ]);
+  const activeExecution = activeExecutions.find((execution) => execution?.status === "active") ?? null;
+  const contextPack: Row = {
+    surface: "telegram_owner_advisor",
+    canonicalLoop: "AgentResult prepares -> owner approves -> team releases -> publication is confirmed -> next content step is chosen",
+    constraints: [
+      "advisory_only",
+      "no_state_mutation",
+      "no_autoposting",
+      "no_guaranteed_leads_sales_or_revenue_attribution"
+    ],
+    counts: ownerBrief.counts,
+    nextAction: ownerBrief.nextAction,
+    pendingApprovals: ownerBrief.decisions.slice(0, 5).map(compactApprovalForAdvisor),
+    activePilotExecution: compactExecutionForAdvisor(activeExecution),
+    latestPublishedResults: ownerBrief.publishedResults.slice(0, 3).map((result) => ({
+      title: textValue(result.title, "Опубликованный материал"),
+      urlConfirmed: Boolean(result.publicationUrl),
+      format: result.format,
+      nextStep: result.nextStep,
+      primaryReactions: result.primaryReactions
+    })),
+    preparing: ownerBrief.preparing.slice(0, 3).map((item) => ({
+      title: textValue(item.title, "Материал"),
+      status: item.status,
+      expectedResult: item.expectedResult
+    }))
+  };
+  const hermesText = await callHermesAdvisor({ question: input.text, contextPack });
+  const text = hermesText || deterministicAdvisorText({
+    question: input.text,
+    ownerBrief,
+    activeExecution,
+    contextPack
+  });
+  return {
+    intent: "advisor_question",
+    command: null,
+    text: sanitizeAdvisorText(text),
+    buttons: advisorButtons({ ownerBrief, activeExecution }),
+    ownerBrief,
+    advisorContext: contextPack
+  };
+}
+
 async function createTelegramMaterial(input: TelegramMaterialInput, context: { tenantId: string; userId?: string }) {
   const contentItem = await insertJson("content_items", {
     title: input.title,
@@ -3088,6 +3350,23 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
   }
 
   if (includesAny(text, [
+    "что сейчас главное",
+    "что главное сейчас",
+    "что дальше",
+    "что делать дальше",
+    "что мне делать дальше",
+    "почему такой scope",
+    "почему этот scope",
+    "зачем такой scope",
+    "объясни scope",
+    "почему такой скоуп",
+    "зачем такой скоуп",
+    "объясни скоуп"
+  ])) {
+    return executeTelegramAdvisorIntent(input, context);
+  }
+
+  if (includesAny(text, [
     "что сегодня",
     "что на сегодня",
     "что требует",
@@ -3337,6 +3616,10 @@ async function executeTelegramIntent(input: TelegramIntentInput, context: Telegr
       intent: "onboarding",
       command: null
     };
+  }
+
+  if (isAdvisorQuestion(text)) {
+    return executeTelegramAdvisorIntent(input, context);
   }
 
   const briefData = await loadOwnerBriefData(context.tenantId);

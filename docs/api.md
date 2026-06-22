@@ -303,7 +303,7 @@ For diagnostics, pass `{ "dryRun": true }` to prepare and store the envelope wit
 
 Telegram onboarding uses the same backend dispatch path after creating the first `content_writer` task. The owner completes setup, backend starts a background preparation job, immediately responds that the task is in work, then saves the returned `draft`, opens approval, and sends a separate Telegram owner-control message when the draft is ready.
 
-`GET /telegram/owner-brief`, `/brief`, and ordinary intents such as "что дальше" include active draft preparation as owner-facing status: `AgentResult готовит черновик`, without exposing queue or run internals. Commands and intents such as `/preparing`, "что готовится", and "что в работе" return the topic, channel, start time, and expected result.
+`GET /telegram/owner-brief`, `/brief`, and advisor intent answers include active draft preparation as owner-facing status: `AgentResult готовит черновик`, without exposing queue or run internals. Commands and intents such as `/preparing`, "что готовится", and "что в работе" return the topic, channel, start time, and expected result.
 
 Result body:
 
@@ -389,7 +389,8 @@ Supported intent body:
 
 Common intent examples:
 
-- `что сегодня`, `что дальше`, `что требует решения` -> brief;
+- `что сейчас главное`, `что делать дальше`, `почему такой scope`, `что блокирует` -> advisor question;
+- `что сегодня`, `что требует решения` -> brief;
 - `что делать каждый день`, `как с тобой работать` -> daily owner loop;
 - `покажи пост`, `покажи материал`, `можно посмотреть материал` -> current material;
 - `ок`, `окей`, `согласую`, `одобряю`, `можно выпускать`, `да, согласую` -> approve current decision;
@@ -399,6 +400,8 @@ Common intent examples:
 - `подготовь пост про ...`, `поставь тему в работу ...`, `следующий материал ...` -> create a backend `content_writer` task, start Hermes dispatch, save the returned draft, and open approval;
 - `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
 - `что по результату` -> result summary.
+
+Advisor safety: `advisor_question` is read-only. Backend builds a tenant-safe context pack from owner brief, pending approvals, active pilot execution, confirmed publication results, and preparing tasks. Hermes may produce the owner-facing answer when `HERMES_API_KEY` is configured; otherwise backend returns a deterministic advisory answer from the same context. Advisor answers must not mutate state, publish, approve, request changes, start weeks, close reviews, expose raw API/VPS/env/tool details, or promise guaranteed leads/sales/revenue attribution. Buttons are still generated from existing backend read models and point to explicit commands/actions such as approve scope, request changes, confirm URL, or review result.
 
 Owner-facing response text should use natural action language instead of listing slash commands as the main next step. Slash commands remain supported as a technical compatibility contract for Hermes quick commands and dry-runs.
 
