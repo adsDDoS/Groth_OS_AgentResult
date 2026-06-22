@@ -556,6 +556,7 @@ const state = {
   selectedPublicationResultId: "",
   weekTwoExecution: null,
   weekThreeExecution: null,
+  weekFourExecution: null,
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -701,7 +702,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution, weekThreeExecution] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution, weekThreeExecution, weekFourExecution] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -714,7 +715,8 @@ async function loadData() {
       api("/publication-results").catch(() => ({ data: [] })),
       api("/workspace/state").catch(() => ({ data: {} })),
       api("/pilot/week-2/execution").catch(() => ({ data: null })),
-      api("/pilot/week-3/execution").catch(() => ({ data: null }))
+      api("/pilot/week-3/execution").catch(() => ({ data: null })),
+      api("/pilot/week-4/execution").catch(() => ({ data: null }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
 
@@ -735,8 +737,10 @@ async function loadData() {
     state.workspaceState = workspaceState.data && typeof workspaceState.data === "object" ? workspaceState.data : state.workspaceState;
     state.weekTwoExecution = weekTwoExecution.data && typeof weekTwoExecution.data === "object" ? weekTwoExecution.data : null;
     state.weekThreeExecution = weekThreeExecution.data && typeof weekThreeExecution.data === "object" ? weekThreeExecution.data : null;
+    state.weekFourExecution = weekFourExecution.data && typeof weekFourExecution.data === "object" ? weekFourExecution.data : null;
     mergePilotWeekExecutionState(state.weekTwoExecution);
     mergePilotWeekExecutionState(state.weekThreeExecution);
+    mergePilotWeekExecutionState(state.weekFourExecution);
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
       ...deriveMetrics(metrics.data || {}),
@@ -766,6 +770,7 @@ async function loadData() {
     state.publicationResultsSource = "derived";
     state.weekTwoExecution = null;
     state.weekThreeExecution = null;
+    state.weekFourExecution = null;
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -2260,7 +2265,7 @@ function pilotWeekExecutionPanel(execution) {
 }
 
 function activePilotWeekExecutions() {
-  return [state.weekTwoExecution, state.weekThreeExecution].filter((execution) => execution?.status === "active");
+  return [state.weekTwoExecution, state.weekThreeExecution, state.weekFourExecution].filter((execution) => execution?.status === "active");
 }
 
 function pilotExecutionWeek(execution) {
@@ -5763,7 +5768,8 @@ async function executePilotDaySevenReviewCommand({ publicationResultId = "", nex
 async function completePilotWeekReviewFromDashboard(encoded = "") {
   if (!state.online) return null;
   const [rawWeek = "2", publicationResultId = "", rawStep = "reuse"] = String(encoded).split("|");
-  const week = Number(rawWeek) === 3 ? 3 : 2;
+  const parsedWeek = Number(rawWeek);
+  const week = Number.isFinite(parsedWeek) && parsedWeek >= 2 ? parsedWeek : 2;
   const nextStep = ["reuse", "expand", "update", "leave"].includes(rawStep) ? rawStep : "reuse";
   try {
     const response = await api(`/pilot/week-${week}/review`, {
@@ -5796,8 +5802,7 @@ async function completePilotWeekReviewFromDashboard(encoded = "") {
       state.metrics.tasks_created = state.tasks.length;
     }
     if (data.workspace_state && typeof data.workspace_state === "object") state.workspaceState = data.workspace_state;
-    if (week === 2) state.weekTwoExecution = null;
-    if (week === 3) state.weekThreeExecution = null;
+    setPilotWeekExecutionState(week, null);
     showToast(text(`Week-${week} review closed.`, `Week-${week} review закрыт.`));
     setRoute("publications");
     return data;
@@ -6993,11 +6998,9 @@ async function decideApproval(item, action, note = "") {
     item.decision_note = note;
     item.decided_at = new Date().toISOString();
     appendAudit(item, nextStatus, note);
-    if (item.scope === "pilot_week_2_scope" && nextStatus === "approved") {
-      await executeStartPilotWeekExecutionCommand(2, { note: note || "Started from dashboard scope approval." });
-    }
-    if (item.scope === "pilot_week_3_scope" && nextStatus === "approved") {
-      await executeStartPilotWeekExecutionCommand(3, { note: note || "Started from dashboard scope approval." });
+    const pilotWeek = pilotScopeWeek(item.scope);
+    if (pilotWeek >= 2 && pilotWeek <= 4 && nextStatus === "approved") {
+      await executeStartPilotWeekExecutionCommand(pilotWeek, { note: note || "Started from dashboard scope approval." });
     }
     state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
     showToast(decisionToast(nextStatus));
@@ -7054,18 +7057,22 @@ async function refreshWeekThreeExecution() {
   return refreshPilotWeekExecution(3);
 }
 
+function setPilotWeekExecutionState(week, execution) {
+  if (week === 4) state.weekFourExecution = execution;
+  else if (week === 3) state.weekThreeExecution = execution;
+  else state.weekTwoExecution = execution;
+}
+
 async function refreshPilotWeekExecution(week) {
   if (!state.online) return null;
   try {
     const response = await api(`/pilot/week-${week}/execution`);
     const execution = response?.data || null;
-    if (week === 3) state.weekThreeExecution = execution;
-    else state.weekTwoExecution = execution;
+    setPilotWeekExecutionState(week, execution);
     mergePilotWeekExecutionState(execution);
     return execution;
   } catch {
-    if (week === 3) state.weekThreeExecution = null;
-    else state.weekTwoExecution = null;
+    setPilotWeekExecutionState(week, null);
     return null;
   }
 }

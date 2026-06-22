@@ -103,6 +103,18 @@ export async function pilotRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.get("/pilot/week-4/execution", async (request, reply) => {
+    const result = await getActiveWeekFourExecution(request.tenantId);
+    if (!result) {
+      reply.status(404);
+      return {
+        error: "PilotWeekFourExecutionNotFound",
+        message: "No active week-4 execution workspace is available."
+      };
+    }
+    return { data: result };
+  });
+
   app.post("/pilot/week-2/start", async (request, reply) => {
     const body = weekTwoStartBody.parse(request.body ?? {});
     const result = await startWeekTwoExecution({
@@ -132,6 +144,23 @@ export async function pilotRoutes(app: FastifyInstance) {
       return {
         error: "PilotWeekThreeNotReady",
         message: "Week-3 execution requires an approved pilot_week_3_scope approval."
+      };
+    }
+    return { data: result };
+  });
+
+  app.post("/pilot/week-4/start", async (request, reply) => {
+    const body = weekTwoStartBody.parse(request.body ?? {});
+    const result = await startWeekFourExecution({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekFourNotReady",
+        message: "Week-4 execution requires an approved pilot_week_4_scope approval."
       };
     }
     return { data: result };
@@ -487,6 +516,10 @@ export async function getActiveWeekThreeExecution(tenantId: string) {
   return getActivePilotWeekExecution(tenantId, 3);
 }
 
+export async function getActiveWeekFourExecution(tenantId: string) {
+  return getActivePilotWeekExecution(tenantId, 4);
+}
+
 async function getActivePilotWeekExecution(tenantId: string, week: number) {
   const scopeKey = `week_${week}_scope`;
   const executionKey = `week_${week}_execution`;
@@ -722,6 +755,10 @@ export async function startWeekTwoExecution(input: WeekTwoStartInput) {
 
 export async function startWeekThreeExecution(input: WeekTwoStartInput) {
   return startPilotWeekExecution(input, 3);
+}
+
+export async function startWeekFourExecution(input: WeekTwoStartInput) {
+  return startPilotWeekExecution(input, 4);
 }
 
 async function startPilotWeekExecution(input: WeekTwoStartInput, week: number) {

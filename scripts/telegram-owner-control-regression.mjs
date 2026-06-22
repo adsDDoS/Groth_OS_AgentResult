@@ -147,7 +147,7 @@ async function main() {
     env: {
       ...process.env,
       AI_GROWTH_OS_STORAGE: "local",
-      AI_GROWTH_OS_LOCAL_DATA_PATH: dataFile,
+      AI_GROWTH_OS_LOCAL_DATA_FILE: dataFile,
       HOST: "127.0.0.1",
       PORT: String(port),
       HERMES_API_KEY: "",

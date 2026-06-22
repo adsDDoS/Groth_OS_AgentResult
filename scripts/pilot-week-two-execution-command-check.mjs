@@ -272,6 +272,45 @@ try {
   assert(weekThreeReview.data?.week_3_review?.status === "published", "week-3 review board item should be completed");
   const reviewedWeekThreeMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [startedWeekThree.data.content.id, tenantId]);
   assert(reviewedWeekThreeMaterialRows.rows[0]?.metadata?.week_3_execution?.status === "completed", "week-3 material execution metadata should be completed");
+  const blockedWeekFourStart = await inject("POST", "/pilot/week-4/start", {
+    note: "Should not start before week-4 scope approval."
+  }, tenantId);
+  assert(blockedWeekFourStart.response.statusCode === 409, `week-4 start should be blocked before approval, saw ${blockedWeekFourStart.response.statusCode}`);
+  const approveWeekFour = await inject("POST", `/approvals/${weekThreeReview.data.week_4_scope.approval.id}/approve`, {
+    note: "Approve week-4 scope from operator."
+  }, tenantId);
+  assert(approveWeekFour.response.statusCode === 200, `week-4 scope approve failed: ${approveWeekFour.response.statusCode} ${approveWeekFour.response.body}`);
+  const approvedWeekFourMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [weekThreeReview.data.week_4_scope.next_material.id, tenantId]);
+  assert(approvedWeekFourMaterialRows.rows[0]?.metadata?.week_4_scope?.approval_status === "approved", "approved week-4 content metadata missing");
+  const approvedWeekFourBoardRows = await query("select * from publishing_calendar_items where tenant_id = $1 order by created_at desc limit 300", [tenantId]);
+  assert(approvedWeekFourBoardRows.rows.some((item) => item.metadata?.week_4_scope?.approval_status === "approved" && item.content_item_id === weekThreeReview.data.week_4_scope.next_material.id), "approved week-4 board metadata missing");
+  const approvedWeekFourWorkspaceRows = await query("select * from tenants where id = $1", [tenantId]);
+  assert(approvedWeekFourWorkspaceRows.rows[0]?.settings?.dashboard_state?.activePilotWorkspace?.week_4_scope?.approval_status === "approved", "approved week-4 workspace metadata missing");
+  const startedWeekFour = await inject("POST", "/pilot/week-4/start", {
+    note: "Start approved week-4 production."
+  }, tenantId);
+  assert(startedWeekFour.response.statusCode === 200, `week-4 start failed: ${startedWeekFour.response.statusCode} ${startedWeekFour.response.body}`);
+  assert(startedWeekFour.data.status === "started", "week-4 start status mismatch");
+  assert(startedWeekFour.data.content?.id === weekThreeReview.data.week_4_scope.next_material.id, "week-4 start content mismatch");
+  assert(startedWeekFour.data.content?.metadata?.week_4_execution?.status === "started", "week-4 content execution metadata missing");
+  assert(startedWeekFour.data.task?.task_type === "pilot_week_4_execution", "week-4 execution task missing");
+  assert(startedWeekFour.data.approval?.scope === "social_post", "week-4 material approval missing");
+  assert(startedWeekFour.data.board?.length === 5, "week-4 board should be returned");
+  assert(startedWeekFour.data.board.some((item) => item.title.includes("Day 22") && item.status === "published"), "week-4 Day 22 should be marked started");
+  assert(startedWeekFour.data.workspace_state?.activePilotWorkspace?.mode === "week_4", "workspace mode should be week_4");
+  assert(startedWeekFour.data.workspace_state?.activePilotWorkspace?.week_4_execution?.status === "started", "workspace week-4 execution marker missing");
+  const activeWeekFour = await inject("GET", "/pilot/week-4/execution", undefined, tenantId);
+  assert(activeWeekFour.response.statusCode === 200, `week-4 execution view failed: ${activeWeekFour.response.statusCode} ${activeWeekFour.response.body}`);
+  assert(activeWeekFour.data?.status === "active", "week-4 execution view should be active");
+  assert(activeWeekFour.data?.week === 4, "week-4 execution view week marker mismatch");
+  assert(activeWeekFour.data?.current_gate === "material_approval", "week-4 execution should wait for material approval first");
+  assert(activeWeekFour.data?.material?.id === startedWeekFour.data.content.id, "week-4 execution view material mismatch");
+  assert(activeWeekFour.data?.material_approval?.id === startedWeekFour.data.approval.id, "week-4 execution material approval mismatch");
+  assert(activeWeekFour.data?.board?.length === 5, "week-4 execution view board missing");
+  assert(activeWeekFour.data?.roles?.release_owner, "week-4 execution view release owner missing");
+  assert(activeWeekFour.data?.actions?.approve_material?.approval_id === startedWeekFour.data.approval.id, "week-4 execution approve material action mismatch");
+  assert(activeWeekFour.data?.actions?.handoff_release?.calendar_item_id, "week-4 execution handoff action missing");
+  assert(activeWeekFour.data?.actions?.confirm_url?.calendar_item_id, "week-4 execution confirm URL action missing");
 
   const repeated = await inject("POST", "/pilot/week-2/start", {
     note: "Idempotent repeat."
@@ -298,6 +337,12 @@ try {
       && row.config?.action === "pilot.week_3.review"
       && row.config?.target_id === weekThreeAfterConfirmation.data.actions.review_result.publication_result_id),
     "week-3 review audit missing"
+  );
+  assert(
+    audits.some((row) => row.provider === "owner_action_audit"
+      && row.config?.action === "pilot.week_4.start"
+      && row.config?.target_id === startedWeekFour.data.content.id),
+    "week-4 start audit missing"
   );
 
   const otherPilot = await startPilot(otherTenantId, "Other tenant week-2 execution material");

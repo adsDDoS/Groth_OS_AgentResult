@@ -261,6 +261,38 @@ try {
   assert(closedWeek3.data.text.includes("Week-3 review закрыт"), "telegram week-3 review close text missing");
   assert(closedWeek3.data.reviewResult?.week_4_scope?.approval?.scope === "pilot_week_4_scope", "telegram week-3 review should create week-4 scope");
   assert(closedWeek3.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek3.data.reviewResult.week_4_scope.approval.id), "telegram week-4 approval button missing");
+  const blockedWeek4 = await inject("POST", "/telegram/commands", {
+    command: "/week4",
+    note: "Try before approving week-4 scope."
+  }, tenantId);
+  assert(blockedWeek4.response.statusCode === 200, `telegram week-4 blocked command failed: ${blockedWeek4.response.statusCode} ${blockedWeek4.response.body}`);
+  assert(blockedWeek4.data.text.includes("сначала согласуйте"), "telegram week-4 should be blocked before approval");
+  const approvedWeekFourScope = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: closedWeek3.data.reviewResult.week_4_scope.approval.id,
+    note: "Approve week-4 scope from Telegram."
+  }, tenantId);
+  assert(approvedWeekFourScope.response.statusCode === 200, `telegram week-4 scope approve failed: ${approvedWeekFourScope.response.statusCode} ${approvedWeekFourScope.response.body}`);
+  assert(approvedWeekFourScope.data.result?.scope === "pilot_week_4_scope", "telegram week-4 scope approval result mismatch");
+  assert(approvedWeekFourScope.data.result?.status === "approved", "telegram week-4 scope approval status mismatch");
+  assert(!approvedWeekFourScope.data.weekTwoExecution, "telegram week-4 scope approval should not start week-2 execution");
+  const weekFourMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [closedWeek3.data.reviewResult.week_4_scope.next_material.id, tenantId]);
+  assert(weekFourMaterialRows.rows[0]?.metadata?.week_4_scope?.approval_status === "approved", "telegram approved week-4 material metadata missing");
+  const startedWeek4 = await inject("POST", "/telegram/commands", {
+    command: "/week4",
+    note: "Start week-4 from Telegram."
+  }, tenantId);
+  assert(startedWeek4.response.statusCode === 200, `telegram week-4 start failed: ${startedWeek4.response.statusCode} ${startedWeek4.response.body}`);
+  assert(startedWeek4.data.weekFourExecution?.status === "started", "telegram week-4 command should start execution");
+  assert(startedWeek4.data.weekFourExecution?.task?.task_type === "pilot_week_4_execution", "telegram week-4 execution task missing");
+  const week4Status = await inject("POST", "/telegram/commands", {
+    command: "/week4_status"
+  }, tenantId);
+  assert(week4Status.response.statusCode === 200, `telegram week-4 status failed: ${week4Status.response.statusCode} ${week4Status.response.body}`);
+  assert(week4Status.data.text.includes("Week-4 execution"), "telegram week-4 status title missing");
+  assert(week4Status.data.text.includes("согласование материала"), "telegram week-4 status should show material approval gate");
+  assert(week4Status.data.text.includes("Доска:"), "telegram week-4 status should show board");
+  assert(week4Status.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === startedWeek4.data.weekFourExecution.approval.id), "telegram week-4 material approval button missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

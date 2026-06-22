@@ -77,6 +77,8 @@ Publishing creates jobs only after required approval exists.
 - `POST /pilot/week-3/start`
 - `GET /pilot/week-3/execution`
 - `POST /pilot/week-3/review`
+- `POST /pilot/week-4/start`
+- `GET /pilot/week-4/execution`
 
 `POST /pilot/week-1/start` starts a backend-owned week-1 pilot workspace from intake. It creates or updates the company profile, first ICP demand item, first Telegram material brief, owner approval, week-1 calendar board, Day-7 review task, tenant dashboard state, and owner-action audit event.
 
@@ -196,6 +198,18 @@ Request body:
 ```
 
 Response includes `{ decision, publication_result, action, target, target_type, week_4_scope, week_3_review, task, workspace_state }`. `week_4_scope` is created by the shared next-scope proposal builder with `pilot_week_4_scope` approval, next material, board, roles, and one-channel constraint.
+
+`POST /pilot/week-4/start` starts backend-owned week-4 execution only after the `pilot_week_4_scope` approval is approved. It uses the same generic week execution command path as week 2 and week 3: the next material moves into review, the first week-4 board item is marked started, a `pilot_week_4_execution` task is created, a week-4 material approval is opened, tenant workspace state moves to `mode: "week_4"`, and owner-action audit records `pilot.week_4.start`. Repeating the command is idempotent and returns the existing execution objects when week-4 execution is already started or completed.
+
+Request body:
+
+```json
+{
+  "note": "Start approved week-4 production."
+}
+```
+
+`GET /pilot/week-4/execution` returns the active backend-owned week-4 working surface for dashboard and Telegram. It returns `week: 4`, active material, material approval, week-4 board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
 
 ## SEO/GEO
 
@@ -341,6 +355,8 @@ For Day-7 pilot review, `/telegram/commands` supports `/day7 expand|reuse|update
 For week-2 execution, `/telegram/commands` supports `/week2`, `/week_2`, `/week-2`, `/start_week2`, and `/start_week_2`. It calls the same backend `POST /pilot/week-2/start` workflow and is blocked until `pilot_week_2_scope` is approved. Telegram approval action on `pilot_week_2_scope` also starts week-2 execution automatically. `/week2_status`, `/week2_board`, and `/w2` render the active backend `GET /pilot/week-2/execution` view with current gate, roles, board, material approval, QA/release handoff target, URL confirmation target, and result-review commands. When active week-2 execution is at `result_review`, Telegram `reuse`, `expand`, `update`, and `leave` commands call `POST /pilot/week-2/review` and return the created `week_3_scope` approval buttons instead of using the generic publication-result workflow.
 
 For week-3 execution, `/telegram/commands` supports `/week3`, `/week_3`, `/week-3`, `/start_week3`, and `/start_week_3`. It calls the same backend `POST /pilot/week-3/start` workflow and is blocked until `pilot_week_3_scope` is approved. `/week3_status`, `/week3_board`, and `/w3` render `GET /pilot/week-3/execution` with the same gate/action controls as week 2: material approval, QA/release handoff, URL confirmation, and result-review buttons. When active week-3 execution is at `result_review`, Telegram `reuse`, `expand`, `update`, and `leave` commands call `POST /pilot/week-3/review` and return the created `week_4_scope` approval buttons instead of using the generic publication-result workflow.
+
+For week-4 execution, `/telegram/commands` supports `/week4`, `/week_4`, `/week-4`, `/start_week4`, and `/start_week_4`. It calls the same backend `POST /pilot/week-4/start` workflow and is blocked until `pilot_week_4_scope` is approved. `/week4_status`, `/week4_board`, and `/w4` render `GET /pilot/week-4/execution` with the same gate/action controls as earlier execution weeks: material approval, QA/release handoff, and URL confirmation. Week-4 result review remains a separate backend command goal and is not handled by the generic publication-result fallback.
 
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 

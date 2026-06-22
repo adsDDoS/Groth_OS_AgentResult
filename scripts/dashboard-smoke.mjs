@@ -56,9 +56,11 @@ function assertDashboardScriptContract() {
   assert(appJs.includes('"complete-pilot-week-review"'), "Dashboard week-N review buttons are missing");
   assert(appJs.includes("api(`/pilot/week-${week}/review`"), "Dashboard week-N review must call backend pilot command");
   assert(appJs.includes('api("/pilot/week-3/execution"'), "Dashboard must load backend week-3 execution state");
+  assert(appJs.includes('api("/pilot/week-4/execution"'), "Dashboard must load backend week-4 execution state");
   assert(appJs.includes("state.weekThreeExecution"), "Dashboard week-3 execution state slot is missing");
-  assert(appJs.includes("state.weekThreeExecution = null"), "Dashboard must clear week-3 execution after backend review");
-  assert(appJs.includes("executeStartPilotWeekExecutionCommand(3"), "Dashboard must start week-3 execution from approved scope");
+  assert(appJs.includes("state.weekFourExecution"), "Dashboard week-4 execution state slot is missing");
+  assert(appJs.includes("setPilotWeekExecutionState(week, null)"), "Dashboard must clear generic week execution after backend review");
+  assert(appJs.includes("executeStartPilotWeekExecutionCommand(pilotWeek"), "Dashboard must start approved pilot week scopes generically");
   assert(appJs.includes("function pilotWeekExecutionPanel"), "Dashboard must render week-N execution with a generic panel");
   assert(appJs.includes("function pilotScopeWeek(scope)"), "Dashboard pilot scope approval helper is missing");
   assert(appJs.includes("pilotScopeWeek(item?.scope)"), "Dashboard pilot scope title should support week-3 scope approvals");
