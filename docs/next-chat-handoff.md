@@ -246,10 +246,10 @@ git --no-pager diff --check
 
 ## Recommended Next Goal
 
-Start the first paid private pilot:
+Run the first paid private pilot live:
 
 ```text
-Run the first paid Telegram-first private pilot with one founder-led B2B expert/service team, using Telegram owner-control as the daily UI and dashboard as cockpit/fallback.
+Use docs/paid-pilot-week-1-live-run.md as the operator log while running the first paid Telegram-first private pilot with one founder-led B2B expert/service team. Keep Telegram owner-control as the daily UI, dashboard as cockpit/fallback, and capture real friction from onboarding -> first material -> approval -> handoff -> URL confirmation -> Day-7 review.
 ```
 
 Why this is next:
@@ -273,6 +273,7 @@ scripts/rotate-telegram-owner-control-token-vps.sh
 scripts/agentresult-vps-health.sh
 docs/pre-production-milestone.md
 docs/client-facing-pilot-kit-v1.md
+docs/paid-pilot-week-1-live-run.md
 docs/pilot-first-icp-execution-example.md
 docs/client-demo-call-dry-run-v3.md
 ```
@@ -284,5 +285,5 @@ docs/client-demo-call-dry-run-v3.md
 Сначала прочитай docs/next-chat-handoff.md, knowledge.md и docs/product-course.md.
 Текущий production demo: https://dashboard-orpin-mu-26.vercel.app/?demo=client&v=client-demo-v3#/overview
 Production backend is on be3b96a; owner-control is on 4039eb0 after BotFather token rotation. Content-factory, Telegram production smokes, VPS health, advisor probe, tenant guard, and backup restore drill passed.
-Следующая цель: открыть первого paid Telegram-first private pilot и вести week-1 loop через Telegram owner-control + dashboard cockpit.
+Следующая цель: вести первого paid Telegram-first private pilot через Telegram owner-control + dashboard cockpit, заполняя docs/paid-pilot-week-1-live-run.md по реальным friction points.
 ```

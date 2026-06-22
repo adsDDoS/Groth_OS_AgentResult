@@ -10,6 +10,7 @@ Access: `operator-only`
 | --- | --- | --- | --- |
 | Qualification | `docs/pilot-qualification-note.md` | Идём в пилот / рано / не наш клиент. | Intake или stop. |
 | Intake | `docs/pilot-onboarding-intake.md` | Есть канал, роли, cadence, format, forbidden claims, result source. | Week 1. |
+| Paid live run | `docs/paid-pilot-week-1-live-run.md` | Week-1 loop идёт через Telegram owner-control + dashboard; friction фиксируется по фактам. | First product follow-up или Day 7 review. |
 | Week 1 | `docs/pilot-week-1-execution-board.md` | Один материал прошёл topic -> draft -> QA -> release -> confirmation. | Day 7 review. |
 | Day 7 review | `docs/pilot-day-7-review-template.md` | Go / Narrow / Repair / No-go. | Week 2, repair или stop. |
 | Week 2 expansion | `docs/pilot-week-2-expansion-board.md` | Same loop / narrow expansion / channel test / repair week. | Final decision. |
@@ -33,6 +34,7 @@ Access: `operator-only`
 
 - Qualification: клиент принимает production-control метрику.
 - Intake: есть approval owner, QA/release owner и result owner.
+- Paid live run: все state changes сделаны через Telegram owner-control или dashboard, а не raw API.
 - Week 1: есть owner decision и QA gate.
 - Day 7: выбран `next_content_step` и `week_2_decision`.
 - Week 2: не добавлено больше одного нового измерения.

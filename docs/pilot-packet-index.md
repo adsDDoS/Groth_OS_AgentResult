@@ -16,13 +16,14 @@
 | 0a | `client-facing` | Send export-ready DOCX/PDF artifacts. | [GrothOS Client-Facing Pilot Kit Exports](client-facing/README.md) |
 | 1 | `operator-only` | Decide who is qualified for pilot. | [Pilot Qualification Note](pilot-qualification-note.md) |
 | 2 | `client-facing` | Collect channel, roles, cadence, format, claims, result source. | [Pilot Onboarding Intake](pilot-onboarding-intake.md) |
-| 3 | `operator-only` | Run first week: setup, topics, draft, QA, release, confirmation, review. | [Pilot Week-1 Execution Board](pilot-week-1-execution-board.md) |
-| 4 | `client-facing` | Close week 1 into next content step and week 2 decision. | [Pilot Day 7 Review Template](pilot-day-7-review-template.md) |
-| 5 | `operator-only` | Run week 2 without scope creep. | [Pilot Week-2 Expansion Board](pilot-week-2-expansion-board.md) |
-| 6 | `operator-only` | Keep the full route and gates in one place. | [Pilot Operating Manual](pilot-operating-manual.md) |
-| 7 | `client-facing` | Turn pilot outcome into continue / narrow / repair / stop. | [Pilot Closeout Report Template](pilot-closeout-report-template.md) |
-| 8 | `operator-only` | Convert closeout decision into an offer. | [Pilot Pricing / Offer One-Pager](pilot-pricing-offer-one-pager.md) |
-| 9 | `operator-only` | Send the correct follow-up message. | [Pilot Sales Follow-Up Templates](pilot-sales-follow-up-templates.md) |
+| 3 | `operator-only` | Open and operate the first paid week-1 loop in Telegram owner-control + dashboard, capturing real friction. | [Paid Pilot Week-1 Live Run](paid-pilot-week-1-live-run.md) |
+| 4 | `operator-only` | Run first week: setup, topics, draft, QA, release, confirmation, review. | [Pilot Week-1 Execution Board](pilot-week-1-execution-board.md) |
+| 5 | `client-facing` | Close week 1 into next content step and week 2 decision. | [Pilot Day 7 Review Template](pilot-day-7-review-template.md) |
+| 6 | `operator-only` | Run week 2 without scope creep. | [Pilot Week-2 Expansion Board](pilot-week-2-expansion-board.md) |
+| 7 | `operator-only` | Keep the full route and gates in one place. | [Pilot Operating Manual](pilot-operating-manual.md) |
+| 8 | `client-facing` | Turn pilot outcome into continue / narrow / repair / stop. | [Pilot Closeout Report Template](pilot-closeout-report-template.md) |
+| 9 | `operator-only` | Convert closeout decision into an offer. | [Pilot Pricing / Offer One-Pager](pilot-pricing-offer-one-pager.md) |
+| 10 | `operator-only` | Send the correct follow-up message. | [Pilot Sales Follow-Up Templates](pilot-sales-follow-up-templates.md) |
 
 ## Execution Examples
 
@@ -60,6 +61,12 @@ If unsure where to start, use:
 
 ```text
 docs/pilot-operating-manual.md
+```
+
+If running the first paid pilot live, use:
+
+```text
+docs/paid-pilot-week-1-live-run.md
 ```
 
 If preparing a client call, use:
