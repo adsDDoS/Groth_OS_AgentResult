@@ -40,9 +40,26 @@ This document does not replace the product state. Product actions happen in Tele
 | Owner Telegram access confirmed. |  |  |
 | Pilot tenant selected and protected from demo reset. |  |  |
 | `/pilot` responds in Telegram owner-control. |  |  |
+| `/onboarding` starts and shows `Шаг 1/7`. |  |  |
 | Advisor answers "что сейчас главное?" without mutation. |  |  |
 | Dashboard cockpit opens the same tenant state. |  |  |
 | First material topic is chosen. |  |  |
+
+## Day-0 Intake Payload
+
+Fill this with real client answers before or during the Telegram owner-control setup. These seven lines map directly to the `/onboarding` flow.
+
+| Telegram Step | Prompt Meaning | Real Client Answer | Product Evidence |
+| --- | --- | --- | --- |
+| Step 1/7 - offer | What the client sells and what result their customer should see. |  |  |
+| Step 2/7 - client | ICP segment, decision-maker role, main pain. |  |  |
+| Step 3/7 - channel | First release channel: Telegram, site, email, VC/Habr, or manual handoff. |  |  |
+| Step 4/7 - release owner | Who receives the approved material and confirms release. |  |  |
+| Step 5/7 - first signal source | Where result is checked: replies, form, channel, manual owner mark, or other source. |  |  |
+| Step 6/7 - approval rules | What must wait for owner decision before release. |  |  |
+| Step 7/7 - first material | First topic or task for AgentResult to prepare. |  |  |
+
+Day-0 is not complete until Telegram returns `Настройка зафиксирована` and `AgentResult взял задачу`.
 
 ## Product Route
 

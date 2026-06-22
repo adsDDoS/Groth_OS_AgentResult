@@ -191,6 +191,8 @@ Do not add lead, CRM, demand, or money language to publication results without a
 Latest completed checks before this handoff:
 
 - Production deploy: backend is `agentresult-os-backend:be3b96a`; owner-control is `agentresult-os-backend:4039eb0`.
+- Day-0 paid pilot preflight passed on 2026-06-23: `npm run telegram:regression`, `npm run telegram:pilot-production-smoke` with Telegram `messageId: 231`, `npm run telegram:production-smoke`, and `EXPECTED_OWNER_IMAGE_TAG=4039eb0 npm run vps:agentresult-health`.
+- `docs/paid-pilot-week-1-live-run.md` now has a Day-0 Intake Payload that maps exactly to the seven real Telegram `/onboarding` answers. The real client workspace should not be launched until those owner/client answers are captured.
 - `npm run content-factory:check` passed.
 - `npm run telegram:regression` passed.
 - `npm run dashboard:smoke` passed.
@@ -249,7 +251,7 @@ git --no-pager diff --check
 Run the first paid private pilot live:
 
 ```text
-Use docs/paid-pilot-week-1-live-run.md as the operator log while running the first paid Telegram-first private pilot with one founder-led B2B expert/service team. Keep Telegram owner-control as the daily UI, dashboard as cockpit/fallback, and capture real friction from onboarding -> first material -> approval -> handoff -> URL confirmation -> Day-7 review.
+Use docs/paid-pilot-week-1-live-run.md as the operator log while running the first paid Telegram-first private pilot with one founder-led B2B expert/service team. Fill the Day-0 Intake Payload with the seven real `/onboarding` answers, keep Telegram owner-control as the daily UI, dashboard as cockpit/fallback, and capture real friction from onboarding -> first material -> approval -> handoff -> URL confirmation -> Day-7 review.
 ```
 
 Why this is next:
