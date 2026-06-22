@@ -302,6 +302,7 @@ Required checks:
 
 ```bash
 npm run telegram:production-smoke
+npm run telegram:pilot-production-smoke
 npm run vps:agentresult-health
 ```
 
@@ -374,6 +375,7 @@ Quick cutover verification:
 
 ```bash
 npm run telegram:production-smoke
+npm run telegram:pilot-production-smoke
 ```
 
 ### VPS recovery checklist

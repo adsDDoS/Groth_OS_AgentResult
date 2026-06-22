@@ -58,6 +58,15 @@ Run the production Telegram result-flow smoke:
 npm run telegram:production-smoke
 ```
 
+Run the production Telegram `/pilot` command smoke. It validates the backend
+owner-control command path, sends the owner-facing `/pilot` response to the
+configured Telegram smoke chat, and resets the demo pilot tenant before and
+after the check:
+
+```bash
+npm run telegram:pilot-production-smoke
+```
+
 Rotate the owner-control Telegram token after BotFather returns a new token:
 
 ```bash

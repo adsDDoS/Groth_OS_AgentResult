@@ -67,6 +67,7 @@ Ready:
 - Telegram owner-control supports `/week3`, `/start_week3`, `/week3_status`, `/week3_board`, and `/w3`; it starts week-3 only after approved `pilot_week_3_scope` and renders targeted buttons for `osapprove`, `handoff`, `published`, and result next-step commands.
 - Backend week-3 result review is now `POST /pilot/week-3/review`; it closes active week-3 execution after confirmed URL, records `expand / reuse / update / leave`, completes `pilot_week_3_execution`, marks the week-3 result-review board item complete, creates backend-owned `week_4_scope`, updates workspace state, and writes owner-action audit. Week-2 and week-3 reviews now share the same week review command path instead of copying week-specific logic.
 - Dashboard and Telegram now route active week-3 `result_review` choices through `POST /pilot/week-3/review`; dashboard uses generic week-N review buttons for active pilot executions, and Telegram gives active week-3 result review priority before generic publication-result commands.
+- Production Telegram owner-control runtime is expected to run as `agentresult-os-telegram-owner-control` on `127.0.0.1:18831` with polling enabled for `@groth_os_bot`; `npm run telegram:pilot-production-smoke` validates `/pilot` and sends the owner-facing response to Telegram.
 - Pilot docs now include qualification, intake, week-1 execution, Day-7 review, week-2 expansion, closeout, offer, follow-up, and a first ICP execution example.
 
 ## Production Demo
@@ -174,6 +175,7 @@ Latest completed checks before this handoff:
 - `npm run telegram:pilot-week-one-command:check` passed.
 - `npm run telegram:day-seven-review:check` passed.
 - `npm run telegram:regression` passed.
+- `npm run telegram:pilot-production-smoke` should pass after owner-control VPS changes.
 - `npm run build -w packages/shared` passed.
 - `npm run build -w apps/backend` passed.
 - `npm run dashboard:smoke` passed.
