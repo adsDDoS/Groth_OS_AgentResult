@@ -4,10 +4,10 @@ Use this milestone before claiming readiness for the first customer pilot.
 
 ## Status
 
-Current state: production readiness cut completed for software/runtime gates.
+Current state: production readiness cut completed.
 
-Paid pilot status: ready to schedule the first private paid pilot after the
-operator rotates the Telegram owner-control token through BotFather.
+Paid pilot status: ready to schedule the first Telegram-first private paid
+pilot.
 
 Closed:
 
@@ -22,22 +22,20 @@ Closed:
   `pilot_week_6_scope` from the shared scope proposal builder.
 - Telegram advisor intent is read-only and supports short follow-up context
   history without state mutation.
-- Production backend and Telegram owner-control are deployed on `be3b96a`.
+- Production backend is deployed on `agentresult-os-backend:be3b96a`.
+- Production Telegram owner-control is deployed on
+  `agentresult-os-backend:4039eb0` after token rotation.
 - Production backend and owner-control enforce `AGENTRESULT_REQUIRE_API_KEY=1`.
 - Production tenant allowlist is restricted to the demo tenant and pilot tenant.
 - Production Telegram owner-control `/pilot`, advisor, follow-up, week command
   boundary, API-key guard, and blocked-tenant guard have been smoke-tested.
 - Fresh VPS Postgres backup and restore drill passed on 2026-06-22.
-
-Blocked by operator action:
-
-- Rotate the leaked Telegram owner-control bot token through BotFather.
+- Telegram owner-control token was rotated through BotFather on 2026-06-22.
 
 Still required before customer pilot:
 
-- Rotate the Telegram owner-control bot token through BotFather with
-  `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`.
-- Rotate any other pasted or exposed production secrets.
+- Keep any other pasted or exposed production secrets rotated before sharing
+  real client data.
 
 ## Required Gates
 

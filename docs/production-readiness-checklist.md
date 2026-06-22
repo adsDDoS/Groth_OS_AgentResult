@@ -5,8 +5,7 @@ Last checked: 2026-06-22.
 ## Current Verdict
 
 AgentResult is ready for controlled demo, private-beta operation, and the first
-Telegram-first paid private pilot after Telegram owner-control token rotation.
-It is not full customer-production SaaS.
+Telegram-first paid private pilot. It is not full customer-production SaaS.
 
 The working contour is:
 
@@ -79,7 +78,9 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 - VPS health has both systemd timer and GitHub manual workflow coverage.
 - GitHub Actions VPS health also runs every 30 minutes.
 - API-key and tenant whitelist guard exists for pilot deployments.
-- Production backend and owner-control are deployed on `be3b96a`.
+- Production backend is deployed on `agentresult-os-backend:be3b96a`.
+- Production owner-control is deployed on `agentresult-os-backend:4039eb0`
+  after Telegram token rotation.
 - Production API-key guard and tenant allowlist are enabled.
 - Production advisor/follow-up and week command boundary probes pass.
 - Fresh VPS backup and restore drill passed on 2026-06-22.
@@ -111,12 +112,10 @@ GitHub Actions -> AgentResult VPS health -> Run workflow
 
 ## Blocking Before Customer Production
 
-1. Rotate the leaked Telegram owner-control bot token through BotFather and run
-   `NEW_TELEGRAM_BOT_TOKEN=<new-token> npm run vps:rotate-owner-token`.
-2. Lock down production secrets and rotate anything pasted into chat, logs, or
+1. Lock down production secrets and rotate anything pasted into chat, logs, or
    screenshots.
-3. Keep scheduled GitHub Actions health checks green.
-4. Decide which external channels are manual-only and which will become native
+2. Keep scheduled GitHub Actions health checks green.
+3. Decide which external channels are manual-only and which will become native
    integrations.
 
 ## Product Gaps Before Visual Dashboard Work
