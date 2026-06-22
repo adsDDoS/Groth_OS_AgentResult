@@ -5,10 +5,10 @@ import { query } from "../../db/client.js";
 import { resetMemoryDemoStore } from "../../db/memory.js";
 import { createAgentTask } from "../agents/runner.js";
 import { createApprovalRequest, decideApproval } from "../approvals/service.js";
-import { insertJson, patchJson } from "../common/repository.js";
+import { insertJson, listRows, patchJson } from "../common/repository.js";
 import { executePublicationResultCommand, listPublicationResults } from "../distribution-signals/routes.js";
 import { dispatchHermesTask } from "../hermes/index.js";
-import { completeDaySevenReview, completeWeekFourReview, completeWeekThreeReview, completeWeekTwoReview, getActiveWeekFourExecution, getActiveWeekThreeExecution, getActiveWeekTwoExecution, startWeekFourExecution, startWeekOnePilot, startWeekThreeExecution, startWeekTwoExecution } from "../pilot/routes.js";
+import { completeDaySevenReview, completeWeekFiveReview, completeWeekFourReview, completeWeekThreeReview, completeWeekTwoReview, getActiveWeekFiveExecution, getActiveWeekFourExecution, getActiveWeekThreeExecution, getActiveWeekTwoExecution, startWeekFiveExecution, startWeekFourExecution, startWeekOnePilot, startWeekThreeExecution, startWeekTwoExecution } from "../pilot/routes.js";
 import { confirmPublishingCalendarLive } from "../publishing/routes.js";
 
 type Row = Record<string, unknown>;
@@ -56,6 +56,13 @@ type PublicationResultConfirmationState = {
   calendarItemId: string;
   completedAt?: string;
   step: PublicationResultConfirmationStep;
+  updatedAt?: string;
+};
+type AdvisorHistoryEntry = {
+  activePilotExecution?: Row | null;
+  answerPreview?: string;
+  id?: string;
+  question: string;
   updatedAt?: string;
 };
 
@@ -146,6 +153,11 @@ type TelegramUpdate = {
 
 function textValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function pilotScopeWeek(scope: unknown) {
+  const match = String(scope || "").match(/^pilot_week_(\d+)_scope$/);
+  return match ? Number(match[1]) : 0;
 }
 
 function ownerFacingText(value: unknown, fallback = "") {
@@ -725,6 +737,21 @@ function weekFourStartCommandFromText(command: string) {
     || command.startsWith("start_week_4 ");
 }
 
+function weekFiveStartCommandFromText(command: string) {
+  return command === "week5"
+    || command === "week_5"
+    || command === "week-5"
+    || command === "start_week5"
+    || command === "start_week_5"
+    || command === "week5_start"
+    || command === "week_5_start"
+    || command.startsWith("week5 ")
+    || command.startsWith("week_5 ")
+    || command.startsWith("week-5 ")
+    || command.startsWith("start_week5 ")
+    || command.startsWith("start_week_5 ");
+}
+
 function weekTwoStatusCommandFromText(command: string) {
   return command === "week2_status"
     || command === "week_2_status"
@@ -762,6 +789,19 @@ function weekFourStatusCommandFromText(command: string) {
     || command === "w4_status"
     || command === "статус_week4"
     || command === "статус_week_4";
+}
+
+function weekFiveStatusCommandFromText(command: string) {
+  return command === "week5_status"
+    || command === "week_5_status"
+    || command === "week-5-status"
+    || command === "week5_board"
+    || command === "week_5_board"
+    || command === "week-5-board"
+    || command === "w5"
+    || command === "w5_status"
+    || command === "статус_week5"
+    || command === "статус_week_5";
 }
 
 function daySevenReviewCommandFromText(command: string): "expand" | "reuse" | "update" | "leave" | null {
@@ -925,7 +965,7 @@ async function completeDaySevenReviewFromTelegram(
 
 type PilotWeekStartResult = NonNullable<Awaited<ReturnType<typeof startWeekTwoExecution>>>;
 type ActivePilotWeekExecution = NonNullable<Awaited<ReturnType<typeof getActiveWeekTwoExecution>>>;
-type PilotExecutionWeek = 2 | 3 | 4;
+type PilotExecutionWeek = 2 | 3 | 4 | 5;
 
 function renderPilotWeekExecutionMessage(result: PilotWeekStartResult, week: number) {
   const title = textValue(result.content?.title, `week-${week} material`);
@@ -941,7 +981,7 @@ function renderWeekTwoExecutionMessage(result: PilotWeekStartResult) {
   return renderPilotWeekExecutionMessage(result, 2);
 }
 
-type PilotWeekReviewResult = NonNullable<Awaited<ReturnType<typeof completeWeekTwoReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekThreeReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekFourReview>>>;
+type PilotWeekReviewResult = NonNullable<Awaited<ReturnType<typeof completeWeekTwoReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekThreeReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekFourReview>>> | NonNullable<Awaited<ReturnType<typeof completeWeekFiveReview>>>;
 
 function renderPilotWeekReviewMessage(input: {
   week: PilotExecutionWeek;
@@ -1082,7 +1122,16 @@ async function completeWeekFourReviewFromTelegram(
   return completePilotWeekReviewFromTelegram(4, nextStep, input, context);
 }
 
+async function completeWeekFiveReviewFromTelegram(
+  nextStep: "expand" | "reuse" | "update" | "leave",
+  input: TelegramCommandInput,
+  context: TelegramExecutionContext
+) {
+  return completePilotWeekReviewFromTelegram(5, nextStep, input, context);
+}
+
 function pilotWeekReviewCommand(week: PilotExecutionWeek) {
+  if (week === 5) return completeWeekFiveReview;
   if (week === 4) return completeWeekFourReview;
   if (week === 3) return completeWeekThreeReview;
   return completeWeekTwoReview;
@@ -1136,19 +1185,26 @@ async function startWeekFourExecutionFromTelegram(input: TelegramCommandInput, c
   return startPilotWeekExecutionFromTelegram(input, context, 4);
 }
 
+async function startWeekFiveExecutionFromTelegram(input: TelegramCommandInput, context: TelegramExecutionContext) {
+  return startPilotWeekExecutionFromTelegram(input, context, 5);
+}
+
 function pilotWeekStartCommand(week: PilotExecutionWeek) {
+  if (week === 5) return startWeekFiveExecution;
   if (week === 4) return startWeekFourExecution;
   if (week === 3) return startWeekThreeExecution;
   return startWeekTwoExecution;
 }
 
 function pilotWeekActiveExecutionCommand(week: PilotExecutionWeek) {
+  if (week === 5) return getActiveWeekFiveExecution;
   if (week === 4) return getActiveWeekFourExecution;
   if (week === 3) return getActiveWeekThreeExecution;
   return getActiveWeekTwoExecution;
 }
 
 function pilotWeekExecutionResultPayload(week: PilotExecutionWeek, execution: PilotWeekStartResult | ActivePilotWeekExecution) {
+  if (week === 5) return { pilotWeekExecution: execution, weekFiveExecution: execution };
   if (week === 4) return { pilotWeekExecution: execution, weekFourExecution: execution };
   if (week === 3) return { pilotWeekExecution: execution, weekThreeExecution: execution };
   return { pilotWeekExecution: execution, weekTwoExecution: execution };
@@ -1196,6 +1252,10 @@ async function showWeekFourExecutionFromTelegram(context: TelegramExecutionConte
   return showPilotWeekExecutionFromTelegram(context, 4);
 }
 
+async function showWeekFiveExecutionFromTelegram(context: TelegramExecutionContext) {
+  return showPilotWeekExecutionFromTelegram(context, 5);
+}
+
 async function showPilotWeekExecutionFromTelegram(context: TelegramExecutionContext, week: PilotExecutionWeek) {
   const getActiveExecution = pilotWeekActiveExecutionCommand(week);
   const execution = await getActiveExecution(context.tenantId);
@@ -1221,6 +1281,7 @@ async function showPilotWeekExecutionFromTelegram(context: TelegramExecutionCont
 async function executeTelegramAction(input: TelegramActionInput, context: { tenantId: string; userId?: string }) {
   let result: Row | null = null;
   let weekTwoExecution: Awaited<ReturnType<typeof startWeekTwoExecution>> | null = null;
+  let pilotWeekExecution: PilotWeekStartResult | null = null;
 
   if (input.action === "approval.approve") {
     result = await decideApproval({
@@ -1230,12 +1291,14 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
       decidedBy: context.userId,
       decisionNote: input.note
     });
-    if (result?.scope === "pilot_week_2_scope" && result.status === "approved") {
-      weekTwoExecution = await startWeekTwoExecution({
+    const pilotWeek = pilotScopeWeek(result?.scope);
+    if (pilotWeek === 2 && result?.status === "approved") {
+      pilotWeekExecution = await startWeekTwoExecution({
         tenantId: context.tenantId,
         userId: context.userId,
         note: input.note || "Started from Telegram scope approval."
       });
+      weekTwoExecution = pilotWeekExecution;
     }
   }
 
@@ -1265,6 +1328,7 @@ async function executeTelegramAction(input: TelegramActionInput, context: { tena
     action: input.action,
     result,
     ownerBrief: buildOwnerBrief(briefData),
+    pilotWeekExecution,
     weekTwoExecution
   };
 }
@@ -2491,7 +2555,12 @@ function isAdvisorQuestion(text: string) {
     "что посоветуешь",
     "как лучше поступить",
     "reuse или expand",
-    "expand или reuse"
+    "expand или reuse",
+    "а почему",
+    "почему?",
+    "что выбрать",
+    "покажи подробнее",
+    "подробнее"
   ])) return true;
 
   return isQuestionLike(text) && !includesAny(text, [
@@ -2593,6 +2662,14 @@ function deterministicAdvisorText(input: { question: string; ownerBrief: OwnerBr
       : "Почему такой scope: в текущем состоянии нет активного pilot scope approval, поэтому опираюсь на ближайший gate и подтвержденные публикации.");
   }
 
+  const previousAdvisorContext = input.contextPack.previousAdvisorContext && typeof input.contextPack.previousAdvisorContext === "object"
+    ? input.contextPack.previousAdvisorContext as Row
+    : null;
+  if (previousAdvisorContext && includesAny(input.question.toLowerCase(), ["почему", "зачем", "что выбрать", "подробнее"])) {
+    lines.push("");
+    lines.push(`Продолжаю предыдущий вопрос: ${textValue(previousAdvisorContext.question, "предыдущий advisor context")}.`);
+  }
+
   lines.push("");
   lines.push("Я не меняю состояние без отдельной кнопки или явной команды.");
   return lines.join("\n");
@@ -2662,10 +2739,50 @@ function advisorButtons(input: { ownerBrief: OwnerBrief; activeExecution: Active
   return ownerControlButtons(input.ownerBrief);
 }
 
+async function loadLatestAdvisorHistory(tenantId: string): Promise<AdvisorHistoryEntry | null> {
+  const rows = await listRows("integrations", { tenantId, limit: 20 });
+  const row = rows.find((item) => item.provider === "telegram_advisor_context") as Row | undefined;
+  const configData = row?.config && typeof row.config === "object" ? row.config as Row : {};
+  const question = textValue(configData.question, "");
+  if (!question) return null;
+  return {
+    activePilotExecution: configData.activePilotExecution && typeof configData.activePilotExecution === "object"
+      ? configData.activePilotExecution as Row
+      : null,
+    answerPreview: textValue(configData.answerPreview, ""),
+    id: typeof row?.id === "string" ? row.id : undefined,
+    question,
+    updatedAt: textValue(configData.updatedAt, textValue(row?.created_at, ""))
+  };
+}
+
+async function saveAdvisorHistory(input: {
+  answer: string;
+  contextPack: Row;
+  question: string;
+  tenantId: string;
+}) {
+  await insertJson("integrations", {
+    provider: "telegram_advisor_context",
+    status: "advisory_only",
+    config: {
+      activePilotExecution: input.contextPack.activePilotExecution ?? null,
+      answerPreview: input.answer.slice(0, 700),
+      constraints: input.contextPack.constraints,
+      previousQuestion: (input.contextPack.previousAdvisorContext as Row | null)?.question ?? null,
+      question: input.question,
+      updatedAt: new Date().toISOString()
+    },
+    last_checked_at: null
+  }, input.tenantId);
+}
+
 async function executeTelegramAdvisorIntent(input: TelegramIntentInput, context: TelegramExecutionContext) {
   const briefData = await loadOwnerBriefData(context.tenantId);
   const ownerBrief = buildOwnerBrief(briefData);
+  const previousAdvisorContext = await loadLatestAdvisorHistory(context.tenantId);
   const activeExecutions = await Promise.all([
+    getActiveWeekFiveExecution(context.tenantId),
     getActiveWeekFourExecution(context.tenantId),
     getActiveWeekThreeExecution(context.tenantId),
     getActiveWeekTwoExecution(context.tenantId)
@@ -2682,6 +2799,7 @@ async function executeTelegramAdvisorIntent(input: TelegramIntentInput, context:
     ],
     counts: ownerBrief.counts,
     nextAction: ownerBrief.nextAction,
+    previousAdvisorContext,
     pendingApprovals: ownerBrief.decisions.slice(0, 5).map(compactApprovalForAdvisor),
     activePilotExecution: compactExecutionForAdvisor(activeExecution),
     latestPublishedResults: ownerBrief.publishedResults.slice(0, 3).map((result) => ({
@@ -2704,10 +2822,17 @@ async function executeTelegramAdvisorIntent(input: TelegramIntentInput, context:
     activeExecution,
     contextPack
   });
+  const sanitizedText = sanitizeAdvisorText(text);
+  await saveAdvisorHistory({
+    answer: sanitizedText,
+    contextPack,
+    question: input.text,
+    tenantId: context.tenantId
+  });
   return {
     intent: "advisor_question",
     command: null,
-    text: sanitizeAdvisorText(text),
+    text: sanitizedText,
     buttons: advisorButtons({ ownerBrief, activeExecution }),
     ownerBrief,
     advisorContext: contextPack
@@ -2989,6 +3114,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
   }
 
   if (publicationResultCommand) {
+    const activeWeekFiveExecution = await getActiveWeekFiveExecution(context.tenantId);
+    if (activeWeekFiveExecution?.current_gate === "result_review") {
+      return completeWeekFiveReviewFromTelegram(publicationResultCommand, input, context);
+    }
     const activeWeekFourExecution = await getActiveWeekFourExecution(context.tenantId);
     if (activeWeekFourExecution?.current_gate === "result_review") {
       return completeWeekFourReviewFromTelegram(publicationResultCommand, input, context);
@@ -3004,7 +3133,7 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     if (publicationResultCommand === "leave") {
       return {
         command: "leave",
-        text: "Для обычного результата публикации `leave` уже означает оставить материал как есть. Для week-2/week-3/week-4 review используйте эту команду на gate `result_review`.",
+        text: "Для обычного результата публикации `leave` уже означает оставить материал как есть. Для week-2/week-3/week-4/week-5 review используйте эту команду на gate `result_review`.",
         buttons: publicationResultCommandButtons(ownerBrief),
         ownerBrief
       };
@@ -3028,6 +3157,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
     return showWeekFourExecutionFromTelegram(context);
   }
 
+  if (weekFiveStatusCommandFromText(command)) {
+    return showWeekFiveExecutionFromTelegram(context);
+  }
+
   if (weekTwoStartCommandFromText(command)) {
     return startWeekTwoExecutionFromTelegram(input, context);
   }
@@ -3038,6 +3171,10 @@ async function executeTelegramCommand(input: TelegramCommandInput, context: Tele
 
   if (weekFourStartCommandFromText(command)) {
     return startWeekFourExecutionFromTelegram(input, context);
+  }
+
+  if (weekFiveStartCommandFromText(command)) {
+    return startWeekFiveExecutionFromTelegram(input, context);
   }
 
   if (["reset", "restart", "перезапуск", "перезапустить"].includes(command)) {
@@ -3805,6 +3942,12 @@ function isTelegramOwnerAllowed(update: TelegramUpdate, allowedUsers: Set<string
 
 function renderTelegramActionResultMessage(actionResult: Awaited<ReturnType<typeof executeTelegramAction>>) {
   if ("text" in actionResult && typeof actionResult.text === "string") return actionResult.text;
+
+  if (actionResult.pilotWeekExecution) {
+    const taskType = String(actionResult.pilotWeekExecution.task?.task_type || "");
+    const week = Number(taskType.match(/pilot_week_(\d+)_execution/)?.[1] || 2);
+    return renderPilotWeekExecutionMessage(actionResult.pilotWeekExecution, week);
+  }
 
   if (actionResult.weekTwoExecution) {
     return renderWeekTwoExecutionMessage(actionResult.weekTwoExecution);

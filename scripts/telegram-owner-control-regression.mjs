@@ -317,6 +317,16 @@ async function main() {
   expectIncludes(nextBrief.text, "не меняю состояние", "advisor read-only boundary");
   expectNoCommandUx(nextBrief, "brief after prepare");
   expectNoOwnerNoise(nextBrief, "brief after prepare");
+  const advisorCountsBefore = await calendarStatusCounts();
+  const advisorFollowup = await request("/telegram/intent", { text: "а почему?" });
+  expectEquals(advisorFollowup.intent, "advisor_question", "advisor follow-up intent");
+  expectIncludes(advisorFollowup.text, "Продолжаю предыдущий вопрос", "advisor follow-up previous context");
+  expectIncludes(advisorFollowup.text, "не меняю состояние", "advisor follow-up read-only boundary");
+  expectEquals(advisorFollowup.advisorContext?.previousAdvisorContext?.question, "что дальше", "advisor follow-up previous question");
+  expectNoCommandUx(advisorFollowup, "advisor follow-up");
+  expectNoOwnerNoise(advisorFollowup, "advisor follow-up");
+  const advisorCountsAfter = await calendarStatusCounts();
+  expectEquals(JSON.stringify(advisorCountsAfter), JSON.stringify(advisorCountsBefore), "advisor follow-up should not mutate publication state");
 
   const published = await request("/telegram/intent", { text: "что вышло" });
   expectEquals(published.intent, "published_status", "published status intent");

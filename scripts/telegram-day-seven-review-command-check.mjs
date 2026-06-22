@@ -13,6 +13,7 @@ process.env.AI_GROWTH_OS_LOCAL_DATA_FILE = localDataFile;
 const { authPlugin } = await import("../apps/backend/dist/modules/auth/plugin.js");
 const { registerRoutes } = await import("../apps/backend/dist/routes.js");
 const { query } = await import("../apps/backend/dist/db/client.js");
+const { listRows } = await import("../apps/backend/dist/modules/common/repository.js");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -354,6 +355,95 @@ try {
   assert(advisorScope.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek4.data.reviewResult.week_5_scope.approval.id), "telegram advisor should return week-5 scope approval button");
   assert(!advisorScope.data.text.includes("guaranteed leads"), "telegram advisor must not promise guaranteed leads");
   assert(!advisorScope.data.text.includes("revenue attribution"), "telegram advisor must not mention revenue attribution");
+  const advisorFollowup = await inject("POST", "/telegram/intent", {
+    text: "а почему?"
+  }, tenantId);
+  assert(advisorFollowup.response.statusCode === 200, `telegram advisor follow-up failed: ${advisorFollowup.response.statusCode} ${advisorFollowup.response.body}`);
+  assert(advisorFollowup.data.intent === "advisor_question", "telegram advisor follow-up intent mismatch");
+  assert(advisorFollowup.data.advisorContext?.previousAdvisorContext?.question === "почему такой scope и что делать дальше?", "telegram advisor follow-up should include previous context");
+  assert(advisorFollowup.data.text.includes("Продолжаю предыдущий вопрос"), "telegram advisor follow-up should reference previous context");
+  assert(advisorFollowup.data.text.includes("не меняю состояние"), "telegram advisor follow-up should remain advisory-only");
+  const advisorHistoryRows = (await listRows("integrations", { tenantId, limit: 30 })).filter((row) => row.provider === "telegram_advisor_context");
+  assert(advisorHistoryRows.length >= 2, "telegram advisor history rows missing");
+  assert(advisorHistoryRows.every((row) => row.status === "advisory_only"), "telegram advisor history must be advisory-only");
+
+  const blockedWeek5 = await inject("POST", "/telegram/commands", {
+    command: "/week5",
+    note: "Try before approving week-5 scope."
+  }, tenantId);
+  assert(blockedWeek5.response.statusCode === 200, `telegram week-5 blocked command failed: ${blockedWeek5.response.statusCode} ${blockedWeek5.response.body}`);
+  assert(blockedWeek5.data.text.includes("сначала согласуйте"), "telegram week-5 should be blocked before approval");
+  const approvedWeekFiveScope = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: closedWeek4.data.reviewResult.week_5_scope.approval.id,
+    note: "Approve week-5 scope from Telegram."
+  }, tenantId);
+  assert(approvedWeekFiveScope.response.statusCode === 200, `telegram week-5 scope approve failed: ${approvedWeekFiveScope.response.statusCode} ${approvedWeekFiveScope.response.body}`);
+  assert(approvedWeekFiveScope.data.result?.scope === "pilot_week_5_scope", "telegram week-5 scope approval result mismatch");
+  assert(approvedWeekFiveScope.data.result?.status === "approved", "telegram week-5 scope approval status mismatch");
+  const weekFiveMaterialRows = await query("select * from content_items where id = $1 and tenant_id = $2", [closedWeek4.data.reviewResult.week_5_scope.next_material.id, tenantId]);
+  assert(weekFiveMaterialRows.rows[0]?.metadata?.week_5_scope?.approval_status === "approved", "telegram approved week-5 material metadata missing");
+  const startedWeek5 = await inject("POST", "/telegram/commands", {
+    command: "/week5",
+    note: "Start week-5 from Telegram."
+  }, tenantId);
+  assert(startedWeek5.response.statusCode === 200, `telegram week-5 start failed: ${startedWeek5.response.statusCode} ${startedWeek5.response.body}`);
+  assert(startedWeek5.data.weekFiveExecution?.status === "started", "telegram week-5 command should start execution");
+  assert(startedWeek5.data.weekFiveExecution?.task?.task_type === "pilot_week_5_execution", "telegram week-5 execution task missing");
+  const week5Status = await inject("POST", "/telegram/commands", {
+    command: "/w5"
+  }, tenantId);
+  assert(week5Status.response.statusCode === 200, `telegram week-5 status failed: ${week5Status.response.statusCode} ${week5Status.response.body}`);
+  assert(week5Status.data.text.includes("Week-5 execution"), "telegram week-5 status title missing");
+  assert(week5Status.data.text.includes("согласование материала"), "telegram week-5 status should show material approval gate");
+  assert(week5Status.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === startedWeek5.data.weekFiveExecution.approval.id), "telegram week-5 material approval button missing");
+  const week5MaterialApproval = await inject("POST", "/telegram/actions", {
+    action: "approval.approve",
+    targetId: startedWeek5.data.weekFiveExecution.approval.id,
+    note: "Approve week-5 material from Telegram."
+  }, tenantId);
+  assert(week5MaterialApproval.response.statusCode === 200, `telegram week-5 material approve failed: ${week5MaterialApproval.response.statusCode} ${week5MaterialApproval.response.body}`);
+  const week5QaStatus = await inject("POST", "/telegram/commands", {
+    command: "/week5_status"
+  }, tenantId);
+  assert(week5QaStatus.data.text.includes("QA и передача на выпуск"), "telegram week-5 status should move to QA/release gate");
+  const week5HandoffButton = week5QaStatus.data.buttons?.find((button) => button.command === "handoff" && button.targetId);
+  assert(week5HandoffButton?.targetId, "telegram week-5 handoff button missing");
+  const week5Handoff = await inject("POST", "/telegram/commands", {
+    command: "/handoff",
+    targetId: week5HandoffButton.targetId,
+    note: "Week-5 QA passed."
+  }, tenantId);
+  assert(week5Handoff.response.statusCode === 200, `telegram week-5 handoff failed: ${week5Handoff.response.statusCode} ${week5Handoff.response.body}`);
+  const confirmedWeek5 = await inject("POST", `/publishing/items/${week5HandoffButton.targetId}/confirm-live`, {
+    note: "Week-5 URL confirmed.",
+    publicationUrl: "https://t.me/agentresult/807",
+    format: "telegram_post",
+    primaryReactions: {
+      comments: 1,
+      reposts: 0,
+      saves: 2,
+      reactions: 5
+    },
+    nextStep: "reuse",
+    nextStepNote: "Review week-5 result in product."
+  }, tenantId);
+  assert(confirmedWeek5.response.statusCode === 200, `week-5 confirm-live failed: ${confirmedWeek5.response.statusCode} ${confirmedWeek5.response.body}`);
+  const week5ReviewStatus = await inject("POST", "/telegram/commands", {
+    command: "/week5_status"
+  }, tenantId);
+  assert(week5ReviewStatus.data.text.includes("review результата"), "telegram week-5 status should move to result review gate");
+  const week5ReuseButton = week5ReviewStatus.data.buttons?.find((button) => button.command === "reuse" && button.targetId);
+  assert(week5ReuseButton?.targetId, "telegram week-5 result review button missing");
+  const closedWeek5 = await inject("POST", "/telegram/commands", {
+    command: "/reuse",
+    targetId: week5ReuseButton.targetId,
+    note: "Reuse week-5 proof into week-6 scope."
+  }, tenantId);
+  assert(closedWeek5.response.statusCode === 200, `telegram week-5 review command failed: ${closedWeek5.response.statusCode} ${closedWeek5.response.body}`);
+  assert(closedWeek5.data.text.includes("Week-5 review закрыт"), "telegram week-5 review close text missing");
+  assert(closedWeek5.data.reviewResult?.week_6_scope?.approval?.scope === "pilot_week_6_scope", "telegram week-5 review should create week-6 scope");
+  assert(closedWeek5.data.buttons?.some((button) => button.command === "osapprove" && button.targetId === closedWeek5.data.reviewResult.week_6_scope.approval.id), "telegram week-6 approval button missing");
 
   const otherPilot = await startPilot(otherTenantId, "Telegram Day-7 leave material");
   const otherPublicationResult = await confirmPublication(otherTenantId, otherPilot, 802);

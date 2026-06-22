@@ -57,8 +57,10 @@ function assertDashboardScriptContract() {
   assert(appJs.includes("api(`/pilot/week-${week}/review`"), "Dashboard week-N review must call backend pilot command");
   assert(appJs.includes('api("/pilot/week-3/execution"'), "Dashboard must load backend week-3 execution state");
   assert(appJs.includes('api("/pilot/week-4/execution"'), "Dashboard must load backend week-4 execution state");
+  assert(appJs.includes('api("/pilot/week-5/execution"'), "Dashboard must load backend week-5 execution state");
   assert(appJs.includes("state.weekThreeExecution"), "Dashboard week-3 execution state slot is missing");
   assert(appJs.includes("state.weekFourExecution"), "Dashboard week-4 execution state slot is missing");
+  assert(appJs.includes("state.weekFiveExecution"), "Dashboard week-5 execution state slot is missing");
   assert(appJs.includes("setPilotWeekExecutionState(week, null)"), "Dashboard must clear generic week execution after backend review");
   assert(appJs.includes("executeStartPilotWeekExecutionCommand(pilotWeek"), "Dashboard must start approved pilot week scopes generically");
   assert(appJs.includes("function pilotWeekExecutionPanel"), "Dashboard must render week-N execution with a generic panel");

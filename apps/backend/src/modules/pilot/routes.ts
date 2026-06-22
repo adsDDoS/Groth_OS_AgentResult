@@ -115,6 +115,18 @@ export async function pilotRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.get("/pilot/week-5/execution", async (request, reply) => {
+    const result = await getActiveWeekFiveExecution(request.tenantId);
+    if (!result) {
+      reply.status(404);
+      return {
+        error: "PilotWeekFiveExecutionNotFound",
+        message: "No active week-5 execution workspace is available."
+      };
+    }
+    return { data: result };
+  });
+
   app.post("/pilot/week-2/start", async (request, reply) => {
     const body = weekTwoStartBody.parse(request.body ?? {});
     const result = await startWeekTwoExecution({
@@ -166,6 +178,23 @@ export async function pilotRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.post("/pilot/week-5/start", async (request, reply) => {
+    const body = weekTwoStartBody.parse(request.body ?? {});
+    const result = await startWeekFiveExecution({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekFiveNotReady",
+        message: "Week-5 execution requires an approved pilot_week_5_scope approval."
+      };
+    }
+    return { data: result };
+  });
+
   app.post("/pilot/week-2/review", async (request, reply) => {
     const body = weekTwoReviewBody.parse(request.body ?? {});
     const result = await completeWeekTwoReview({
@@ -212,6 +241,23 @@ export async function pilotRoutes(app: FastifyInstance) {
       return {
         error: "PilotWeekFourReviewNotReady",
         message: "Week-4 review requires active week-4 execution and a confirmed week-4 publication result."
+      };
+    }
+    return { data: result };
+  });
+
+  app.post("/pilot/week-5/review", async (request, reply) => {
+    const body = weekTwoReviewBody.parse(request.body ?? {});
+    const result = await completeWeekFiveReview({
+      ...body,
+      tenantId: request.tenantId,
+      userId: request.userId
+    });
+    if (!result) {
+      reply.status(409);
+      return {
+        error: "PilotWeekFiveReviewNotReady",
+        message: "Week-5 review requires active week-5 execution and a confirmed week-5 publication result."
       };
     }
     return { data: result };
@@ -537,6 +583,10 @@ export async function getActiveWeekFourExecution(tenantId: string) {
   return getActivePilotWeekExecution(tenantId, 4);
 }
 
+export async function getActiveWeekFiveExecution(tenantId: string) {
+  return getActivePilotWeekExecution(tenantId, 5);
+}
+
 async function getActivePilotWeekExecution(tenantId: string, week: number) {
   const scopeKey = `week_${week}_scope`;
   const executionKey = `week_${week}_execution`;
@@ -622,6 +672,10 @@ export async function completeWeekThreeReview(input: WeekTwoReviewInput) {
 
 export async function completeWeekFourReview(input: WeekTwoReviewInput) {
   return completePilotWeekReview(input, 4);
+}
+
+export async function completeWeekFiveReview(input: WeekTwoReviewInput) {
+  return completePilotWeekReview(input, 5);
 }
 
 async function completePilotWeekReview(input: WeekTwoReviewInput, sourceWeek: number) {
@@ -780,6 +834,10 @@ export async function startWeekThreeExecution(input: WeekTwoStartInput) {
 
 export async function startWeekFourExecution(input: WeekTwoStartInput) {
   return startPilotWeekExecution(input, 4);
+}
+
+export async function startWeekFiveExecution(input: WeekTwoStartInput) {
+  return startPilotWeekExecution(input, 5);
 }
 
 async function startPilotWeekExecution(input: WeekTwoStartInput, week: number) {

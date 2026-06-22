@@ -227,6 +227,14 @@ Request body:
 
 Response includes `{ decision, publication_result, action, target, target_type, week_5_scope, week_4_review, task, workspace_state }`. `week_5_scope` is created by the same shared next-scope proposal builder with `pilot_week_5_scope` approval, next material, board, roles, and one-channel constraint.
 
+`GET /pilot/week-5/execution` returns the active backend-owned week-5 working surface for dashboard and Telegram. It returns `week: 5`, active material, material approval, week-5 board, roles, publication result, current gate, and action targets for `material_approval -> qa_release_handoff -> url_confirmation -> result_review`.
+
+`POST /pilot/week-5/start` starts backend-owned week-5 execution only after `pilot_week_5_scope` is approved. It uses the same week execution command path as weeks 2-4: the next material moves into review, the first week-5 board item is marked started, a `pilot_week_5_execution` task is created, a week-5 material approval is opened, tenant workspace state moves to `mode: "week_5"`, and owner-action audit records `pilot.week_5.start`.
+
+`POST /pilot/week-5/review` closes the active week-5 loop after the week-5 publication URL is confirmed. It uses the same backend-owned week review command path as weeks 2-4: records `expand / reuse / update / leave`, completes `pilot_week_5_execution`, marks the week-5 result-review board item complete, creates a backend-owned `week_6_scope` proposal, updates tenant workspace state, and writes owner-action audit.
+
+Response includes `{ decision, publication_result, action, target, target_type, week_6_scope, week_5_review, task, workspace_state }`. `week_6_scope` is created by the same shared next-scope proposal builder with `pilot_week_6_scope` approval, next material, board, roles, and one-channel constraint.
+
 ## SEO/GEO
 
 - `POST /seo/analyze-page`
@@ -374,6 +382,8 @@ For week-3 execution, `/telegram/commands` supports `/week3`, `/week_3`, `/week-
 
 For week-4 execution, `/telegram/commands` supports `/week4`, `/week_4`, `/week-4`, `/start_week4`, and `/start_week_4`. It calls the same backend `POST /pilot/week-4/start` workflow and is blocked until `pilot_week_4_scope` is approved. `/week4_status`, `/week4_board`, and `/w4` render `GET /pilot/week-4/execution` with the same gate/action controls as earlier execution weeks: material approval, QA/release handoff, URL confirmation, and result-review buttons. When active week-4 execution is at `result_review`, Telegram `reuse`, `expand`, `update`, and `leave` commands call `POST /pilot/week-4/review` and return the created `week_5_scope` approval buttons instead of using the generic publication-result workflow.
 
+For week-5 execution, `/telegram/commands` supports `/week5`, `/week_5`, `/week-5`, `/start_week5`, and `/start_week_5`. It calls the same backend `POST /pilot/week-5/start` workflow and is blocked until `pilot_week_5_scope` is approved. `/week5_status`, `/week5_board`, and `/w5` render `GET /pilot/week-5/execution` with material approval, QA/release handoff, URL confirmation, and result-review buttons. When active week-5 execution is at `result_review`, Telegram `reuse`, `expand`, `update`, and `leave` commands call `POST /pilot/week-5/review` and return the created `week_6_scope` approval buttons instead of using the generic publication-result workflow.
+
 `POST /telegram/intent` maps ordinary owner language to safe backend commands/actions. It is the preferred path for natural-language Telegram messages where the owner should not need slash commands.
 
 The same intent router can be used by the backend owner-control polling middleware. Enable it with `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=1` only after disabling Hermes polling for the same bot token. The middleware uses the Telegram allowlist, routes owner text through backend intent logic, and sends back only owner-facing text.
@@ -401,7 +411,7 @@ Common intent examples:
 - `опубликуй напрямую`, `отправь в канал` -> direct publishing boundary response;
 - `что по результату` -> result summary.
 
-Advisor safety: `advisor_question` is read-only. Backend builds a tenant-safe context pack from owner brief, pending approvals, active pilot execution, confirmed publication results, and preparing tasks. Hermes may produce the owner-facing answer when `HERMES_API_KEY` is configured; otherwise backend returns a deterministic advisory answer from the same context. Advisor answers must not mutate state, publish, approve, request changes, start weeks, close reviews, expose raw API/VPS/env/tool details, or promise guaranteed leads/sales/revenue attribution. Buttons are still generated from existing backend read models and point to explicit commands/actions such as approve scope, request changes, confirm URL, or review result.
+Advisor safety: `advisor_question` is read-only. Backend builds a tenant-safe context pack from owner brief, pending approvals, active pilot execution, confirmed publication results, preparing tasks, and the latest short advisor context history. Hermes may produce the owner-facing answer when `HERMES_API_KEY` is configured; otherwise backend returns a deterministic advisory answer from the same context. Advisor follow-ups such as `а почему?`, `что выбрать?`, and `покажи подробнее` can reference the latest advisor context, but history is stored only as `telegram_advisor_context` / `advisory_only` integration rows and must not become action state. Advisor answers must not mutate state, publish, approve, request changes, start weeks, close reviews, expose raw API/VPS/env/tool details, or promise guaranteed leads/sales/revenue attribution. Buttons are still generated from existing backend read models and point to explicit commands/actions such as approve scope, request changes, confirm URL, or review result.
 
 Owner-facing response text should use natural action language instead of listing slash commands as the main next step. Slash commands remain supported as a technical compatibility contract for Hermes quick commands and dry-runs.
 

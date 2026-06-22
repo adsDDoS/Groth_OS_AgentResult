@@ -557,6 +557,7 @@ const state = {
   weekTwoExecution: null,
   weekThreeExecution: null,
   weekFourExecution: null,
+  weekFiveExecution: null,
   resultSignals: [],
   agents: demo.agents,
   tasks: [],
@@ -702,7 +703,7 @@ async function loadData() {
     await api("/health");
     setBackendStatus(true);
 
-    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution, weekThreeExecution, weekFourExecution] = await Promise.all([
+    const [me, offer, demand, approvals, agents, metrics, content, calendar, distributionSignals, publicationResults, workspaceState, weekTwoExecution, weekThreeExecution, weekFourExecution, weekFiveExecution] = await Promise.all([
       api("/me"),
       api("/offer"),
       api("/demand-map"),
@@ -716,7 +717,8 @@ async function loadData() {
       api("/workspace/state").catch(() => ({ data: {} })),
       api("/pilot/week-2/execution").catch(() => ({ data: null })),
       api("/pilot/week-3/execution").catch(() => ({ data: null })),
-      api("/pilot/week-4/execution").catch(() => ({ data: null }))
+      api("/pilot/week-4/execution").catch(() => ({ data: null })),
+      api("/pilot/week-5/execution").catch(() => ({ data: null }))
     ]);
     const tasks = await api("/tasks").catch(() => ({ data: [] }));
 
@@ -738,9 +740,11 @@ async function loadData() {
     state.weekTwoExecution = weekTwoExecution.data && typeof weekTwoExecution.data === "object" ? weekTwoExecution.data : null;
     state.weekThreeExecution = weekThreeExecution.data && typeof weekThreeExecution.data === "object" ? weekThreeExecution.data : null;
     state.weekFourExecution = weekFourExecution.data && typeof weekFourExecution.data === "object" ? weekFourExecution.data : null;
+    state.weekFiveExecution = weekFiveExecution.data && typeof weekFiveExecution.data === "object" ? weekFiveExecution.data : null;
     mergePilotWeekExecutionState(state.weekTwoExecution);
     mergePilotWeekExecutionState(state.weekThreeExecution);
     mergePilotWeekExecutionState(state.weekFourExecution);
+    mergePilotWeekExecutionState(state.weekFiveExecution);
     state.tasks = Array.isArray(tasks.data) ? tasks.data.map(normalizeTask) : [];
     state.metrics = {
       ...deriveMetrics(metrics.data || {}),
@@ -771,6 +775,7 @@ async function loadData() {
     state.weekTwoExecution = null;
     state.weekThreeExecution = null;
     state.weekFourExecution = null;
+    state.weekFiveExecution = null;
   }
 
   if (shouldUseLocalWorkspaceFallback()) {
@@ -2265,7 +2270,7 @@ function pilotWeekExecutionPanel(execution) {
 }
 
 function activePilotWeekExecutions() {
-  return [state.weekTwoExecution, state.weekThreeExecution, state.weekFourExecution].filter((execution) => execution?.status === "active");
+  return [state.weekTwoExecution, state.weekThreeExecution, state.weekFourExecution, state.weekFiveExecution].filter((execution) => execution?.status === "active");
 }
 
 function pilotExecutionWeek(execution) {
@@ -6999,7 +7004,7 @@ async function decideApproval(item, action, note = "") {
     item.decided_at = new Date().toISOString();
     appendAudit(item, nextStatus, note);
     const pilotWeek = pilotScopeWeek(item.scope);
-    if (pilotWeek >= 2 && pilotWeek <= 4 && nextStatus === "approved") {
+    if (pilotWeek >= 2 && pilotWeek <= 5 && nextStatus === "approved") {
       await executeStartPilotWeekExecutionCommand(pilotWeek, { note: note || "Started from dashboard scope approval." });
     }
     state.selectedApprovalId = state.approvals.find((approval) => approval.status === "pending")?.id || "";
@@ -7058,7 +7063,8 @@ async function refreshWeekThreeExecution() {
 }
 
 function setPilotWeekExecutionState(week, execution) {
-  if (week === 4) state.weekFourExecution = execution;
+  if (week === 5) state.weekFiveExecution = execution;
+  else if (week === 4) state.weekFourExecution = execution;
   else if (week === 3) state.weekThreeExecution = execution;
   else state.weekTwoExecution = execution;
 }

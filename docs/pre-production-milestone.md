@@ -15,6 +15,10 @@ Closed:
 - Backend can enforce API-key access and tenant whitelist through environment
   variables.
 - Backup restore drill command exists.
+- Pilot week execution/review loop is backend-owned through week 5 and creates
+  `pilot_week_6_scope` from the shared scope proposal builder.
+- Telegram advisor intent is read-only and supports short follow-up context
+  history without state mutation.
 
 Blocked by operator action:
 
@@ -27,13 +31,23 @@ Still required before customer pilot:
 - Set `AGENTRESULT_ALLOWED_TENANT_IDS` to the pilot tenant IDs only.
 - Run a fresh Postgres backup and restore drill.
 - Rotate all pasted or exposed production secrets.
+- Confirm tenant provisioning/reset policy for paid pilot: demo tenants may be
+  reset, pilot tenants require explicit operator action.
 
 ## Required Gates
 
 ```bash
 npm run content-factory:check
+npm run auth:tenant-guard:check
+npm run telegram:regression
+npm run telegram:day-seven-review:check
+npm run pilot:week-two-execution:check
+npm run dashboard:smoke
 npm run telegram:production-smoke
+npm run telegram:pilot-production-smoke
+npm run telegram:polling-invariant
 npm run vps:agentresult-health
+npm run vps:restore-drill
 ```
 
 GitHub Actions:
