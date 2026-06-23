@@ -159,23 +159,26 @@ process.stdin.on("end", () => {
     -H "content-type: application/json" \
     -H "x-tenant-id: $tenant_id" \
     "${auth_header_args[@]}" \
-    -d '{"text":"что по результату"}' \
-    "$OWNER_URL/telegram/intent" | node -e '
+    -d '{"command":"published_status"}' \
+    "$OWNER_URL/telegram/commands" | node -e '
 let input = "";
 process.stdin.on("data", chunk => input += chunk);
 process.stdin.on("end", () => {
   const body = JSON.parse(input);
   const data = body?.data || {};
-  if (data.intent !== "result" || !String(data.text || "").includes("AgentResult Growth Control")) {
+  const counts = data.ownerBrief?.counts || {};
+  if (data.command !== "published_status" || typeof counts.handedOff !== "number" || typeof counts.published !== "number") {
     console.error(input);
     process.exit(1);
   }
   console.log(JSON.stringify({
-    intent: data.intent,
+    command: data.command,
+    handedOff: counts.handedOff,
+    published: counts.published,
     buttons: (data.buttons || []).map((button) => button.label)
   }));
 });
-' || fail "owner-control Telegram intent check failed"
+' || fail "owner-control Telegram command check failed"
 
   echo "agentresult vps health passed"
 }

@@ -186,7 +186,7 @@ async function main() {
   });
   expectIncludes(onboardingChannel.text, "Шаг 3/7", "onboarding channel step");
 
-  const onboardingReleaseOwner = await request("/telegram/intent", { text: "Telegram и сайт" });
+  const onboardingReleaseOwner = await request("/telegram/intent", { text: "Первый канал — Telegram. MAX и vc.ru важны как следующие или ручные каналы после проверки первого контура." });
   expectIncludes(onboardingReleaseOwner.text, "Шаг 4/7", "onboarding release owner step");
 
   const onboardingFirstSignal = await request("/telegram/intent", { text: "Егор, собственник" });
@@ -210,6 +210,7 @@ async function main() {
 
   const offer = await get("/offer");
   expectEquals(offer.profile.releaseOwner, "Егор, собственник", "company release owner");
+  expectEquals(offer.profile.onboarding.channel, "telegram", "company onboarding first channel");
   expectEquals(offer.profile.firstSignalSource, "Заявки формы, ответы в Telegram и ручная отметка собственника", "company first signal source");
   expectEquals(offer.profile.onboarding.firstMaterial, "Пост про контроль выпуска без автопубликации", "company onboarding first material");
 

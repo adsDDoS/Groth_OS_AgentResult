@@ -118,16 +118,15 @@ curl -fsS -m 15 \
   -H "content-type: application/json" \
   -H "x-tenant-id: $tenant_id" \
   "${auth_header_args[@]}" \
-  -d '{"text":"что по результату"}' \
-  "$HOST_URL/telegram/intent" | node -e '
+  -d '{"command":"published_status"}' \
+  "$HOST_URL/telegram/commands" | node -e '
 let input = "";
 process.stdin.on("data", chunk => input += chunk);
 process.stdin.on("end", () => {
   const body = JSON.parse(input);
   const data = body?.data || {};
-  const text = String(data.text || "");
   const counts = data.ownerBrief?.counts || {};
-  if (data.intent !== "result" || !text.includes("AgentResult Growth Control")) {
+  if (data.command !== "published_status") {
     console.error(input);
     process.exit(1);
   }
@@ -136,13 +135,13 @@ process.stdin.on("end", () => {
     process.exit(1);
   }
   console.log(JSON.stringify({
-    intent: data.intent,
+    command: data.command,
     handedOff: counts.handedOff,
     published: counts.published,
     buttons: (data.buttons || []).map((button) => button.label)
   }));
 });
-' || fail "read-only Telegram intent smoke failed"
+' || fail "read-only Telegram command smoke failed"
 
 echo "telegram publication-result production smoke passed"
 REMOTE

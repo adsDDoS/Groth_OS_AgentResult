@@ -199,11 +199,11 @@ function channelLabel(value: unknown) {
 
 function normalizeChannel(value: string) {
   const text = value.toLowerCase();
+  if (text.includes("telegram") || text.includes("телеграм") || text.includes("тг")) return "telegram";
   if (text.includes("email") || text.includes("почт")) return "email";
   if (text.includes("habr") || text.includes("хабр")) return "habr";
   if (text.includes("vc")) return "vc";
   if (text.includes("сайт") || text.includes("cms")) return "site";
-  if (text.includes("telegram") || text.includes("телеграм") || text.includes("тг")) return "telegram";
   return "manual";
 }
 

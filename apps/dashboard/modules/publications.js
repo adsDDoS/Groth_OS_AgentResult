@@ -65,10 +65,10 @@ function publicationStateStrip() {
   const handedOff = state.calendar.filter((item) => item.status === "handed_off").length;
   const published = state.calendar.filter((item) => item.status === "published").length;
   const items = [
-    [text("Weekly topics", "Темы недели"), pending ? text("Decision needed", "Ждёт решения") : text("Clear", "Чисто"), text("owner boundaries", "границы собственника")],
+    [text("Weekly topics", "Темы недели"), pending ? text("Decision needed", "Ждёт решения") : text("Done", "Выполнено"), text("owner boundaries", "границы собственника")],
     [text("Release queue", "Очередь выпуска"), scheduled ? text("With manager", "У менеджера") : text("Empty", "Пусто"), text("AI draft and manager QA passed", "AI-текст и QA пройдены")],
-    [text("Result confirmation", "Подтверждение результата"), handedOff ? text("Awaiting owner", "Ждёт собственника") : text("Clear", "Чисто"), text("after live release", "после выхода")],
-    [text("Results", "Результаты"), published ? text("Counted", "Учтено") : text("No release", "Нет выхода"), text("tracked separately", "учтено отдельно")]
+    [text("Result confirmation", "Подтверждение результата"), handedOff ? text("Awaiting owner", "Ждёт собственника") : published ? text("Done", "Выполнено") : text("Clear", "Чисто"), text("after live release", "после выхода")],
+    [text("Results", "Результаты"), published ? text("Done", "Выполнено") : text("No release", "Нет выхода"), text("tracked separately", "учтено отдельно")]
   ];
 
   return `

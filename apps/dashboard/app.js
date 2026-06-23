@@ -1,5 +1,5 @@
 import { createToolsModule } from "./modules/tools.js?v=agentresult-working-os-122";
-import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-134";
+import { createPublicationsModule } from "./modules/publications.js?v=agentresult-working-os-135";
 import { createCompanyGrowthModule } from "./modules/company-growth.js?v=agentresult-working-os-122";
 
 const params = new URLSearchParams(window.location.search);
@@ -275,8 +275,8 @@ const RU = {
   "handed off": "ждёт подтверждения результата",
   "pending": "ожидает",
   "rejected": "отклонено",
-  "done": "готово",
-  "completed": "готово",
+  "done": "выполнено",
+  "completed": "выполнено",
   "queued": "в очереди",
   "in progress": "в работе",
   "changes requested": "нужны правки",
@@ -2177,7 +2177,7 @@ function commandCenterRows(pending) {
       meta: text("No blocking action is waiting.", "Блокирующих действий нет."),
       owner: text("Owner", "Собственник"),
       state: "done",
-      status: text("Clear", "Чисто"),
+      status: text("Done", "Выполнено"),
       due: text("Today", "Сегодня"),
       action: "go-demand-map",
       id: "",
@@ -2602,9 +2602,9 @@ function ownerCommandStatuses(pending) {
   return [
     {
       label: text("Result confirmation", "Подтверждение результата"),
-      value: handoffs ? text("Awaiting owner", "Ждёт собственника") : text("Clear", "Чисто"),
-      note: handoffs ? text("Only after live.", "Только после выхода.") : text("No wait.", "Не ждёт."),
-      state: handoffs ? "active" : "muted"
+      value: handoffs ? text("Awaiting owner", "Ждёт собственника") : published ? text("Done", "Выполнено") : text("Clear", "Чисто"),
+      note: handoffs ? text("Only after live.", "Только после выхода.") : published ? text("URL/result recorded.", "URL/результат зафиксирован.") : text("No wait.", "Не ждёт."),
+      state: handoffs ? "active" : published ? "done" : "muted"
     },
     {
       label: text("Weekly topics", "Темы недели"),
@@ -2620,9 +2620,9 @@ function ownerCommandStatuses(pending) {
     },
     {
       label: text("Result", "Результат"),
-      value: signals ? text("Signal recorded", "Есть сигнал") : published ? text("Release counted", "Выход учтён") : text("No signal", "Нет сигнала"),
-      note: signals ? text("Source recorded.", "Источник зафиксирован.") : published ? text("Watch signal.", "Смотрим сигнал.") : text("No signal yet.", "Сигнала пока нет."),
-      state: signals ? "done" : published ? "active" : "muted"
+      value: signals || published ? text("Done", "Выполнено") : text("No signal", "Нет сигнала"),
+      note: signals ? text("Source recorded.", "Источник зафиксирован.") : published ? text("Publication result recorded.", "Результат публикации зафиксирован.") : text("No signal yet.", "Сигнала пока нет."),
+      state: signals || published ? "done" : "muted"
     }
   ];
 }
