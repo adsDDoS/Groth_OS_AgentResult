@@ -109,7 +109,7 @@ Hermes agent должен присылать ссылки на публикац�
 | Stage | Product Surface | Expected Fact | Actual Fact | Owner Quote | Friction |
 | --- | --- | --- | --- | --- | --- |
 | Onboarding | Telegram `/onboarding` / dashboard Start Pilot | Intake completed. | Live Telegram onboarding completed; messages delivered in owner DM. | "Hermes agent в телеграм должен присылать ссылки для проверки в личку, также должно быть в дашборде где-то грамотно выполнено." | Backend `/telegram/commands/send` delivery was not configured, so operator used backend command + direct Telegram send workaround. |
-| First material | Telegram advisor + dashboard board | One material brief ready for owner decision. | Hermes task failed with `fetch failed`; fallback draft created through backend material command: content `2e8ef890-560c-4a09-864f-88a18e699e13`, approval `baf9bd17-d1e7-4d3e-8d2b-88d8369e9d3d`, Telegram notification `messageId: 306`. |  | AgentResult generation/runtime needs production fix; owner approval loop can continue from fallback draft. |
+| First material | Telegram advisor + dashboard board | One material brief ready for owner decision. | Hermes task failed with `fetch failed`; fallback draft created through backend material command: content `2e8ef890-560c-4a09-864f-88a18e699e13`, approval `baf9bd17-d1e7-4d3e-8d2b-88d8369e9d3d`, Telegram notification `messageId: 306`. Stale demo approval `10000000-0000-4000-8000-000000000403` was rejected through product API so owner-control shows only the real material. |  | AgentResult generation/runtime needs production fix; owner approval loop can continue from fallback draft. |
 | Approval | Telegram buttons / dashboard decisions | Owner approves or requests changes. |  |  |  |
 | QA | Dashboard board / Telegram status | QA passed or changes requested. |  |  |  |
 | Handoff | Telegram/dashboard action | Team receives release-ready material. |  |  |  |
@@ -127,9 +127,10 @@ Use one row per real friction point. Capture small issues; the first pilot is fo
 | F-003 | First material | P1 | Hermes onboarding first-material task failed with `fetch failed`. | Hermes runtime/API connectivity or dispatch config failed in production owner-control path. | Created controlled fallback material through backend so approval loop can continue. | Fix Hermes dispatch runtime and add production smoke for onboarding first-material generation. |
 | F-004 | Onboarding | P2 | Channel answer contained Telegram, MAX, and vc.ru; backend normalized it to `vc`. | `normalizeChannel()` checked `vc` before Telegram. | Local fix changes priority to Telegram first and regression covers Telegram + MAX + vc.ru answer. | Deploy updated owner-control before the next live onboarding. |
 | F-005 | Telegram UX | P2 | Owner sees too many `Согласовать` buttons across unrelated messages. | Reused owner-control shortcuts optimized demos/smokes, not live owner chat. | Button noise reduced: onboarding has no buttons; ready list has only `Материал`; decision buttons appear only inside material view. | Continue using buttons only when they apply to the object currently shown. |
-| F-006 | Handoff |  |  |  |  |  |
-| F-007 | URL confirmation |  |  |  |  |  |
-| F-008 | Day-7 review |  |  |  |  |  |
+| F-006 | Tenant hygiene | P1 | Owner brief showed the real first material plus an old demo approval. | Paid pilot tenant still carried synthetic demo state from preparation. | Rejected stale demo approval `10000000-0000-4000-8000-000000000403` through backend product API with operator note. | Pilot launch must start from clean tenant/workspace provisioning, not accumulated demo state. |
+| F-007 | Handoff |  |  |  |  |  |
+| F-008 | URL confirmation |  |  |  |  |  |
+| F-009 | Day-7 review |  |  |  |  |  |
 
 Severity:
 
