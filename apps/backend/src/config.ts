@@ -37,6 +37,7 @@ export const config = {
   hermesBaseUrl: process.env.HERMES_BASE_URL ?? "http://localhost:8080",
   hermesApiKey: process.env.HERMES_API_KEY ?? "",
   hermesModel: stringEnv(process.env.HERMES_MODEL, "hermes-agent"),
+  hermesMaxTokens: Number(process.env.HERMES_MAX_TOKENS ?? 2048),
   hermesRequestTimeoutMs: Number(process.env.HERMES_REQUEST_TIMEOUT_MS ?? 180000),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? process.env.HERMES_TELEGRAM_BOT_TOKEN ?? "",
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",

@@ -384,6 +384,7 @@ async function callHermesRuntime(input: { envelope: Row; runId: string }) {
       body: JSON.stringify({
         model: config.hermesModel,
         temperature: 0.2,
+        max_tokens: config.hermesMaxTokens,
         response_format: { type: "json_object" },
         messages: [
           {
