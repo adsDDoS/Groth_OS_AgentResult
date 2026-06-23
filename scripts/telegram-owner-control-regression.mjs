@@ -120,6 +120,13 @@ function expectButtonLabels(result, expectedLabels, label) {
   }
 }
 
+function expectNoButtons(result, label) {
+  const labels = (result.buttons ?? []).map((button) => button.label);
+  if (labels.length) {
+    throw new Error(`${label}: expected no buttons, got ${labels.join(", ")}`);
+  }
+}
+
 async function createMaterial(title, bodyMd) {
   return request("/telegram/materials", {
     title,
@@ -165,12 +172,14 @@ async function main() {
   const onboardingStart = await request("/telegram/commands", { command: "/onboarding" });
   expectIncludes(onboardingStart.text, "Шаг 1/7", "onboarding start");
   expectNoCommandUx(onboardingStart, "onboarding start");
+  expectNoButtons(onboardingStart, "onboarding start");
 
   const onboardingClient = await request("/telegram/intent", {
     text: "AgentResult Growth Control для B2B-компаний: регулярный выпуск материалов через согласование собственника"
   });
   expectIncludes(onboardingClient.text, "Шаг 2/7", "onboarding client step");
   expectNoCommandUx(onboardingClient, "onboarding client step");
+  expectNoButtons(onboardingClient, "onboarding client step");
 
   const onboardingChannel = await request("/telegram/intent", {
     text: "Собственники B2B-компаний, которым нужен контроль выпуска и результата"
@@ -194,6 +203,7 @@ async function main() {
   expectIncludes(onboardingComplete.text, "Ответственный за выпуск: Егор, собственник", "onboarding release owner summary");
   expectIncludes(onboardingComplete.text, "Первый сигнал: Заявки формы, ответы в Telegram", "onboarding first signal summary");
   expectNoCommandUx(onboardingComplete, "onboarding complete");
+  expectNoButtons(onboardingComplete, "onboarding complete");
   if (!onboardingComplete.hermesJob?.taskId) {
     throw new Error("onboarding did not create the first material task");
   }
@@ -216,12 +226,12 @@ async function main() {
   expectIncludes(ready.text, "Контроль выпуска материалов", "ready list");
   expectIncludes(ready.text, "Второй тестовый материал", "ready list");
   expectNoCommandUx(ready, "ready list");
-  expectButtonLabels(ready, ["Материал", "Согласовать", "Правки"], "ready buttons");
+  expectButtonLabels(ready, ["Материал"], "ready buttons");
 
   const first = await request("/telegram/intent", { text: "покажи первый" });
   expectIncludes(first.text, "контроль выпуска материалов", "show first");
   expectNoCommandUx(first, "show first");
-  expectButtonLabels(first, ["Согласовать", "Правки"], "show first buttons");
+  expectButtonLabels(first, ["Согласовать", "Нужны правки"], "show first buttons");
   expectEquals(first.buttons?.[0]?.targetId, ready.ownerBrief.decisions[0].id, "show first target");
 
   const byTopic = await request("/telegram/intent", { text: "покажи про контроль выпуска" });

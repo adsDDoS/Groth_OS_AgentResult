@@ -1056,10 +1056,10 @@ function weekTwoGateTelegramLabel(gate: string) {
 }
 
 function weekTwoGateTelegramAction(gate: string) {
-  if (gate === "material_approval") return "согласовать material";
+  if (gate === "material_approval") return "согласовать материал";
   if (gate === "qa_release_handoff") return "закрыть QA и передать в выпуск";
   if (gate === "url_confirmation") return "подтвердить URL публикации";
-  if (gate === "result_review") return "выбрать reuse / expand / update";
+  if (gate === "result_review") return "выбрать следующий шаг";
   return "проверить статус";
 }
 
@@ -1074,12 +1074,12 @@ function pilotWeekExecutionCommandButtons(execution: Awaited<ReturnType<typeof g
   if (gate === "material_approval") {
     const approve = actions.approve_material && typeof actions.approve_material === "object" ? actions.approve_material as Row : {};
     const approvalId = typeof approve.approval_id === "string" ? approve.approval_id : "";
-    return approvalId ? [commandButton("osapprove", "Согласовать material", approvalId)] : [commandButton("brief", "Сводка")];
+    return approvalId ? [commandButton("osapprove", "Согласовать материал", approvalId)] : [commandButton("brief", "Сводка")];
   }
   if (gate === "qa_release_handoff") {
     const handoff = actions.handoff_release && typeof actions.handoff_release === "object" ? actions.handoff_release as Row : {};
     const calendarId = typeof handoff.calendar_item_id === "string" ? handoff.calendar_item_id : "";
-    return calendarId ? [commandButton("handoff", "QA passed / handoff", calendarId)] : [commandButton("brief", "Сводка")];
+    return calendarId ? [commandButton("handoff", "Передано в выпуск", calendarId)] : [commandButton("brief", "Сводка")];
   }
   if (gate === "url_confirmation") {
     const confirm = actions.confirm_url && typeof actions.confirm_url === "object" ? actions.confirm_url as Row : {};
@@ -1090,10 +1090,10 @@ function pilotWeekExecutionCommandButtons(execution: Awaited<ReturnType<typeof g
   const resultId = typeof review.publication_result_id === "string" ? review.publication_result_id : "";
   return resultId
     ? [
-        commandButton("reuse", "Reuse", resultId),
-        commandButton("expand", "Expand", resultId),
-        commandButton("update", "Update", resultId),
-        commandButton("leave", "Leave", resultId)
+        commandButton("reuse", "Переиспользовать", resultId),
+        commandButton("expand", "Расширить", resultId),
+        commandButton("update", "Обновить", resultId),
+        commandButton("leave", "Оставить", resultId)
       ]
     : [commandButton("result", "Результат")];
 }
@@ -1606,7 +1606,7 @@ async function startOnboarding(context: TelegramExecutionContext) {
   return {
     command: "onboarding",
     text: isResume ? renderOnboardingMessage(state) : renderOnboardingMessage(),
-    buttons: ownerControlButtons(ownerBrief),
+    buttons: onboardingCommandButtons(),
     ownerBrief,
     onboarding: state
   };
@@ -1633,7 +1633,7 @@ async function continueOnboarding(input: TelegramIntentInput, context: TelegramE
       intent: "onboarding_continue",
       command: null,
       text: onboardingPrompt(nextStep),
-      buttons: ownerControlButtons(ownerBrief),
+      buttons: onboardingCommandButtons(),
       ownerBrief,
       onboarding: nextState
     };
@@ -1678,7 +1678,7 @@ async function continueOnboarding(input: TelegramIntentInput, context: TelegramE
         ? "Задача в работе. Я пришлю черновик отдельным сообщением, когда он будет готов."
         : "Задача в работе. Черновик появится на согласование после подготовки."
     ].join("\n"),
-    buttons: ownerControlButtons(ownerBrief),
+    buttons: onboardingCommandButtons(),
     hermesJob: {
       delivery: "queued",
       taskId: hermesTask.id
@@ -2447,9 +2447,7 @@ function briefCommandButtons(brief: OwnerBrief): TelegramCommandButton[] {
   const targetId = primaryDecisionIdFromBrief(brief);
   if (targetId) {
     return [
-      commandButton("post", "Материал", targetId),
-      commandButton("osapprove", "Согласовать", targetId),
-      commandButton("changes", "Правки", targetId)
+      commandButton("post", "Материал", targetId)
     ];
   }
 
@@ -2472,7 +2470,7 @@ function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): T
   const buttons = [commandButton("brief", "Сводка")];
 
   if (targetId) {
-    buttons.unshift(commandButton("changes", "Правки", targetId));
+    buttons.unshift(commandButton("changes", "Нужны правки", targetId));
     buttons.unshift(commandButton("osapprove", "Согласовать", targetId));
   }
 
@@ -2480,9 +2478,7 @@ function postCommandButtons(brief: OwnerBrief, selectedDecision?: Row | null): T
 }
 
 function onboardingCommandButtons(): TelegramCommandButton[] {
-  return [
-    commandButton("brief", "Сводка")
-  ];
+  return [];
 }
 
 function findApprovedContentForHandoff(input: BriefData) {
