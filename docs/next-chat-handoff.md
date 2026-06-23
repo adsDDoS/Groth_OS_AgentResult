@@ -190,16 +190,18 @@ Do not add lead, CRM, demand, or money language to publication results without a
 
 Latest completed checks before this handoff:
 
-- Production deploy: backend is `agentresult-os-backend:be3b96a`; owner-control is `agentresult-os-backend:4039eb0`.
-- Day-0 paid pilot preflight passed on 2026-06-23: `npm run telegram:regression`, `npm run telegram:pilot-production-smoke` with Telegram `messageId: 231`, `npm run telegram:production-smoke`, and `EXPECTED_OWNER_IMAGE_TAG=4039eb0 npm run vps:agentresult-health`.
-- `docs/paid-pilot-week-1-live-run.md` now has the real Day-0 Intake Payload and a paste-ready Telegram `/onboarding` script. The real client workspace is not launched yet; next action is to paste the seven messages into Telegram owner-control and wait for `Настройка зафиксирована` + `AgentResult взял задачу`.
-- First live friction to watch: owner expects Hermes/owner-control to send publication links in Telegram direct messages and dashboard to show a clear owner-facing `done` state. MAX and vc.ru are requested but should remain secondary/manual until Telegram-first week-1 URL confirmation works cleanly.
+- Production deploy: backend is `agentresult-os-backend:be3b96a`; owner-control is `agentresult-os-backend:f8f4d3e`; `agentresult-os-hermes` is running as the paid-pilot Hermes API sidecar on `agentresult-os-net`.
+- Live Day-0 onboarding completed on 2026-06-23 through Telegram owner-control. First prompt/answers were delivered in owner DM (`messageId: 298-305`), and the first fallback draft was sent as `messageId: 309`.
+- Production Hermes dispatch and backend Telegram delivery were fixed after live friction: `/telegram/commands/send` now falls back to the first allowed owner chat when no approval chat is configured, command execution receives the delivery chat id for background draft notifications, owner-control uses `HERMES_MODEL=hermes-agent` fallback when env is empty, and backend caps Hermes API output at `HERMES_MAX_TOKENS=2048`.
+- Production Hermes profile was switched from unaffordable `anthropic/claude-opus-4.6` default to `openrouter/free` for the `agentresult-os-hermes` sidecar; backup exists in `/opt/agentresult-os/hermes-data/config.yaml.bak-*-agentresult-api-model`.
+- Integrated production smoke passed: `/telegram/commands/send` sent the prepare start message (`messageId: 311`), Hermes completed task `9d96863c-30c1-435c-95ab-241842ff1509`, created draft `1513f563-0933-49b5-ab6d-ec30ae8258cf`, wrote `telegram_next_material_hermes_job: completed`, and the smoke approval was rejected for cleanup.
+- Current owner queue is clean: one real pending decision remains for `Пост: зачем B2B-компании мультиагентная система`; buttons are only `Материал` at summary level, with `Согласовать / Нужны правки` only inside the material view.
 - `npm run content-factory:check` passed.
 - `npm run telegram:regression` passed.
 - `npm run dashboard:smoke` passed.
-- `npm run telegram:production-smoke` passed.
+- `npm run telegram:production-smoke` passed and now checks `/telegram/commands/send` dry-run delivery payload.
 - `npm run telegram:pilot-production-smoke` passed after token rotation and sent Telegram smoke message `messageId: 228`.
-- `EXPECTED_OWNER_IMAGE_TAG=4039eb0 npm run vps:agentresult-health` passed.
+- `EXPECTED_OWNER_IMAGE_TAG=f8f4d3e npm run vps:agentresult-health` passed and now checks `agentresult-os-hermes` plus owner-control -> Hermes `/health`.
 - Production advisor/follow-up probe passed: `advisor_question`, previous context present.
 - Production week-5 command boundary probe passed: `/week5` is blocked until `pilot_week_5_scope` approval.
 - Production API-key guard probe passed: missing API key returns `401`.

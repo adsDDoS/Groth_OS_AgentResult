@@ -186,7 +186,7 @@ VPS containers for the demo contour:
 - `agentresult-os-postgres`: demo Postgres, memory-limited.
 - `agentresult-os-backend`: demo API, memory-limited, `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0`.
 - `agentresult-os-demo-readonly-proxy`: HTTP-only upstream for Vercel serverless, memory limit `128m/128m`.
-- `agentresult-os-hermes`: keep stopped unless explicitly testing Hermes generation.
+- `agentresult-os-hermes`: keep stopped for read-only dashboard demo; keep running for paid-pilot owner-control when backend-owned Hermes drafting is enabled.
 
 The VPS read-only upstream proxy is deployed with:
 
@@ -256,6 +256,7 @@ npx vercel --prod
 Operational guardrails:
 
 - Keep `agentresult-os-hermes` stopped for the dashboard demo.
+- Keep `agentresult-os-hermes` running for paid-pilot owner-control when `/onboarding` or `/prepare` should generate drafts without operator fallback.
 - Keep `AI_GROWTH_OS_TELEGRAM_OWNER_CONTROL_POLLING=0` for `agentresult-os-backend`.
 - Do not expose write routes through the demo prefix.
 - Do not run LAB/n8n/debtorpilot while working on this 3.8 GB VPS.
