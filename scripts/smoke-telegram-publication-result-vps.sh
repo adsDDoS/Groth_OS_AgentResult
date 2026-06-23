@@ -143,5 +143,31 @@ process.stdin.on("end", () => {
 });
 ' || fail "read-only Telegram command smoke failed"
 
+curl -fsS -m 15 \
+  -H "content-type: application/json" \
+  -H "x-tenant-id: $tenant_id" \
+  "${auth_header_args[@]}" \
+  -d '{"command":"brief","dryRun":true}' \
+  "$HOST_URL/telegram/commands/send" | node -e '
+let input = "";
+process.stdin.on("data", chunk => input += chunk);
+process.stdin.on("end", () => {
+  const body = JSON.parse(input);
+  const data = body?.data || {};
+  const delivery = data.delivery || {};
+  const payload = delivery.payload || {};
+  if (delivery.delivery !== "dry_run" || !payload.chat_id || !payload.text) {
+    console.error(input);
+    process.exit(1);
+  }
+  console.log(JSON.stringify({
+    command: data.result?.command,
+    delivery: delivery.delivery,
+    hasChatId: Boolean(payload.chat_id),
+    buttons: ((payload.reply_markup || {}).inline_keyboard || []).flat().map((button) => button.text)
+  }));
+});
+' || fail "Telegram command delivery dry-run smoke failed"
+
 echo "telegram publication-result production smoke passed"
 REMOTE

@@ -4,6 +4,7 @@ set -euo pipefail
 VPS_HOST="${VPS_HOST:-root@91.103.140.101}"
 BACKEND_CONTAINER="${BACKEND_CONTAINER:-agentresult-os-backend}"
 OWNER_CONTAINER="${OWNER_CONTAINER:-agentresult-os-telegram-owner-control}"
+HERMES_CONTAINER="${HERMES_CONTAINER:-agentresult-os-hermes}"
 OWNER_SERVICE="${OWNER_SERVICE:-agentresult-client-owner-updates.service}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:18830}"
 OWNER_URL="${OWNER_URL:-http://127.0.0.1:18831}"
@@ -58,6 +59,7 @@ process.stdin.on("end", () => {
 
   assert_running_container "$BACKEND_CONTAINER" "127.0.0.1:18830->3000/tcp"
   assert_running_container "$OWNER_CONTAINER" "127.0.0.1:18831->3000/tcp"
+  assert_running_container "$HERMES_CONTAINER" "127.0.0.1:18842->8642/tcp"
 
   owner_line="$(container_line "$OWNER_CONTAINER")"
   owner_image="$(printf '%s\n' "$owner_line" | awk '{print $2}')"
@@ -150,6 +152,27 @@ process.stdin.on("end", () => {
   assert_health "$BACKEND_URL"
   assert_health "$OWNER_URL"
 
+  docker exec "$OWNER_CONTAINER" node -e '
+const url = `${process.env.HERMES_BASE_URL || ""}`.replace(/\/$/, "") + "/health";
+if (!url.startsWith("http")) {
+  console.error("HERMES_BASE_URL is missing");
+  process.exit(1);
+}
+try {
+  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  const body = await response.json();
+  if (!response.ok || body.status !== "ok") {
+    console.error(JSON.stringify({ status: response.status, body }));
+    process.exit(1);
+  }
+  console.log(JSON.stringify({ hermes: "ok", url }));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+' || fail "owner-control cannot reach Hermes API"
+  echo "hermes api ok"
+
   auth_header_args=()
   if [ -n "$api_key" ]; then
     auth_header_args=(-H "x-agentresult-api-key: $api_key")
@@ -190,7 +213,7 @@ fi
 
 remote_function="$(declare -f run_agentresult_vps_health)"
 ssh "$VPS_HOST" \
-  "BACKEND_CONTAINER='$BACKEND_CONTAINER' OWNER_CONTAINER='$OWNER_CONTAINER' OWNER_SERVICE='$OWNER_SERVICE' BACKEND_URL='$BACKEND_URL' OWNER_URL='$OWNER_URL' EXPECTED_OWNER_IMAGE_TAG='$EXPECTED_OWNER_IMAGE_TAG' bash -s" <<REMOTE
+  "BACKEND_CONTAINER='$BACKEND_CONTAINER' OWNER_CONTAINER='$OWNER_CONTAINER' HERMES_CONTAINER='$HERMES_CONTAINER' OWNER_SERVICE='$OWNER_SERVICE' BACKEND_URL='$BACKEND_URL' OWNER_URL='$OWNER_URL' EXPECTED_OWNER_IMAGE_TAG='$EXPECTED_OWNER_IMAGE_TAG' bash -s" <<REMOTE
 set -euo pipefail
 $remote_function
 run_agentresult_vps_health

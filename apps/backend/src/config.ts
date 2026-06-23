@@ -13,6 +13,17 @@ function booleanEnv(value: string | undefined, fallback = false) {
   return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
 }
 
+function stringEnv(value: string | undefined, fallback = "") {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
+function firstCsvValue(value: string | undefined) {
+  return stringEnv(value?.split(",")[0]);
+}
+
+const telegramAllowedUsers = stringEnv(process.env.TELEGRAM_ALLOWED_USERS, process.env.HERMES_TELEGRAM_ALLOWED_USERS ?? "");
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   host: process.env.HOST ?? "0.0.0.0",
@@ -25,12 +36,15 @@ export const config = {
   openRouterModel: process.env.OPENROUTER_MODEL ?? "anthropic/claude-3.5-sonnet",
   hermesBaseUrl: process.env.HERMES_BASE_URL ?? "http://localhost:8080",
   hermesApiKey: process.env.HERMES_API_KEY ?? "",
-  hermesModel: process.env.HERMES_MODEL ?? "hermes-agent",
+  hermesModel: stringEnv(process.env.HERMES_MODEL, "hermes-agent"),
   hermesRequestTimeoutMs: Number(process.env.HERMES_REQUEST_TIMEOUT_MS ?? 180000),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? process.env.HERMES_TELEGRAM_BOT_TOKEN ?? "",
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",
-  telegramApprovalChatId: process.env.TELEGRAM_APPROVAL_CHAT_ID ?? "",
-  telegramAllowedUsers: process.env.TELEGRAM_ALLOWED_USERS ?? process.env.HERMES_TELEGRAM_ALLOWED_USERS ?? "",
+  telegramApprovalChatId: stringEnv(
+    process.env.TELEGRAM_APPROVAL_CHAT_ID,
+    stringEnv(process.env.TELEGRAM_HOME_CHANNEL, firstCsvValue(telegramAllowedUsers))
+  ),
+  telegramAllowedUsers,
   requireApiKey: booleanEnv(process.env.AGENTRESULT_REQUIRE_API_KEY),
   apiKey: process.env.AGENTRESULT_API_KEY ?? "",
   allowedTenantIds: process.env.AGENTRESULT_ALLOWED_TENANT_IDS ?? "",
