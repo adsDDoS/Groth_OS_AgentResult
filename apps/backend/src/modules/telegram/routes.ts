@@ -4193,6 +4193,7 @@ export async function telegramRoutes(app: FastifyInstance) {
   app.post("/telegram/commands/send", async (request) => {
     const body = telegramSendCommandSchema.parse(request.body ?? {});
     const result = await executeTelegramCommand(body, {
+      telegramChatId: config.telegramApprovalChatId,
       tenantId: request.tenantId,
       userId: request.userId
     });
